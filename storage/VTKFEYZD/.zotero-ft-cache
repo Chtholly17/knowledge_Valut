@@ -1,0 +1,4845 @@
+*****For Peer Review Only*****
+
+Image Quality Assessment: Measuring Perceptual Degradation via Distribution
+Measures in a Deep Feature Space
+
+Journal: Transactions on Pattern Analysis and Machine Intelligence
+
+Manuscript ID TPAMI-2022-11-2222
+
+Manuscript Type: Regular
+
+Keywords:
+
+Image quality assessment, distribution measures, perceptual degradation
+
+Page 1 of 19
+
+*****For Peer Review Only*****
+
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+1
+
+1
+
+2 3
+
+Image Quality Assessment: Measuring
+
+4 5
+
+Perceptual Degradation via Distribution
+
+6 7
+
+Measures in a Deep Feature Space
+
+8
+
+9
+
+10
+
+Xingran Liao, Xuekai Wei, Mingliang Zhou, Zhengguo Li, Senior Member, IEEE, and Sam
+
+11
+
+Kwong, Fellow, IEEE
+
+12
+
+13
+
+Abstract—Many deep network-based full-reference image quality assessment (FR-IQA) models use pixelwise measures to compare
+
+14
+
+deep features, determine the severity of perceptual information contamination, and then output objective quality scores. However, the
+
+15
+
+pixelwise comparison process often ignores the pixel correlations among deep features, thus shifting from subjective evaluations of
+
+16
+
+specific distortions. Herein, we propose that deep-based FR-IQA measures should consider pixel correlation fidelity, which compels us
+
+17
+
+to view deep features as statistical distributions and introduce distribution measures to address the pixel correlation issue. Specifically,
+
+18
+
+reference and distorted images are first projected into deep features by a Visual Geometry Group (VGG) network. Then, we test three distribution measures for comparing deep features: the Wasserstein distance (WSD), the symmetric Kullback–Leibler divergence
+
+19
+
+(SKLD), and the Jensen–Shannon divergence (JSD). The experimental results show that these deep network-based distribution
+
+20
+
+measures require no training but are closely related to human subjective evaluations based on both conventional and recently
+
+21
+
+published challenging IQA datasets, indicating that these measures have advanced robustness to different distortions and possess
+
+22
+
+clear interpretability. Moreover, we discuss applications of the proposed measures in image reconstruction tasks and demonstrate their
+
+23
+
+prominent usage in perceptual optimization. The code will be publicly available upon acceptance.
+
+24
+
+25
+
+Index Terms—Image quality assessment, distribution measures, perceptual degradation, deep neural network image representations, perceptual optimization.
+
+26
+
+27
+
+✦
+
+28 29
+
+1 INTRODUCTION
+
+30
+
+31 32 33 34
+
+W Ith the development of digital devices, the demand for presenting high perceptual quality images is growing. However, digital images always suffer from distortions during the process of capturing, compressing, and transmission; thus, monitoring perceptual quality degra-
+
+conducted in a perceptual manner [7]. The traditional mean square error (MSE) fails to be a perceptual metric because it measures the difference through a pixelwise comparison in the pixel domain, and it is widely accepted that comparing images pixel by pixel does not lead to a percep-
+
+35
+
+dations via automatic measures becomes increasingly nec- tual model [8], [9]. According to research in natural scene
+
+36
+
+essary. Full-reference image quality assessment (FR-IQA) statistics [10], a direct way to establish an effective FR-IQA
+
+37
+
+serves as a perceptual quality measure, providing an au- model is to compare the differences among perceptual fea-
+
+38
+
+tomatic method for image quality evaluation. Some FR-IQA tures, such as luminance, contrast, and structure. A notable
+
+39
+
+measures are even used as perceptual losses and applied example is the structural similarity index (SSIM) [11], which
+
+40
+
+in different image reconstruction tasks, such as denoising, compares the similarities among these perceptual features
+
+41
+
+dehazing, and image superresolution adjustment [1]–[3], and is more perceptual than the MSE in terms of subjective
+
+42
+
+which always provide more visually satisfactory reconstruc- quality score predictions. However, the SSIM [11] is still not
+
+43
+
+tion results.
+
+a perceptual measure for some distortion types, and people
+
+44
+
+An effective FR-IQA measure should be sensitive to the tend to explore various perceptual features to construct
+
+45
+
+degradation of perceptual quality and correspond to the more robust FR-IQA measures. As such, the given raw
+
+46
+
+human visual system (HVS). This issue requires a compar- images are projected into spatial, frequency, or deep feature
+
+47
+
+ison between the reference and the distorted images to be domains via different transformations. These features are
+
+48
+
+usually compared via the MSE or the similarity index [11].
+
+49
+
+• Xingran Liao and Sam Kwong are with the Department of Computer Currently, building a perceptual FR-IQA measure by com-
+
+50
+
+Science, City University of Hong Kong, Kowloon, Hong Kong (e-mail: paring deep features is flourishing. Existing works [12], [13]
+
+51 52
+
+Xingrliao2-c@my.cityu.edu.hk, cssamk@cityu.edu.hk).
+
+have shown that FR-IQA measures based on deep feature
+
+• Xuekai Wei is with the State Key Laboratory of Internet of Things for Smart City and the Department of Electrical and Computer En-
+
+comparisons are more robust than those based on spatial
+
+53
+
+gineering, University of Macau, Macao, China (e-mail: xuekaiwei2- or frequency feature comparisons. The underlying reason
+
+54 55 56
+
+c@my.cityu.edu.hk). • Mingliang Zhou is with the Department of Computer Science, Chongqing
+University, Chongqing China (e-mail: mingliangzhou@cqu.edu.cn). • Zhengguo Li is with the Institute for Infocomm Research, Agency for
+
+for this finding may be that deep neural networks capture the perceptual features that govern the perceptual quality degradations caused by various distortions, as shown in
+
+57 58 59
+
+Science, Technology and Research, Singapore 138632, Singapore (e-mail: ezgli@i2r.a-star.edu.sg).
+Manuscript received XXXXXX; revised XXXXXX.
+
+Fig. 1. Specifically, distortions induced in the pixel domain are reflected in the deep feature domain, and these deep features contain perceptual information, which is important
+
+60
+
+*****For Peer Review Only*****
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+Page 2 of 19
+2
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+17
+
+18
+
+19
+
+20
+
+21
+
+22
+
+23
+
+24
+
+25
+
+26
+
+27
+
+Fig. 1. Visualization of the deep network features derived from an original image and two distorted images from the KADID-10k datasets [4].
+
+28
+
+The second-row images are contaminated by motion blur distortions, and the third-row images are contaminated by denoising distortions. (a) The
+
+29
+
+original image and the distorted images with their mean opinion scores (MOS) and deep image structure and texture similarity (DISTS) scores listed below. (b)(c)(d) The first-, second-, and third-stage deep features of the VGG16 network [5] with the deep-stage image structures and texture
+
+30
+
+similarity scores [6] listed below.
+
+31
+
+32
+
+33
+
+for conducting subjective evaluations. For instance, Ding et perceptual comparisons and attain superior prediction re-
+
+34
+
+al. [6], [14] empirically concluded that the deep features of sults in deep feature comparisons. We believe the reason is
+
+35
+
+the Visual Geometry Group 16 (VGG16) [5] network contain that these measures take the pixel correlation of deep fea-
+
+36
+
+structure and texture information, which plays a significant tures into account, and in our approach, we first project the
+
+37
+
+role in subjective quality assessments. However, because reference and distorted images into deep feature domains
+
+38
+
+the pixels in deep features still have strong correlations, as via the VGG19 network [5]. Then, we test three widely
+
+39
+
+shown in Fig. 1, the use of pixelwise measures such as the used distribution measures for comparing deep features:
+
+40 41 42
+
+MSE may lead to inferior results in the quality score prediction task. Moreover, Liao et al. [15] also reported that using an SSIM variant [16] to compare deep features is not a robust method for some distortion samples, as shown in Fig. 1, and
+
+the Wasserstein distance (WSD) [18], the Jensen–Shannon divergence (JSD) [19], and the symmetric Kullback–Leibler divergence (SKLD) [20]. Such a strategy leads to three independent deep network-based FR-IQAs, which are deep
+
+43
+
+leads to wave-like artefacts in perceptual optimization cases. network-based WSD (DeepWSD), deep network-based JSD
+
+44
+
+Therefore, it is urgent to consider applying more powerful (DeepJSD), and deep network-based SKLD (DeepSKLD).
+
+45
+
+metrics in measuring the perceptual quality degradations of Finally, a training-free logarithm function is used to pool the
+
+46
+
+the deep network features and avoiding generating artefacts difference scores among various stages to form a perceptual
+
+47
+
+in perceptual optimization. However, works on which kind quality score. In conclusion, our contributions are threefold.
+
+48
+
+of measures are good for quality assessment and perceptual
+
+49
+
+optimization are rather barren, which poses a restriction on
+
+• We propose a new design philosophy for a deep
+
+50
+
+the further development of the FR-IQA measures.
+
+network-based FR-IQA model that pursues pixel
+
+51
+
+correlation fidelity in the deep feature domain. This
+
+52
+
+To address this problem, we focus on designing a new
+
+philosophy is closely related to the efficient coding
+
+53
+
+FR-IQA measure that addresses both the pixel correlation
+
+theory of the HVS and compels us to introduce
+
+54
+
+issue and perceptual optimization [17]. The core issues in
+
+distribution measures, i.e., the WSD, the JSD, and the
+
+55
+
+our FR-IQA design are to explore the determined kinds
+
+SKLD, to compare deep features. Such a strategy also
+
+56
+
+of measures that are suitable for deep feature comparisons
+
+enables the model to become more robust to different
+
+57 58 59
+
+and to reveal the underlying reasons behind our approach. Specifically, we show that even without a training process, statistical distribution-based measures can provide better
+
+distortion types. • We propose FR-IQA measures that utilize distribu-
+tion measures to estimate perceptual degradation in
+
+60
+
+Page 3 of 19
+
+*****For Peer Review Only*****
+
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+3
+
+1
+
+the VGG19 deep feature domain; this approach can utilize the low-level image features and achieve enhanced
+
+2
+
+tackle the pixel correlation issue when comparing computational efficiency, the gradient magnitude similarity
+
+3
+
+deep features. Moreover, we design the proposed deviation (GMSD) [29] computes the gradient difference be-
+
+4
+
+measures without a training process but can achieve tween the reference and distorted images and has achieved
+
+5
+
+satisfactory quality assessment results on several satisfactory results on the conventional IQA datasets, which
+
+6 7 8 9 10
+
+IQA datasets, which indicates that these measures are closely related to human subjective evaluations and are robust to various distortions with clear interpretability. We also perform different perceptual experiments to show that the proposed methods are more perceptual than many existing meth-
+
+indicates that low-level perceptual features play a significant role in quality assessment.
+The design philosophies of these FR-IQA milestones contain two important parts: the feature decomposition part and the feature comparison part. The feature decomposition part is extremely important in the development of the FR-
+
+11
+
+ods, achieving state-of-the-art quality prediction and IQA task, and many works have concentrated on extracting
+
+12
+
+maximum differential competition (MDC) [21] re- essential perceptual features that control perceptual quality.
+
+13
+
+sults.
+
+However, the feature comparison part has rarely been ex-
+
+14
+
+• We also demonstrate that the proposed measures plored, and no answer has been provided for determining
+
+15
+
+can be applied in some image reconstruction tasks the proper measures in the deep feature comparisons. As
+
+16
+
+to obtain more visually satisfactory results, which such, the Euclidean norm and the similarity index [11] are
+
+17
+
+reveals the great potential for the proposed measures still widely used for comparing perceptual features, but
+
+18
+
+to act as perceptual losses.
+
+inferior perceptual quality prediction and perceptual opti-
+
+19 20 21 22 23
+
+The rest of the thesis is structured as follows. In Section 2, we review the background of FR-IQA and various distribution measures. In Section 3, we present the design philosophy for the deep-based FR-IQA measures. In Section 4, we explain the methodology of DeepWSD,
+
+mization results are obtained, especially when comparing deep network features. In this paper, we attempt to build an FR-IQA measure by using a new kind of measure to attain more perceptual results in both quality assessment and perceptual optimization cases.
+
+24
+
+DeepSKLD, and DeepJSD in detail. In Section 5, we present
+
+25
+
+the experimental results, including the quality prediction re- 2.2 Distribution measures
+
+26 27 28 29 30
+
+sults, MDC experimental results, and ablation study results. In Section 6, we discuss the application of the proposed approach in image superresolution and image denoising tasks. In Section 7, we conclude this work.
+
+Distribution measures are widely used in many visual tasks to compare image features in a broad sense. In the reducedreference IQA (RR-IQA) task, distribution measures are always used to compare histograms of different statistics.
+
+31
+
+Wang et al. [30] used the KLD measure to compare the
+
+32 33 34
+
+2 RELATED WORK
+2.1 FR-IQA model Driven by different philosophies, considerable efforts have
+
+wavelet coefficient histograms of distorted and reference images and obtained satisfactory score prediction results. However, the KLD is not a complete distance measure, and some of its properties might lead to inferior comparison
+
+35
+
+been expended to build FR-IQA measures that are more per- results. KLD cannot achieve higher prediction accuracy
+
+36
+
+ceptual [22]. Beyond comparing the structural similarity, the due to its asymmetric property; thus, Liu et al. [31] used
+
+37
+
+DISTS index [6] compares the texture similarity through fea- the JSD to compare the pixel histograms of distorted and
+
+38
+
+ture projection via the VGG16 network [5] and has become reference images and achieved better quality assessment
+
+39
+
+more perceptual. Another way to build a perceptual FR-IQA results. In some non-reference IQA (NR-IQA) tasks [32],
+
+40
+
+measure is to transform an image into the frequency domain [33], the KLD and JSD have also been viewed as regular
+
+41
+
+and compare differences between the subband coefficients. measures for comparing different natural image statistics.
+
+42
+
+The underlying philosophy involves mimicking the shallow This is because these distribution measures can be used
+
+43
+
+visual process of the HVS [22]. Many frequency transfor- to determine significant differences rather than focus on a
+
+44
+
+mations, such as the log-Gabor filter [23], [24] and wavelet pixelwise difference. In the image retrieval task [34], the
+
+45
+
+transformation [25], have been proven to be in accord with WSD is used to compare the differences between the colour,
+
+46
+
+the mechanisms of some forehead brain lobes. The feature texture, and outline histograms of images, and this approach
+
+47
+
+similarity index measure (FSIM) [26] adopts the log-Gabor yielded higher retrieval accuracy than that of the traditional
+
+48
+
+filter to detect local phase differences and compare gradient Euclidean norm and chi-square distance [35]. Moreover, in
+
+49
+
+magnitude differences on a global scale, thereby attaining the image generation task, the WSD alleviates the mode
+
+50
+
+satisfactory quality prediction results. To explore the rela- collapse problem of the generative adversarial network and
+
+51
+
+tionship between distortion strength and perceptual quality could reduce the generation of some artefacts [36]. All of
+
+52
+
+degradation, the image information, visual quality index these measures perform well in different visual tasks, even
+
+53
+
+(VIF) [27] and information fidelity criterion (IFC) [28] are though the features they compare are quite different, indi-
+
+54
+
+used to predict perceptual quality by gauging the perceptual cating that setting distribution measures as image difference
+
+55
+
+information losses caused by distortions. The input images measures can be an effective technique. However, the use of
+
+56 57 58 59
+
+are built as Gaussian-scale mixture models and decomposed by wavelet transformations. Then, the mutual information is used to quantify the perceptual information losses among the wavelet subbands and output the final score. To fully
+
+these distribution measures in FR-IQA models as fidelity measures has been insufficiently explored. Moreover, ignoring the pixel correlation in deep features, such as the use of MSE or SSIM variants, leads to inferior results in both
+
+60
+
+*****For Peer Review Only*****
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+Page 4 of 19
+4
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+17
+
+18
+
+19
+
+20
+
+21
+
+22
+
+23
+
+24
+
+Fig. 2. Distortion samples from the KADID-10k [4] dataset with the same MSE score but different MOS scores. (a) Colour shift distortion. (c)
+
+25
+
+JPEG2000 distortion. (d) Colour diffusion distortion. (f) JPEG distortion. (b) and (e) Reference images for the corresponding distorted images.
+
+26
+
+27
+
+28
+
+quality assessment tasks and perceptual optimization tasks. quality of the perceived images by using previous visual
+
+29 30 31 32 33 34
+
+As such, it is urgent to rethink the essence of deep network features and apply appropriate measures to measure perceptual degradations.
+Herein, we show that the contribution of our work is not merely the application of the abovementioned measures to the FR-IQA task. For the deep-based FR-IQA task, we propose that the pursuit of pixel correlation fidelity is more
+
+experience, which indicates that our visual system continues recording the natural scene statistics we have seen and uses them to estimate the perceptual degradation through finding the mismatch [8], [40].
+When the visual system receives two stimuli, i.e., a reference image and a distorted image, the comparison between the perceived distorted image and the intrinsic natural scene
+
+35
+
+important than the pursuit of pixelwise fidelity, and the statistics may no longer be necessary, but the pursuit of
+
+36
+
+utilized distribution measures are suitable for deep network perceptual information fidelity should always be the main
+
+37
+
+feature comparisons. We also empirically show that the theme. Such fidelity is very different from pixelwise fidelity
+
+38
+
+optimization process of the three proposed deep network- because what we sense is not a group of pixels but the per-
+
+39
+
+based distribution measures is more perceptual than that of ceptual information they contain. Moreover, once perceptual
+
+40
+
+other state-of-the-art FR-IQA measures, which is important information fidelity is eliminated, even two distortion types
+
+41
+
+in both IQA and perceptual optimization tasks.
+
+with the same strength lead to different perceptual quality
+
+42
+
+degradations, as shown in Fig. 2. Each row of Fig. 2 shows
+
+43 44
+
+3 PROBLEM ANALYSIS
+
+45
+
+3.1 Perceptual information fidelity in the HVS
+
+two distortion types with the same strength, i.e., they have the same MSE score, but their MOS scores are quite different because the perceptual information fidelity is ruined to
+
+46
+
+An ongoing issue regarding the FR-IQA task involves esti- different extents. For (a), colour channel shifting leads to
+
+47
+
+mating the fidelity between distorted and reference images, structure ghosting, causing both an unsatisfactory visual
+
+48
+
+but pixelwise fidelity measures such as the MSE fail to experience and structure fidelity disruptions, thus leading
+
+49
+
+serve as perceptual measures. Moreover, explorations and to a poor MOS score. For (d), the colour diffusion distortion
+
+50
+
+comparisons of deep features can lead to better FR-IQA completely destroys the colour channel fidelity, thus leading
+
+51
+
+measures, which compels us to reconsider the type of fi- to an unacceptable MOS score. On the other hand, the
+
+52
+
+delity pursued by the HVS. According to the efficient coding JPEG2000 distortion (c) and JPEG distortion (f) affect the
+
+53
+
+theory [37], the HVS captures perceptual degradation by pixelwise fidelity but maintain the perceptual information
+
+54
+
+sensing the mismatches between the encoded perceptual fidelity to some extent, so their perceptual qualities are
+
+55
+
+information and natural scene statistics, such as the mis- acceptable. However, DISTS [6] and learned perceptual
+
+56 57 58 59
+
+match between luminance, contrast, structure, texture and color etc.. Such a theory is also the foundation of many NRIQA measures. Moreover, according to the free-energy principle [38], [39], the HVS is able to evaluate the perceptual
+
+image patch similarity (LPIPS) [12] fail to evaluate these image pairs perceptually, indicating that they do not pursue perceptual information fidelity well. In conclusion, the HVS pursues perceptual information fidelity when receiving two
+
+60
+
+Page 5 of 19
+
+*****For Peer Review Only*****
+
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+5
+
+1
+
+2 3 4
+
+Stimulus pair
+
+Latent codes
+
+Perceptual fidelity
+comparison
+
+Perceptual mismatching
+
+Perceptual pooling
+
+5
+
+The HVS
+
+6
+
+Double
+
+7
+
+stimulus
+
+Perceptual quality
+
+8
+
+assessment
+
+9
+
+The neural network
+
+10
+
+11 12
+
+Digital image
+
+Deep feartures
+
+Correlation fidelity
+comparison
+
+Numerical difference
+
+Numerical pooling
+
+13
+
+/similarity
+
+14
+
+Input
+
+Feature decomposition
+
+Feature comparison
+
+Task specific pooling
+
+Output
+
+15
+
+16
+
+Fig. 3. Overall philosophy of our proposed FR-IQA measures.
+
+17
+
+18 19 20 21
+
+stimuli. Such perceptual information is processed by the HVS, and a perceptual FR-IQA measure should consider the procedure.
+
+4.1 Preliminaries of distribution measures
+Distribution measures aim to quantify the distance between two probability distributions in the sense of statistics, and
+
+22 23 24 25
+
+3.2 Pixel correlation fidelity in deep-based FR-IQA
+The quality assessment mechanism in the HVS contains two important parts. First, the reference and distorted image signals are encoded into the underlying perceptual infor-
+
+we mainly test the WSD [18], JSD [19], and SKLD [20] in terms of deep feature comparisons, which lead to three independent FR-IQA measures. We first present the definitions of the KLD and WSD as follows:
+
+26
+
+mation code. Second, these codes are compared to find KLD(X , Y) = FX (x)(log FX (x) − log FY (x)) dx, (1)
+
+27
+
+mismatches [41]. Such a process is imitated by many FR-
+
+1/l
+
+28
+
+IQA measures, which decompose and compare perceptual W SDl(X , Y) = inf
+
+||x − y||l dJ(x, y) . (2)
+
+29
+
+features. Existing works [6], [12], [42] have shown that
+
+J∈J (X ,Y)
+
+30
+
+it is necessary to build a perceptual FR-IQA measure by where X and Y are the statistical distributions and x and y
+
+31
+
+comparing the features of deep neural networks because are their masses, respectively. FX and FY are the probability
+
+32
+
+deep features contain perceptual information. Herein, we density functions of X and Y, respectively. J (X , Y) is the
+
+33
+
+propose that the pursuit of pixel correlation fidelity is a joint distribution of X and Y, and l is the exponential index.
+
+34
+
+correct choice for deep feature comparison because pixels In our work, we set l = 2.
+
+35
+
+in deep features always have strong correlations, and such
+
+The definitions of the JSD and SKLD are based on the
+
+36
+
+correlations form the perceptual information we can read, KLD and are
+
+37
+
+such as structure or texture information. Specifically, for
+
+38
+
+digital images, the correlation between pixels is the basic
+
+1
+
+1
+
+JSD(X , Y) = KLD(X , M) + KLD(Y, M)
+
+2
+
+2
+
+(3)
+
+39
+
+unit of forming perceptual information, and when distor-
+
+40
+
+tions occur, pixel correlation degradation in deep features
+
+1
+
+1
+
+SKLD(X , Y) = KLD(X , Y) + KLD(Y, X )
+
+2
+
+2
+
+(4)
+
+41
+
+will be affected to different extents, reflecting how severely
+
+where
+
+M
+
+=
+
+1 2
+
+(X
+
++
+
+Y ).
+
+The
+
+relationships
+
+among
+
+the
+
+WSD,
+
+42
+
+the perceptual information is lost and finally determining JSD, and SKLD involve two key points. First, only the WSD
+
+43
+
+the perceptual quality. In conclusion, the contamination of is a complete distance, while the SKLD and JSD are merely
+
+44
+
+pixel correlations in deep features is closely related to per- divergences and do not satisfy the triangle inequality of
+
+45
+
+ceptual information degradation thus applying the metrics the complete distance requirement. Second, the SKLD and
+
+46
+
+that involve comparing pixel correlations is necessary.
+
+JSD are two symmetric forms of the KLD that aim to erase
+
+47 48 49 50 51 52 53
+
+4 METHODOLOGY
+The overall philosophy of our FR-IQA design is shown in Fig. 3, where we divide the whole process of the deep-based FR-IQA measure into 3 parts: a feature decomposition part, a feature comparison part, and a task-specific pooling part. We emphasize that our main work is the feature comparison
+
+the ambiguity encountered when applying them as FR-IQA measures and perceptual losses.
+When X and Y are one-dimensional discrete statistical distributions and l = 2, the computation of the WSD can be reduced to determining the difference between the empirical statistical distributions of X and Y. Specifically, Eq. 2 can be computed by
+
+54
+
+part. Specifically, we focus on approaching the mechanism
+
+55
+
+of perceptual information fidelity comparison in the HVS
+
+W SD1(X , Y) = (FˆX (t) − FˆY (t))2dt
+
+(5)
+
+56 57 58 59
+
+by employing a deep feature correlation comparison and introducing distribution measures. In our approach, we regard deep features as a type of distribution and then use distribution measures to estimate pixel correlation fidelity.
+
+R
+where FˆX and FˆY are the empirical cumulative density functions of X and Y, respectively. t is the parameter used for integration.
+
+60
+
+*****For Peer Review Only*****
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+Page 6 of 19
+6
+
+1
+
+Reference image feature extraction
+
+2
+
+The neural network
+
+3
+
+4
+
+Input
+
+5
+
+reference
+
+6
+
+image
+
+7
+
+WSD
+
+8
+
+Logarithm
+
+9 10
+
+SKLD
+
+AVG
+
+Quality score
+
+11
+
+12
+
+13
+
+Input
+
+14
+
+distorted
+
+15
+
+image
+
+JSD
+
+16
+
+17
+
+The neural network
+
+18
+
+19
+
+Distorted image feature extraction
+
+Distribution measures Score Average Distance polling Output
+
+20
+
+21
+
+Fig. 4. Structures of the three proposed deep-based distribution measures. We compare the differences between 5-stage VGG19 [5] features and raw images to estimate the pixel correlation fidelity loss. Then, 6 difference scores are averaged and sent to the logarithm function to output the
+
+22
+
+final quality score.
+
+23
+
+24
+
+25
+
+The comparison philosophy of the three distribution as (m, n, s), where (m, n) indicates the location and s is
+
+26
+
+measures is entirely different from that of the pixelwise the pixel strength, then the variation of s across different
+
+27
+
+measures, i.e., the MSE and the lp norm. A trivial exam- locations (m, n) forms the pixel strength distribution. Then,
+
+28 29 30 31 32
+
+ple involves comparing the distances between two onedimensional Gaussian distributions, i.e., X ∼ Nx(µx, σx2) and Y ∼ Ny(µy, σy2), where µx, µy and σx2, σy2 are the means and variances of two Gaussian distributions, respectively.
+Specifically, the following theorem shows that the three dis-
+tribution measures are subject to comparing the similarities
+
+distribution measures can be used to evaluate the variation in the pixel strength distribution, i.e., to compare how the pixel strength is concentrated or dispersed at different locations which is the key to generating perceptual information. The complete procedures for DeepWSD, DeepSKLD, and DeepJSD can be formulated as follows:
+
+33
+
+between the means and variances, which in fact involves
+
+34
+
+comparing the central locations and the dispersion degrees
+
+35
+
+of the Gaussian distributions. The proof of the theorem is
+
+36
+
+presented in the appendix.
+
+5
+DW (P, Q) = W SD2(P, Q) + W SD2(P˜i, Q˜i) (7)
+i=1 5
+
+37
+
+38
+
+Theorem 4.1. When X ∼ Nx(µx, σx2) and Y ∼ Ny(µy, σy2),
+
+39
+
+then the WSD, JSD and SKLD have a unified upper bound for
+
+40
+
+comparing X and Y:
+
+DJ (P, Q) = JSD(P, Q) + JSD(P˜i, Q˜i)
+
+(8)
+
+i=1
+
+5
+DS(P, Q) = SKLD(P, Q) + SKLD(P˜i, Q˜i) (9)
+
+41 42
+
+D(X , Y)2
+
+⩽
+
+C1(1
+
+−
+
+2µxµy µ2x + µ2y
+
+)
+
++
+
+C2(1
+
+−
+
+2σxy σx2 + σy2
+
+)
+
++
+
+C3,
+
+(6)
+
+i=1
+Inspired by the most apparent distortion (MAD) FR-
+
+43 44 45 46
+
+where D can be set as the WSD, JSD, or SKLD. C1, C2, and C3 are constants, and σxy is the covariance of the distributions X and Y.
+
+IQA measure [43], beyond comparing the pixel correlation fidelity levels, we also introduce a weighted Euclidean norm for each distribution measure:
+
+47
+
+Deul (P, Q) =g(D(P, Q)) × ||P − Q||2
+
+(10)
+
+48 49
+
+4.2 Deep feature space distribution measures
+
+5
++ (g(D(P˜i, Q˜i)) × ||P˜i − Q˜i||2), (11)
+
+50
+
+Given a distorted image P and a reference image Q, we
+
+i=1
+
+51 52
+
+first use the VGG19 network [5] to project them into deep features {P˜i}i=1,...5 and {Q˜i}i=1,...5, where i = 1, ...5
+
+where D(P, Q) is set as the corresponding distribution measure, and the adaptive weight g(s) is set as
+
+53
+
+represents the 5 stages of the VGG19 network [5]. Then,
+
+54
+
+we use the WSD, JSD, and SKLD to compare these deep
+
+55
+
+features and raw images. Specifically, the pixel strength at
+
+1
+
+g(s) = (s + 10)2
+
+. exp(−1/(s + 10) )
+
+(12)
+
+56
+
+each position is treated as the probability density; then, the
+
+Two factors support the introduction of the weighted
+
+57 58 59
+
+overall shape of the pixel strength in the deep features and Euclidean norm. First, the HVS is able to evaluate the raw images forms a kind of distribution. In other words, perceptual quality at different scales; in other words, we can if the pixel strength at a particular location is represented compare images not only in a global perceptual information
+
+60
+
+Page 7 of 19
+
+*****For Peer Review Only*****
+
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+7
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+17
+
+18
+
+19
+
+20
+
+21
+
+22
+
+23
+
+24
+
+Fig. 5. Distortion samples from the KADID-10k [4] dataset. (a) Mean shift distortion. (c) Colour block distortion. (d) White noise distortion. (f)
+
+25
+
+Pixelwise distortion. (b) and (e) Reference images for the corresponding distorted images. Note that DISTS is trained with the KADID-10K [4]
+
+26
+
+dataset.
+
+27
+
+28
+
+comparison manner but also in a local pixelwise comparison is an effective way to imitate the evaluation mechanism in
+
+29
+
+manner. Such a mechanism is imitated by our FR-IQA the HVS. Additionally, the proposed FR-IQA measures even
+
+30 31 32
+
+measures. Moreover, regarding the MAD [43], Larson et al. reported a notable behaviour exhibited by testers in their subjective evaluation experiment; that is, testers first sensed the distortion on a global scale and directly gave
+
+produce competitive quality assessment results on some of the latest challenging IQA datasets, which also reveals the generality of our theory. In addition, the three proposed
+
+33
+
+low scores once the perceptual degradation was apparent. measures can also be used for perceptual optimization in
+
+34
+
+If the distortion was imperceptible, they zoomed in to find many image reconstruction tasks, providing broad applica-
+
+35
+
+the distortion in a patch-by-patch or even a pixel-by-pixel tion prospects.
+
+36
+
+manner and then gave a quality score. The weighted Eu-
+
+37 38 39
+
+clidean norm mimics such behaviour, and when the values of distribution measures are large, the value of the weighted Euclidean norm is suppressed by the weight g(s). Second, the weighted Euclidean norm also benefits the proposed
+
+4.3 Connection with existing methods The structures of the three deep network-based distribution
+
+40
+
+measures in terms of perceptual optimization by prohibiting measures are similar to those of many existing models.
+
+41
+
+the generation of artefacts and accelerating the convergence, Herein, we explain their similarities and differences to clar-
+
+42
+
+which makes FR-IQA more complete as a perceptual loss. ify our contributions. After comparing the features of each network stage, we
+
+43 44
+
+compute the average score of each stage and send it to a training-free logarithm function to output the final per-
+
+4.3.1 Connection with other deep network-based FR-IQA
+
+45
+
+ceptual quality score. The whole process is formulated as
+
+methods
+
+46
+
+follows, and we also present the structures of DeepWSD, Existing deep network-based FR-IQA measures tend to ap-
+
+47
+
+DeepSKLD, and DeepJSD in Fig. 4.
+
+ply a deep convolutional neural network to extract essential
+
+48 49
+
+1
+
+1
+
+1
+
+perceptual features and train an extra score predictor to
+
+DeepW SD(P, Q) = (log ( 6 DW (P, Q) + 6 Deul(P, Q))) 4 (13) regress MOS scores on several datasets. Due to the per-
+
+50 51 52 53
+
+1
+
+1
+
+1
+
+DeepSKLD(P, Q) = (log ( 6 DS(P, Q) + 6 Deul(P, Q))) 4 (14)
+
+1
+
+1
+
+1
+
+DeepJSD(P, Q) = (log ( 6 DJ (P, Q) + 6 Deul(P, Q))) 4 (15)
+
+ceptual relevance of deep network features, our proposed FR-IQA measures are also built on deep network features. However, unlike the previous methods, we mainly work on determining how to approach the comparison mechanism
+
+54
+
+One notable superiority exhibited by the three proposed in the HVS. Moreover, existing deep-based FR-IQA mea-
+
+55
+
+deep-based distribution measures is that they do not require sures always need to train an extra score predictor, while
+
+56 57 58 59
+
+training and do not contain many empirical hyperparameters, but they can achieve satisfactory results on several conventional IQA datasets, which indicates that the pursuit of pixel correlation fidelity for deep-based FR-IQA measures
+
+our proposed measures only use a logarithmic function to output perceptual quality scores; this also demonstrates that comparing deep features through distribution measures is closely related to subjective evaluations.
+
+60
+
+*****For Peer Review Only*****
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+Page 8 of 19
+8
+
+1
+
+TABLE 1
+
+2
+
+Detailed information about the 7 test IQA datasets. For the PIPAL dataset, we use the training set because the labels of the test set are unavailable
+
+3
+
+4
+
+Name
+
+No. of Ref No. of Dist No. and type of Dist Image types Human judgements Evaluation criterion
+
+5
+
+TID2013
+
+25
+
+3000
+
+24 (traditional)
+
+Full image
+
+524k
+
+MOS (Swiss system)
+
+6
+
+LIVE
+
+29
+
+800
+
+5 (traditional)
+
+Full image
+
+25k
+
+DMOS (5 scores)
+
+7
+
+CSIQ
+
+30
+
+800
+
+6 (traditional)
+
+Full image
+
+5k
+
+MOS (Direct ranking)
+
+8
+
+IVC
+
+10
+
+235
+
+4 (traditional)
+
+Full image
+
+9
+
+KADID-10k
+
+81
+
+10, 125
+
+25 (Synthesis)
+
+Full image
+
+10
+
+Live-MultiDist
+
+15
+
+450
+
+2 (Mixed)
+
+Full image
+
+11
+
+PIPAL(train)
+
+200
+
+23200
+
+40 (Algorithm)
+
+image patches
+
+5k 300k 25k 1.13m
+
+MOS (5 scores) MOS (5 scores) DMOS (5 scores) MOS (Elo rating system)
+
+12
+
+13
+
+14
+
+4.3.2 Connection with feature similarity measures
+
+used to compare these 1D distributions in a patch-by-patch
+
+15
+
+From a statistical viewpoint, SSIM [11] can be treated as a manner through three different distribution measures.
+
+16
+
+distribution similarity measure that measures the similari-
+
+17
+
+ties among the first-order moments, the second-order mo-
+
+18
+
+ments, and the overall shapes of pixel strength distribution. 5 EXPERIMENTAL RESULTS
+
+19 20
+
+Moreover, through Eq. (6), with a Gaussian hypothesis, the upper bound of three more general distribution measures 5.1 Databases and experimental settings
+
+21
+
+can be reduced to a unified form that is very similar to To demonstrate the effectiveness of the three proposed FR-
+
+22
+
+the SSIM. The key reason for this is that the Gaussian IQA measures, we test them on 7 IQA datasets: the Tampere
+
+23
+
+distribution can be completely dominated by the first two Image Database (TID2013) [44], Laboratory for Image &
+
+24
+
+moments, which are the mean and the variance. In the Video Engineering (LIVE) [45], Categorical Image Quality
+
+25
+
+pixel domain, the means and variances of image patches (CSIQ) [43], Image Quality Database (IVC) [46], KADID-
+
+26
+
+have clear perceptual meanings, which are their luminance 10k [4], LIVE Multiply Distorted (LIVE-MultiDist) [50]
+
+27 28 29 30 31 32 33
+
+and contrast levels. However, deep features are usually not Gaussian, and their means and variances do not have specific perceptual meanings; thus, directly applying the SSIM or its variants to compare deep features may lead to inferior quality assessment results, as shown in Fig. 5. We elaborately pick two distortion sample pairs that have different MOS scores from the Konstanz Artificially Distorted Image Quality Database 10k (KADID-10k) [4] dataset.
+
+and Perceptual Image Processing Algorithms (PIPAL) [49] datasets. The details of these FR-IQA datasets are shown in Table 1. Among these FR-IQA datasets, the PIPAL dataset is a recent challenging IQA dataset from the New Trends in Image Restoration and Enhancement (NTIRE 2021) challenges on perceptual IQA and contains new distortion types generated by image reconstruction algorithms. The TID2013 [44], LIVE [45], CSIQ [43] and IVC [46] datasets are
+
+34
+
+Note that DISTS is trained on this dataset, but it returns conventional IQA datasets that contain traditional distortion
+
+35
+
+the same quality score for two distortion sample pairs and types such as Gaussian white noise distortions. The KADID-
+
+36
+
+fails to evaluate them perceptually. On the other hand, 10k [4] dataset contains various synthetic distortion types
+
+37
+
+even without training, the three proposed measures are able that are different from those of the four conventional IQA
+
+38
+
+to reflect the perceptual difference between the distortion datasets, and LIVE-MultiDist [50] contains mixed distor-
+
+39
+
+sample pairs and return quite different objective scores, tions such as JPEG distortion plus blur, among others.
+
+40
+
+which indicates that distribution measures are more suitable
+
+We also compare the performance of the three pro-
+
+41
+
+for deep feature comparison tasks.
+
+posed methods with several FR-IQA milestones, which are
+
+42
+
+43
+
+4.3.3 Connection with the perceptual loss
+
+the peak-signal-to-noise ratio (PSNR), SSIM [11], multiscale SSIM (MS-SSIM) [47], GMSD [29], VIF [27], MAD [43],
+
+44
+
+Similar to the widely used perceptual loss [51], [52], our FSIM [26], complex wavelet structural similarity (CW-
+
+45
+
+proposed deep-based distribution measures also utilize and SSIM) [48], LPIPS [12], the perceptual image error assess-
+
+46
+
+compare the features of the VGG19 [5] network. However, ment through the pairwise preference (PieAPP) FR-IQA
+
+47
+
+our FR-IQA measures are based on distribution measures measure [42], DISTS [6] and space warping difference IQA
+
+48
+
+and consider all 5 stage features and raw images to per- network (SWD) [49]. Among them, the PSNR, SSIM [11],
+
+49
+
+form the quality assessment and perceptual optimization MS-SSIM [47] and GMSD [29] are FR-IQA measures that op-
+
+50
+
+tasks. The existing perceptual loss function [51], [52] only erate in the pixel domain. The VIF [27], MAD [43], FSIM [26]
+
+51
+
+compares part of the observed features through the Eu- and CW-SSIM [48] contain frequency feature comparisons,
+
+52
+
+clidean norm. Works completed by Delbracio et al. [53] and while the PieAPP [42], LPIPS [12], DISTS [6] and SWD [49]
+
+53
+
+Cao et al. [13], which are very similar to ours, compare are FR-IQA measures that work in the deep feature domain.
+
+54
+
+the VGG16 features through the projected WSD [54] to All the compared FR-IQA measures use settings that are
+
+55
+
+alleviate the computational burden. In contrast, we do not in line with their open source forms. For LPIPS [12] and
+
+56 57 58 59
+
+project deep features because we believe that projection introduces information loss. Specifically, we directly reshape the deep features to one-dimensional forms and treat them as one-dimensional distributions. Then, a sliding window is
+
+SWD [49], we take their VGG16 forms because such forms can lead to better quality assessment results. For DeepWSD, DeepJSD, and DeepSKLD, the only flexible parameter is the patch size for the deep feature comparison, and we set the
+
+60
+
+Page 9 of 19
+
+*****For Peer Review Only*****
+
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+9
+
+1
+
+TABLE 2
+
+2
+
+Comparison among several FR-IQA methods on four classic datasets. The bold numbers are the three highest scores in each column.
+
+3
+
+4
+
+Method
+
+TID2013 [44]
+
+LIVE [45]
+
+CSIQ [43]
+
+IVC [46]
+
+5
+
+PLCC SRCC KRCC PLCC SRCC KRCC PLCC SRCC KRCC PLCC SRCC KRCC
+
+6
+
+PSNR
+
+0.6773 0.6876 0.4963 0.8648 0.8726 0.6773 0.8195 0.8101 0.6014 0.6804 0.6499 0.4781
+
+7
+
+SSIM [11] 0.7767 0.7271 0.5454 0.9341 0.9479 0.7963 0.8523 0.8656 0.6807 0.7708 0.9018 0.7223
+
+8
+
+MS-SSIM [47] 0.8292 0.7887 0.6049 0.9399 0.9513 0.8048 0.8895 0.9133 0.7393 0.7913 0.8980 0.7203
+
+9
+
+GMSD [29] 0.8548 0.8043 0.6324 0.9574 0.9608 0.8271 0.9452 0.9503 0.8043 0.8645 0.8548 0.6624
+
+10
+
+VIF [27]
+
+0.8672 0.8429 0.6526 0.9343 0.9603 0.8284 0.9132 0.9121 0.7432 0.7391 0.7273 0.5590
+
+11
+
+MAD [43] FSIM [26]
+
+0.8267 0.7680 0.6154 0.9682 0.9669 0.8425 0.9505 0.9468 0.7975 0.8704 0.8698 0.6671 0.8233 0.8549 0.6549 0.9608 0.9672 0.8814 0.9187 0.9379 0.7683 0.8161 0.9263 0.7537
+
+12
+
+CW-SSIM [48] 0.6295 0.7560 0.5580 0.8402 0.9082 0.7142 0.7687 0.7652 0.5683 0.5936 0.5834 0.4072
+
+13
+
+PieAPP [42] 0.8501 0.8479 0.6828 0.9079 0.9279 0.8266 0.9300 0.9369 0.7721 0.9341 0.9306 0.7698
+
+14
+
+LPIPS [12] 0.7324 0.6696 0.4970 0.9343 0.9324 0.7782 0.8936 0.8758 0.6893 0.8715 0.9044 0.7386
+
+15
+
+DISTS [6] 0.8624 0.8483 0.6574 0.9560 0.9542 0.8112 0.9284 0.9289 0.7675 0.8993 0.9138 0.7267
+
+16
+
+SWD [49] 0.8377 0.8153 0.6260 0.8731 0.8832 0.6894 0.9222 0.9154 0.7357 0.8826 0.9012 0.7132
+
+17
+
+DeepWSD 0.9001 0.8806 0.7003 0.9720 0.9654 0.8447 0.9629 0.9646 0.8279 0.9420 0.9356 0.7767
+
+18
+
+DeepJSD 0.9000 0.8790 0.6973 0.9717 0.9653 0.8445 0.9630 0.9670 0.8343 0.9424 0.9362 0.7776
+
+19
+
+DeepSKLD 0.9012 0.8783 0.6962 0.9720 0.9659 0.8463 0.9652 0.9683 0.8375 0.9425 0.9358 0.7772
+
+20
+
+21
+
+22
+
+23
+
+24
+
+25
+
+26
+
+27
+
+28
+
+29
+
+30
+
+31
+
+32
+
+33
+
+34
+
+35
+
+36
+
+37
+
+38
+
+39
+
+40
+
+41
+
+42
+
+43
+
+44
+
+Fig. 6. Scatter plots of DISTS, DeepWSD, DeepJSD, and DeepSKLD based on the TID2013, KADID-10k, and PIPAL datasets. The x-axis denotes
+
+45
+
+the raw score of each tested IQA measure, and the y-axis represents the MOS label for each dataset.
+
+46
+
+47 48
+
+patch size to 8 × 8. The effect of the patch size is thoroughly where D is the raw score and D¯ is the regression score.
+
+49
+
+researched in an ablation study.
+
+{βi}i=1,...4 represents the 4 parameters.
+
+50
+
+To quantify the score prediction results of these FR-IQA
+
+Beyond the quality assessment experiment, we also per-
+
+51
+
+measures, we use Pearson’s linear correlation coefficient form the maximum differential competition (MDC) experi-
+
+52
+
+(PLCC), the Spearman rank-order correlation coefficient ment [21], which provides another approach for evaluating
+
+53 54 55 56 57 58 59
+
+(SRCC), and the Kendall rank-order correlation coefficient (KRCC). To better map the scores of the FR-IQA measures to the human evaluation scores, we use a 4-parameter regression model before computing the PLCC, whose definition is
+D¯ = (β1 − β2)/(1 + exp(−(D − β3)/|β4|) + β2), (16)
+
+the performance of two given IQA measures Q1 and Q2. The basic philosophy is to search for a distorted image pair {I1, I2} according to a reference image I, where the perceptual qualities of I1 and I2 are quite different. If such a pair can fool Q1 but not Q2, then we say that Q2 is more perceptual than Q1 on this image pair. If we can find this kind of image pair as much as possible but cannot demon-
+
+60
+
+*****For Peer Review Only*****
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+Page 10 of 19
+10
+
+1
+
+TABLE 3
+
+2
+
+Comparison among several FR-IQA methods on three classic datasets. The bold numbers are the three highest scores in each column. Note that DISTS is trained with the KADID-10k dataset, so we use * to highlight its
+
+3
+
+score. For PIPAL, we use PIPAL (train) to denote that we only use the training set.
+
+4
+
+5 6
+
+Method
+
+KADID-10k [4]
+
+LIVE-MultiDist [50]
+
+PIPAL (train) [49]
+
+PLCC SRCC KRCC PLCC SRCC KRCC PLCC SRCC KRCC
+
+7
+
+PSNR
+
+0.6747 0.6665 0.4836 0.7622 0.7664 0.5830 0.4374 0.4065 0.2762
+
+8
+
+SSIM [11]
+
+0.7217 0.7325 0.5572 0.8652 0.8255 0.6157 0.5231 0.4987 0.3452
+
+9
+
+MS-SSIM [47] 0.8012 0.8029 0.6088 0.8826 0.8795 0.6431 0.5796 0.5510 0.3884
+
+10
+
+GMSD [29] 0.8315 0.8308 0.6357 0.9068 0.8923 0.7144 0.5924 0.5703 0.4029
+
+11
+
+VIF [27]
+
+0.7927 0.7906 0.6014 0.8947 0.8874 0.5428 0.5701 0.5591 0.3960
+
+12
+
+MAD [43] 0.8232 0.7965 0.6210 0.8542 0.8712 0.6943 0.6508 0.6161 0.4397
+
+13
+
+FSIM [26] 0.8511 0.8542 0.6648 0.8386 0.8932 0.6961 0.6321 0.6065 0.4312
+
+14
+
+CW-SSIM [48] 0.4977 0.4995 0.3521 0.4928 0.4160 0.2930 0.3543 0.2598 0.1751
+
+15
+
+PieAPP [42] 0.8656 0.8647 0.6736 0.8763 0.8881 0.6897 0.6972 0.6982 0.5090
+
+16
+
+LPIPS [12] 0.7003 0.7200 0.5313 0.8350 0.8078 0.6083 0.6109 0.5730 0.4041
+
+17
+
+DISTS [6] 0.8887* 0.8893* 0.7100* 0.8951 0.9330 0.7478 0.6354 0.6172 0.4382
+
+18
+
+SWD [49]
+
+0.7894 0.7903 0.5883 0.8566 0.8534 0.6516 0.6219 0.6031 0.4264
+
+19 20
+
+DeepWSD DeepJSD DeepSKLD
+
+0.9008 0.8929 0.8957
+
+0.9016 0.8935 0.8963
+
+0.7254 0.7143 0.7183
+
+0.9190 0.9111 0.9137
+
+0.9191 0.8988 0.9011
+
+0.7483 0.7189 0.7231
+
+0.6434 0.6124 0.6211
+
+0.6256 0.5983 0.6068
+
+0.4431 0.4204 0.4274
+
+21
+
+22
+
+23
+
+24
+
+strate conversely, then Q2 dominates Q1 in the perceptual of pixel correlation fidelity is also effective for the distortion
+
+25
+
+sense.
+
+types generated by some reconstruction algorithms. In addi-
+
+26
+
+Specifically, given an error bound ε, the required image tion, we also present scatter plots of the three proposed FR-
+
+27
+
+pair {I1, I2} with quite different subjective perceptual qual- IQA measures based on the TID2013 [44], KADID-10k [4]
+
+28 29 30 31 32 33 34 35 36 37
+
+ity scores must satisfy
+
+|Q1(I1, I) − Q1(I2, I)| < ε,
+
+(17)
+
+|Q2(I1, I) − Q2(I2, I)| > ε.
+
+Then, Q2 is more perceptual than Q1 on {I1, I2}. A similar definition for Q1 dominating Q2 can be derived in a parallel manner, and in our experiment, we set ϵ = 0.001 and pick image pairs {I1, I2} with MOS score differences that are larger than 2.
+The experimental results are structured as follows. In
+
+and PIPAL [49] datasets to visualize their score prediction results. In Fig. 6, we find that the raw scores of the three proposed measures are nearly linear with the subjective evaluations in the TID2013 dataset.
+The success of the three proposed measures can be mainly attributed to the pixel correlation comparison. Beyond that, the three methods perform differently on each dataset. DeepWSD performs better than DeepJSD and DeepSKLD on large-scale datasets such as the TID2013 [44], KADID-10k [4] and PIPAL [49] datasets, indicating that it is more generally applicable to various kinds of distortions.
+
+38
+
+Section 5.2, we show the quality assessment results. In On the other hand, DeepJSD and DeepSKLD are better than
+
+39
+
+Section 5.3, we present the MDC experiment results. In DeepWSD on the LIVE [45], CSIQ [43] and IVC [46] datasets.
+
+40
+
+Section 5.4, we analyse the sensitivity of parameters and These datasets contain types of distortions related to signal
+
+41
+
+show the ablation study results.
+
+compression and transmission, such as JPEG2000 distortion
+
+42
+
+43
+
+5.2 Quality prediction results
+
+and Gaussian blur. We empirically conclude that these two measures are more specialized for the quality evaluation
+
+44
+
+The quality prediction results on TID2013 [44], LIVE [45], of distortions related to compression. The latent reason for
+
+45
+
+CSIQ [43] and IVC [46] are shown in Table 2. These this phenomenon may originate from the definitions of the
+
+46
+
+IQA datasets have been used for many years, which may three proposed measures. Specifically, the logarithmic terms
+
+47
+
+cause some FR-IQA measures to unintentionally overadapt. in the SKLD and JSD may unintentionally measure infor-
+
+48
+
+Nonetheless, the three proposed FR-IQA measures attain mation loss that is more important in image compression
+
+49
+
+state-of-the-art performance, which reveals their advanced and transmission, making these measures more specialized
+
+50
+
+score prediction abilities. Additionally, we also test the for compression distortion. The WSD considers the overall
+
+51
+
+performance of our measures on other datasets and present geometry of the pixel strength distribution; thus, it is more
+
+52
+
+the results in Table 3. Note that DISTS [6] is trained with generally applicable to various kinds of distortions, such
+
+53 54
+
+the KADID-10k [4] dataset, but the three proposed methods as the distortions generated by image reconstruction algostill attain better results than DISTS. Such results strongly rithms.
+
+55
+
+support the effectiveness of comparing the pixel correlation
+
+56 57 58 59
+
+difference in deep features. Moreover, on the challenging PIPAL [49] dataset, the three proposed FR-IQA measures also attain satisfactory results, and DeepWSD obtains one of the three highest scores, which indicates that the pursuit
+
+5.3 Maximum Differential Competition results
+We compare the FSIM [26], MAD [43], PieAPP [42], DISTS [6] and the three proposed FR-IQA based on the
+
+60
+
+Page 11 of 19
+
+*****For Peer Review Only*****
+
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+11
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+Fig. 7. MDC results obtained on 3 large IQA datasets. (a), (b), and (c) Results obtained on the TID2013 [44], KADID-10k [4] and PIPAL [49]
+
+17
+
+datasets, respectively.
+
+18
+
+19
+
+20
+
+21
+
+22
+
+23
+
+24
+
+25
+
+26
+
+27
+
+28
+
+29
+
+30
+
+31
+
+32
+
+33
+
+34
+
+Fig. 8. Toy optimization results of Eq. (18).
+
+35
+
+36
+
+TABLE 4 Ablation study results with respect to the patch size and g(s). The bold numbers are the three highest scores in
+
+37
+
+each column. ‘w/P4’ means that a window size of 4×4 is used. ‘w/o g(s)’ means that the adaptive weight g(s) is not
+
+38
+
+used. Bold font signifies the best results obtained by each block on the corresponding dataset. For PIPAL, we use
+
+39
+
+PIPAL (train) to denote that we only use the training set.
+
+40
+
+41
+
+Method
+
+TID2013 [44]
+
+KADID-10k [4]
+
+PIPAL (train) [49]
+
+42
+
+PLCC SRCC KRCC PLCC SRCC KRCC PLCC SRCC KRCC
+
+43
+
+DeepWSD w/P4 0.9024 0.8817 0.7014 0.8962 0.8970 0.7186 0.6103 0.6013 0.4229
+
+44
+
+DeepWSD w/P8 0.9001 0.8806 0.7003 0.9008 0.9016 0.7254 0.6434 0.6256 0.4431
+
+45
+
+DeepWSD w/P16 0.8872 0.8692 0.6849 0.8962 0.8971 0.7190 0.6620 0.6437 0.4588
+
+46
+
+DeepWSD w/o g(s) 0.8994 0.8801 0.6992 0.8952 0.8947 0.7162 0.6125 0.5974 0.4196
+
+47
+
+DeepJSD w/P4 0.8990 0.8776 0.6951 0.8933 0.8939 0.7148 0.6141 0.5991 0.4212
+
+48
+
+DeepJSD w/P8 0.9000 0.8790 0.6973 0.8929 0.8935 0.7143 0.6124 0.5983 0.4204
+
+49
+
+DeepJSD w/P16 0.9005 0.8797 0.6985 0.8928 0.8935 0.7141 0.6176 0.6073 0.4278 DeepJSD w/o g(s) 0.8927 0.8710 0.6863 0.8898 0.8901 0.7103 0.6120 0.5969 0.4192
+
+50
+
+DeepSKLD w/P4 0.8955 0.8777 0.6950 0.8952 0.8957 0.7179 0.6195 0.6058 0.4268
+
+51
+
+DeepSKLD w/P8 0.9012 0.8783 0.6962 0.8957 0.8963 0.7183 0.6211 0.6068 0.4274
+
+52
+
+DeepSKLD w/P16 0.8953 0.8770 0.6947 0.8928 0.8937 0.7147 0.6218 0.6150 0.4337
+
+53
+
+DeepSKLD w/o g(s) 0.8831 0.8678 0.6903 0.8946 0.8950 0.7160 0.6123 0.5973 0.4195
+
+54
+
+55
+
+56 57 58
+
+TID2013 [44], KADID-10k [4] and PIPAL [49] datasets by element indicates the number of image pairs on which Q1 is searching for the image pairs. We visualize the MDC exper- fooled while Q2 is not. To compare the evaluation abilities imental results in heatmaps in Fig. 7. In the heatmaps, each of the two models, we can compare the values on the two
+
+59
+
+60
+
+*****For Peer Review Only*****
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+Page 12 of 19
+12
+
+1
+
+1.0000
+
+Ablation study on TID2013
+
+Ablation study on KADID-10k
+1.0000
+
+2 0.9000
+3
+
+PLCC SRCC KRCC
+
+0.9000
+
+PLCC SRCC KRCC
+
+0.8559 0.8261
+
+0.8893 0.8646
+
+0.8963 0.8957
+
+0.8031 0.7703
+
+0.8045 0.7746
+
+0.8451 0.8133
+
+0.8848 0.8532
+
+0.8935 0.8929
+
+0.8801 0.8393
+
+0.8883 0.8434
+
+0.9016 0.9008
+
+0.8277 0.8469
+0.8627 0.8514
+0.8746 0.8767
+0.8783 0.9012
+0.8235 0.8423
+0.8591 0.8494
+0.8777 0.8771
+0.8790 0.9000
+0.8266 0.8471
+0.8673 0.8354
+0.8741 0.8697
+0.8806 0.9001
+
+0.8094 0.7825
+
+4
+
+0.8000
+
+0.8000
+
+0.6887
+
+0.7068
+
+0.7183
+
+0.6826
+
+0.7044
+
+0.7143
+
+0.7027
+
+0.7076
+
+0.7254
+
+5
+
+0.7000
+
+0.7000
+
+0.6498 0.6897 0.7005 0.6962
+0.6458 0.6823 0.6960 0.6973
+0.6479 0.6855 0.6932 0.7003
+
+0.6007
+
+0.6012
+
+0.6076
+
+6
+
+0.6000
+
+7 0.5000
+8
+
+0.6000 0.5000
+
+9
+
+0.4000
+
+0.4000
+
+10 11
+
+0.3000
+
+DeepWSD DeepWSD DeepWSD DeepWSD DeepJSD DeepJSD DeepJSD DeepJSD DeepSKLD DeepSKLD DeepSKLD DeepSKLD
+
+w/VGG16 w/Squeeze w/AlexNet
+
+w/VGG16 w/Squeeze w/AlexNet
+
+w/VGG16 w/Squeeze w/AlexNet
+
+0.3000
+
+DeepWSD DeepWSD DeepWSD DeepWSD DeepJSD DeepJSD DeepJSD DeepJSD DeepSKLD DeepSKLD DeepSKLD DeepSKLD
+
+w/VGG16 w/Squeeze w/AlexNet
+
+w/VGG16 w/Squeeze w/AlexNet
+
+w/VGG16 w/Squeeze w/AlexNet
+
+12
+
+Fig. 9. The influences of network structures on the TID2013 and KADID-10k datasets.
+
+13
+
+14
+
+15
+
+0.7000
+
+Ablation study on PIPAL
+
+xˆ. We set two initial images for x; one is a white image, and
+
+16
+
+0.6500
+
+PLCC SRCC KRCC the other is a blurred image. With different initial images,
+
+0.5976 0.5892
+0.5623 0.5835
+0.5967 0.6059
+0.6068 0.6211
+0.5928 0.5873
+0.5601 0.5810
+0.5879 0.6022
+0.5983 0.6124
+0.5975 0.5964
+0.6187 0.6231
+0.6201 0.6389
+0.6256 0.6434
+
+17 0.6000
+18
+
+MAD [43] cannot reconstruct the same perceptual results, indicating that it induces a nonconvex loss. On the other
+
+19
+
+0.5500
+
+hand, PieAPP [42] is not optimizable and cannot reconstruct
+
+20
+
+0.5000
+
+the final results. In contrast, with different initial images,
+
+21
+
+0.4500
+
+DeepWSD, DeepJSD, and DeepSKLD all nicely reconstruct
+
+0.4065 0.3781
+0.3992 0.4274
+0.4020 0.3732
+0.3935 0.4204
+0.4038 0.4245 0.4323 0.4431
+
+22
+
+0.4000
+
+highly perceptual quality results, which indicates that they
+
+23
+
+can serve as optimizable perceptual losses with perceptual
+
+0.3500
+24
+
+quality isolines. We argue that this is because WSD [18],
+
+25
+
+0.3000 DeepWSD DeepWSD DeepWSD DeepWSD DeepJSD DeepJSD DeepJSD DeepJSD DeepSKLD DeepSKLD DeepSKLD DeepSKLD
+
+JSD [19] and SKLD [20] are all well-defined convex measures
+
+26
+
+w/VGG16 w/Squeeze w/AlexNet
+
+w/VGG16 w/Squeeze w/AlexNet
+
+w/VGG16 w/Squeeze w/AlexNet so they can naturally address the optimization task.
+
+27
+
+Fig. 10. The influence of the network structure on the PIPAL dataset.
+
+5.4 Ablation study and parameter sensitivity analysis
+
+28
+
+29
+
+Influence of the patch size. We present the influence of the
+
+30
+
+sides of the heatmap diagonal at the corresponding location. patch size on three IQA datasets, the TID2013 [44], KADID-
+
+31
+
+We find that some FR-IQA measures are not as good as we 10K [4] and PIPAL [49] datasets, in Table 4. Different patch
+
+32
+
+expected, even though they have quite high PLCC, SRCC, sizes have different influences on the three measures for
+
+33 34 35 36 37 38 39
+
+and KRCC scores. For example, the FSIM [26] has high SRCCs for the TID2013 [44] and KADID-10k [4] datasets, but many image pairs are not properly evaluated. In contrast, PieAPP [42] does not perform well in terms of the PLCC, SRCC, and KRCC scores obtained on these datasets, but we can hardly find image pairs to fool it, and the performance of PieAPP is even better than the performance of DeepWSD, DeepJSD, and DeepSKLD.
+
+the TID2013 [44] and KADID-10k [4] datasets. Specifically, DeepWSD can achieve better accuracy for the TID2013 [44] dataset with a small patch size, while for the KADID-10k [4] dataset, a larger patch size leads to better accuracy. Such phenomena also exist in DeepJSD, but the influence of the patch size is the opposite of that experienced by DeepWSD. In contrast, all three measures can achieve better results on the PIPAL [49] datasets with larger patch sizes.
+
+40
+
+The MDC experiment [21] reflects whether the quality We argue that this is because the distortion types of the
+
+41
+
+isoline of the proposed FR-IQA measures is perceptual, three datasets are quite different. Specifically, the TID2013
+
+42
+
+which is very important for perceptual optimization. In [44] and KADID-10k [4] datasets contain distortion types
+
+43
+
+many image reconstruction tasks, we always reconstruct such as Gaussian white noise, which can be better detected
+
+44
+
+images with poor perceptual quality into those with better with a small receptive field. However, PIPAL contains dis-
+
+45
+
+perceptual quality; thus, a perceptual quality isoline is one tortions generated by many image reconstruction or image
+
+46
+
+of the determining factors that control the visual satisfaction generation algorithms, which must be detected with a larger
+
+47
+
+of the final results. The MDC results show that MAD [43], receptive field. Considering the overall performance of the
+
+48
+
+PieAPP [42] and the three proposed deep distribution mea- three measures, we finally set the default patch size to 8×8,
+
+49
+
+sures have more perceptual quality isolines. However, when which is a compromise.
+
+50
+
+we apply them in a toy optimization example, we find
+
+Influence of the adaptive weight g(s). The adaptive
+
+51
+
+that the optimization process of MAD [43] suffers from weight is necessary for the quality assessment task. To
+
+52
+
+nonconvex issues and that PieAPP [42] is not optimizable, demonstrate this, we compare the performances of Deep-
+
+53
+
+as shown in Fig. 8. The toy example is defined as follows: WSD, DeepJSD, and DeepSKLD without g(s) on three IQA
+
+54
+
+datasets and present the results in Table 4. Without g(s), the
+
+55 56 57 58 59
+
+xˆ = arg min D(x, y),
+
+(18)
+
+x
+
+where y is a given reference image and x is a distorted image. The FR-IQA measure D(x, y) should reconstruct x to y with high perceptual quality, whose result is denoted as
+
+performances of the three IQA measures deteriorate, which further demonstrates that the pursuit of pixel correlation fidelity is more important when comparing deep features.
+Influence of the network structure. We test other deep networks to demonstrate the generality of the proposed
+
+60
+
+Page 13 of 19
+
+*****For Peer Review Only*****
+
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+13
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+17
+
+Fig. 11. Superresolution results obtained for a natural image.
+
+18
+
+19
+
+20
+
+TABLE 5
+
+21
+
+Comparison among several FR-IQA methods as loss functions in the superresolution task. The bold numbers are
+
+22
+
+the three highest scores in each column. HyperIQA↑ means
+
+23
+
+that the higher the value is, the better the perceptual quality.
+
+24
+
+25
+
+HyperIQA↑ Set5 [59] Set14 [59] Manga109 [60]
+
+26
+
+Bicubic
+
+35.7844 35.4403
+
+41.4170
+
+27
+
+L1
+
+42.5367 49.7005
+
+67.3087
+
+28
+
+LPIPS
+
+40.2194 46.6953
+
+64.6380
+
+29 30
+
+DISTS DeepWSD DeepJSD
+
+44.4219 46.6713 42.5074
+
+50.7813 54.7660 51.4235
+
+64.7674 67.2606 67.9386
+
+31
+
+DeepSKLD 45.3492 54.0678
+
+68.1223
+
+32
+
+33
+
+Fig. 12. Superresolution results obtained for the comic image.
+
+34
+
+the network structure as a deep residual channel attention
+
+35 36 37 38 39
+
+distribution measures in terms of comparing deep features. Specifically, three widely used network structures, SqueezeNet [55], AlexNet [56] and VGG16 [5], are employed, and the results are shown in Fig. 9 and Fig. 10. These networks also generate satisfactory quality assessment re-
+
+network (RCAN) [57]. Beyond using DeepWSD, DeepJSD, and DeepSKLD to train the network, we also use the L1 loss, DISTS, and LPIPS for training. We train the RCAN [57] with the DIVerse-2K (DIV2K) dataset [58] for 10 epochs by using the adaptive moment estimation (Adam) optimizer.
+
+40
+
+sults, but the VGG19 network can achieve the best results, The maximum number of iterations for each epoch is set to
+
+41
+
+so we choose it as the backbone of DeepWSD, DeepJSD, and 20k, and the training process is conducted on image patches
+
+42
+
+DeepSKLD.
+
+that are randomly scratched from the original image with a
+
+43
+
+size of 192×192. The batch size is set to 16, and the upscaling
+
+44
+
+45
+
+6 APPLICATIONS
+
+factor is 4. We first use bicubic interpolation to downsample the image patches for training. The other settings are the
+
+46
+
+The proposed FR-IQA measures can be applied as percep- same as the settings in the RCAN [57]. The reconstruction
+
+47
+
+tual losses in several image reconstruction tasks. Herein, we results are shown in Fig. 11. An obvious characteristic of
+
+48
+
+show two applications in the image superresolution task DeepWSD, DeepSKLD, and DeepJSD is that they can retain
+
+49
+
+and the image denoising task.
+
+sharp edges and fine textures. For example, the three pro-
+
+50
+
+posed methods all retain the unsmooth texture of elephant
+
+51
+
+6.1 Image superresolution
+
+52
+
+noses without introducing artefacts. However, LPIPS and the L1 loss fail to retain such textures, and LPIPS even
+
+53
+
+The image superresolution task aims at reconstructing a introduces noise to the results. Moreover, DISTS can also
+
+54
+
+low-resolution image into its possible superresolution form, generate unsmooth results, but such results are not visually
+
+55
+
+and the result may not be unique. Among all the results, satisfying. Liao et al. [15] also reported that using DISTS
+
+56 57 58 59
+
+we need to search for the most visually satisfactory result. Typically, different network structures and different training loss functions lead to different reconstruction results. Herein, we focus on the effect of the perceptual loss and fix
+
+as the perceptual loss may risk the introduction of wavelike artefacts. For better interpretation, we present another superresolution result for the comic image in Fig. 12, which does not have complex textures and tends to be smooth;
+
+60
+
+*****For Peer Review Only*****
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+Page 14 of 19
+14
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+Fig. 13. Denoising results obtained for the elephant image, which is a natural image. The noisy image is contaminated by additive Gaussian noise
+
+17
+
+with a variance of σ = 10 (with respect to [0,255]).
+
+18
+
+TABLE 6
+
+19
+
+Comparison among several FR-IQA methods as loss
+
+20
+
+functions in the image denoising task. The bold numbers are
+
+21
+
+the three highest scores in each column. HyperIQA↑ means that the higher value is, the better the perceptual quality.
+
+22
+
+23
+
+HyperIQA↑ Set5 [59] Set14 [59] Manga109 [60]
+
+24 25
+
+L1 LPIPS
+
+42.6820 34.4460
+
+52.6146 51.1156
+
+70.3167 67.0823
+
+26
+
+DISTS
+
+43.8713 53.5581
+
+69.6534
+
+27
+
+DeepWSD 48.7731 56.5976
+
+68.7241
+
+28
+
+DeepJSD 45.2379 54.7754
+
+69.2623
+
+Fig. 14. Average images of the same digit obtained using different
+
+29
+
+DeepSKLD 46.1086 54.8391
+
+68.6905
+
+measures.
+
+30
+
+31
+
+32 33 34 35 36 37 38
+
+thus, intentionally generating unsmooth results does not lead to visual satisfaction. In contrast, the three proposed FR-IQA measures still retain sharp edges and some fine textures in the comic image, as magnified in the red zone. Moreover, we also provide a quantitative evaluation of three widely used superresolution datasets: Set5 [59], Set14 [59] and Manga109 [60]. The first two datasets contain natural
+
+contain much texture information that is clear to read, indicating that they have the ability to retain fine texture information during image denoising. In contrast, the result of the L1 loss is rather vague, and the result of LPIPS [12] contains grid-like artefacts. Such grid-like artefacts may come from the pixelwise measure used in the deep feature domain, as artefacts do not occur in the results of other pixel correlation measures. On the other hand, the results
+
+39
+
+images, and the last dataset contains comic images. For a of DISTS [6] also contain satisfactory texture information,
+
+40
+
+fair comparison, the quantitative evaluation index is chosen and we surmise that the key to retaining texture information
+
+41
+
+as an NR-IQA approach, HyperIQA [61], whose value is in is to use the correlation-based measures in the deep feature
+
+42
+
+[0, 100], and the larger the value is, the better. We compute domain. The quantitative evaluation results are presented in
+
+43
+
+the average score for the images in the datasets as the Table 6, among which the three proposed measures always
+
+44
+
+final performance of each model. The results are shown in earn the top three ranks; thus, we empirically conclude that
+
+45
+
+Table 5. On different image datasets, the three proposed FR- the three proposed deep-based distribution measures can
+
+46
+
+IQA measures always earn the top three rankings.
+
+serve as perceptual losses in retaining structure and texture
+
+47
+
+and be applied to different image reconstruction tasks.
+
+48
+
+6.2 Image denoising
+
+49 50
+
+The image denoising task aims at removing noise and recon- 6.3 Key to generating sharp edges and fine textures
+
+51
+
+structing visually satisfactory noise-free images. Herein, we The notable property of DeepWSD, DeepJSD, and Deep-
+
+52
+
+fix the network structure as the fast and flexible denoising SKLD in image reconstruction tasks is that they can main-
+
+53
+
+network (FFDNet) [62] and train it with the L1 loss, DISTS tain sharp structures and fine textures. Herein, we argue that
+
+54
+
+[6], LPIPS [12], and the three proposed measures. For train- the key reason for this lies in the conformal property [63] of
+
+55
+
+ing, we introduce Gaussian noise with a strength of σ = 10 pixel correlation measures. That is, these measures possess
+
+56 57 58 59
+
+(with respect to [0,255]) and set the patch size to 48. All other settings are the same as the initial settings of FFDNet [62], and we present the natural image reconstruction results in Fig. 13. The results of DeepWSD, DeepJSD, and DeepSKLD
+
+the ability to capture the geometric information of several aligned distributions during optimization. We use Fig. 14 to illustrate the main idea. In this figure, we attempt to calculate the average image from digit image samples in the
+
+60
+
+Page 15 of 19
+
+*****For Peer Review Only*****
+
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+15
+
+1
+
+Modified National Institute of Standards and Technology REFERENCES
+
+2
+
+(MNIST) dataset [64], and the results are shown on the right
+
+3
+
+side of the figure. This problem is defined as
+
+4 5
+
+arg min
+I ∗ ∈P
+
+D(I, Si), i = 1...n,
+
+i
+
+[1] S. Gao and X. Zhuang, “Bayesian image super-resolution with
+
+deep modeling of image statistics,” IEEE Transactions on Pattern
+
+(19)
+
+Analysis and Machine Intelligence, 2022.
+
+[2] H. L. Tan, Z. Li, Y. H. Tan, S. Rahardja, and C. Yeo, “A perceptually
+
+6
+
+where I∗ is the optimal average image and the Si are the
+
+relevant mse-based image quality metric,” IEEE Transactions on Image Processing, vol. 22, no. 11, pp. 4447–4459, 2013.
+
+7
+
+image samples. I∗ ∈ P restricts the results to lie in the same [3] C. Ma, Y. Rao, J. Lu, and J. Zhou, “Structure-preserving image
+
+8
+
+image space with the samples. When using the Euclidean
+
+super-resolution,” IEEE Transactions on Pattern Analysis and Ma-
+
+9 10
+
+norm, we can derive that the closed-form solution to Eq. (19) is to average all samples pixel by pixel, which leads to vague
+
+chine Intelligence, 2021. [4] H. Lin, V. Hosu, and D. Saupe, “Kadid-10k: A large-scale artifi-
+cially distorted iqa database,” 2019 Tenth International Conference
+
+11
+
+results. However, with pixel correlation measures such as
+
+on Quality of Multimedia Experience (QoMEX), pp. 1–3, 2019.
+
+12
+
+the SSIM, WSD, JSD, and SKLD, the overall geometric shape [5] K. Simonyan and A. Zisserman, “Very deep convolutional net-
+
+13
+
+of the digit will be maintained; thus, a clear structure is
+
+works for large-scale image refcognition,” arXiv: Computer Vision and Pattern Recognition, vol. abs/1409.1556, 2015.
+
+14
+
+obtained. This property is important in image reconstruction [6] K. Ding, K. Ma, S. Wang, and E. P. Simoncelli, “Image
+
+15
+
+tasks. Specifically, there are several local minima for the
+
+quality assessment: Unifying structure and texture similarity,”
+
+16 17
+
+reconstruction network, and different local minima lead to
+
+IEEE Transactions on Pattern Analysis and Machine Intelligence,
+
+different reconstructed images. The training loss attempts
+
+vol. abs/2004.07728, 2020. [7] Z. Wang and A. C. Bovik, “Modern image quality assessment,”
+
+18
+
+to find the average good reconstructed image and guide the
+
+vol. Synthesis Lectures on Image, Video, and Multimedia Process-
+
+19
+
+training of the weights to this average good reconstruction
+
+ing, pp. 1–156, 2006.
+
+20 21
+
+result [65]. As such, networks trained with the L2 norm will generate vague results, whereas pixel correlation measures
+
+[8] W. Zhang, D. Li, C. Ma, G. Zhai, X. Yang, and K. Ma, “Continual learning for blind image quality assessment,” IEEE Transactions on Pattern Analysis and Machine Intelligence, pp. 1–1, 2022.
+
+22
+
+attempt to preserve geometric information and thus guide [9] Z. Wang and K. Ma, “Active fine-tuning from gmad examples
+
+23 24
+
+a network to reconstruct images with a clear structure and fine textures.
+
+improves blind image quality assessment,” IEEE Transactions on Pattern Analysis and Machine Intelligence, vol. 44, no. 9, pp. 4577– 4590, 2022.
+
+25 26 27
+
+7 CONCLUSION
+We propose a new philosophy for designing deep network-
+
+[10] E. P. Simoncelli and B. A. Olshausen, “Natural image statistics and neural representation,” Annual Review of Neuroscience, vol. 24, no. 1, pp. 1193–1216, 2001.
+[11] Z. Wang, A. Bovik, H. Sheikh, and E. Simoncelli, “Image quality
+
+28
+
+based FR-IQA measures. Specifically, we point out that the
+
+assessment: from error visibility to structural similarity,” IEEE
+
+29 30 31
+
+pursuit of pixel correlation fidelity in deep feature comparisons is highly important and distribution measures are suitable for such comparisons. Then, we introduce three
+
+Transactions on Image Processing, vol. 13, no. 4, pp. 600–612, 2004.
+[12] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, “The unreasonable effectiveness of deep features as a perceptual metric,” 2018 IEEE/CVF Conference on Computer Vision and Pattern
+
+32 33 34 35 36
+
+distribution measures, the WSD, JSD, and SKLD, to estimate the perceptual degradation in the deep features of the VGG19 [5] network, leading to DeepWSD, DeepJSD, and DeepSKLD. DeepWSD, DeepJSD, and DeepSKLD are superior to other measures in that they do not require training but correlate well with the MOS scores of several
+
+Recognition (CVPR), pp. 586–595, jun 2018.
+[13] Y. Cao, Z. Wan, D. Ren, Z. Yan, and W. Zuo, “Incorporating semi-supervised and positive-unlabeled learning for boosting full reference image quality assessment,” IEEE Conference on Computer Vision and Pattern Recognition 2022, vol. abs/2204.08763, 2022.
+[14] K. Ding, Y. Liu, X. Zou, S. Wang, and K. Ma, “Locally adaptive structure and texture similarity for image quality assessment,”
+
+37 38 39
+
+IQA datasets, indicating that they have advanced score prediction abilities and are robust to different distortions. Moreover, an MDC experiment and applications of these
+
+Proceedings of the 29th ACM International Conference on Multimedia, pp. 2483–2491, 2021.
+[15] X. Liao, B. Chen, H. Zhu, S. Wang, M. Zhou, and S. Kwong, “Deepwsd: Projecting degradations in perceptual space to wasser-
+
+40
+
+IQA measures demonstrate that they have perceptual qual-
+
+stein distance in deep feature space,” Proceedings of the 30th ACM
+
+41
+
+ity isolines and can serve as advanced perceptual losses.
+
+International Conference on Multimedia, 2022.
+
+42
+
+Two key reasons support the superiority of these measures.
+
+[16] D. Brunet, E. R. Vrscay, and Z. Wang, “On the mathematical properties of the structural similarity index,” IEEE Transactions on
+
+43
+
+First, the pursuit of pixel correlation fidelity is an effective
+
+Image Processing, vol. 21, no. 4, pp. 1488–1499, 2012.
+
+44
+
+way to approach the pursuit of perceptual information [17] K. Ding, K. Ma, S. Wang, and E. P. Simoncelli, “Comparison of
+
+45 46
+
+fidelity in the HVS. Second, the three distribution measures can capture the degradation of the pixel correlations in deep
+
+full-reference image quality models for optimization of image processing systems,” International Journal of Computer Vision, vol. 129, no. 4, pp. 1258–1281, 2021.
+
+47
+
+features.
+
+[18] D. Johnson and S. Sinanovic, “Monge’s optimal transport distance
+
+48
+
+The limitation of the DeepWSD, DeepJSD, and Deep-
+
+for image classification,” arXiv: Computer Vision and Pattern Recog-
+
+49 50
+
+SKLD approaches is that they are too simple and still in-
+
+nition, 2016.
+
+capable of presenting the highly nonlinear HVS. Moreover,
+
+[19] R. Kumari and D. Sharma, “Generalized ‘useful’ ag and ‘useful’ js-divergence measures and their bounds,” International Journal of
+
+51
+
+the patch comparison strategy may also constrain these dis-
+
+Engineering, Science and Mathematics, vol. 7, no. 1, pp. 441–450,
+
+52 53
+
+tribution measures to capture long-range pixel correlations.
+
+2018.
+
+Nonetheless, the three deep-based distribution measures
+
+[20] M. Snow and J. V. Lent, “Symmetrizing the kullback-leibler distance,” IEEE Transactions on Information Theory, 2001.
+
+54
+
+can incorporate more powerful feature decomposition back- [21] Z. Wang and E. P. Simoncelli, “Maximum differentiation (MAD)
+
+55 56 57 58 59
+
+bones, such as residual networks and transformers, and perform better in score prediction and perceptual optimization. We hope that the pursuit of pixel correlation fidelity theory can also inspire research on extracting and interpreting the meaning of deep network features from a new point of view.
+
+competition: A methodology for comparing computational models of perceptual discriminability,” Journal of Vision, vol. 8, pp. 1–13, Sep 2008.
+[22] Z. Duanmu, W. Liu, Z. Wang, and Z. Wang, “Quantifying visual image quality: A bayesian view,” Annual Review of Vision Science, vol. 7, 01 2021.
+
+60
+
+*****For Peer Review Only*****
+IEEE TRANSACTION ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE
+
+Page 16 of 19
+16
+
+1
+
+[23] S. Fischer, F. Sroubek, L. Perrinet, R. Redondo, and G. Cristobal, [45] H. R. Sheikh, Z. Wang, L. Cormack, and A. C. Bovik, “Live image
+
+2
+
+“Self-invertible 2d log-gabor wavelets,” International Journal of Computer Vision, vol. 75, pp. 231–246, 08 2007.
+
+quality assessment database release 2,” Journal of Biomedical Science and Engineering, June 2010.
+
+3
+
+[24] C. Thillou and B. Gosselin, “Character segmentation-by- [46] A. Ninassi, F. Autrusseau, and P. Le Callet, “Pseudo no reference
+
+4
+
+recognition using log-gabor filters,” International Conference on
+
+image quality metric using perceptual data hiding,” Human Vision
+
+5
+
+Pattern Recognition, vol. 2, pp. 901–904, 01 2006.
+
+and Electronic Imaging, 02 2006.
+
+[25] M. Morrone and D. Burr, “Feature detection in human vision: a [47] Z. Wang, E. Simoncelli, and A. Bovik, “Multi-scale structural
+
+6
+
+phase-dependent energy model.,” Philosophical Transactions of the
+
+similarity for image quality assessment,” Proceedings of the IEEE
+
+7
+
+Royal Society B: Biological Sciences, vol. 235, pp. 221–245, Dec. 1988.
+
+Asilomar Conference Signals, Systems and Computers, 02 2004.
+
+8 9
+
+[26] L. Zhang, L. Zhang, X. Mou, and D. Zhang, “Fsim: A feature similarity index for image quality assessment,” IEEE Transactions on Image Processing, vol. 20, no. 8, pp. 2378–2386, 2011.
+
+[48] M. P. Sampat, Z. Wang, S. Gupta, A. C. Bovik, and M. K. Markey, “Complex wavelet structural similarity: A new image similarity index,” IEEE Transactions on Image Processing, vol. 18, no. 11,
+
+10
+
+[27] H. Sheikh and A. Bovik, “Image information and visual quality,”
+
+pp. 2385–2401, 2009.
+
+11 12 13 14 15 16 17 18
+
+IEEE Transactions on Image Processing, vol. 15, no. 2, pp. 430–444, 2006.
+[28] H. Sheikh, A. Bovik, and G. de Veciana, “An information fidelity criterion for image quality assessment using natural scene statistics,” IEEE Transactions on Image Processing, vol. 14, no. 12, pp. 2117–2128, 2005.
+[29] W. Xue, L. Zhang, X. Mou, and A. C. Bovik, “Gradient magnitude similarity deviation: A highly efficient perceptual image quality index,” IEEE Transactions on Image Processing, vol. 23, no. 2, pp. 684–695, 2014.
+
+[49] J. Gu, H. Cai, H. Chen, X. Ye, J. Ren, and C. Dong, “Pipal: a large-scale image quality assessment dataset for perceptual image restoration,” in European Conference on Computer Vision (ECCV) 2020, pp. 633–651, Springer International Publishing, 2020.
+[50] D. Jayaraman, A. Mittal, A. K. Moorthy, and A. C. Bovik, “Objective quality assessment of multiply distorted images,” 2012 Conference Record of the Forty Sixth Asilomar Conference on Signals, Systems and Computers (ASILOMAR), pp. 1693–1697, 2012.
+[51] D. Amir and Y. Weiss, “Understanding and simplifying perceptual distances,” 2021 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pp. 12221–12230, 2021.
+
+19 20
+
+[30] Z. Wang and E. Simoncelli, “Reduce-reference image quality assessment using a wavelet-domain natural image statistic model,” Proceedings of SPIE - The International Society for Optical Engineering,
+
+[52] J. Johnson, A. Alahi, and L. Fei-Fei, “Perceptual losses for realtime style transfer and super-resolution,” in European Conference on Computer Vision, 2016.
+
+21
+
+vol. 5666, 03 2005.
+
+[53] M. Delbracio, H. Talebei, and P. Milanfar, “Projected distribution
+
+22 23
+
+[31] M. Liu, K. Gu, G. Zhai, P. Le Callet, and W. Zhang, “Perceptual reduced-reference visual quality assessment for contrast alteration,” IEEE Transactions on Broadcasting, vol. 63, no. 1, pp. 71–81,
+
+loss for image enhancement,” (Los Alamitos, CA, USA), pp. 1–12, IEEE Computer Society, may 2021. [54] S. Kolouri, K. Nadjahi, U. Simsekli, R. Badeau, and G. Ro-
+
+24
+
+2017.
+
+hde, “Generalized sliced wasserstein distances,” in Advances in
+
+25 26
+
+[32] K. Gu, W. Lin, G. Zhai, X. Yang, W. Zhang, and C. W. Chen, “No-reference quality metric of contrast-distorted images based on information maximization,” IEEE Transactions on Cybernetics,
+
+Neural Information Processing Systems (H. Wallach, H. Larochelle, A. Beygelzimer, F. d'Alche´-Buc, E. Fox, and R. Garnett, eds.), vol. 32, Curran Associates, Inc., 2019.
+
+27
+
+vol. 47, no. 12, pp. 4559–4565, 2017.
+
+[55] F. Iandola, S. Han, M. Moskewicz, K. Ashraf, W. Dally, and
+
+28 29
+
+[33] K. Gu, D. Tao, J.-F. Qiao, and W. Lin, “Learning a no-reference quality assessment model of enhanced images with big data,” IEEE Transactions on Neural Networks and Learning Systems, vol. 29,
+
+K. Keutzer, “Squeezenet: Alexnet-level accuracy with 50x fewer parameters and ¡0.5mb model size,” International Conference on Learning Representations,(ICIR), Feb. 2017.
+
+30
+
+no. 4, pp. 1301–1313, 2018.
+
+[56] A. Krizhevsky, I. Sutskever, and G. E. Hinton, “Imagenet classifi-
+
+31
+
+[34] Y. Rubner, C. Tomasi, and L. J. Guibas, “The earth mover’s distance
+
+cation with deep convolutional neural networks,” Commun. ACM,
+
+32
+
+as a metric for image retrieval,” International Journal of Computer
+
+vol. 60, p. 84–90, may 2017.
+
+Vision, vol. 40, p. 2000, 2000.
+
+[57] Y. Zhang, K. Li, K. Li, L. Wang, B. Zhong, and Y. Fu, “Image super-
+
+33
+
+[35] W. Yang, L. Xu, X. Chen, F. Zheng, and Y. Liu, “Chi-squared dis-
+
+resolution using very deep residual channel attention networks,”
+
+34
+
+tance metric learning for histogram data,” Mathematical Problems
+
+in 2020 IEEE 15th International Conference on Industrial and Informa-
+
+35
+
+in Engineering, vol. 2015, pp. 1–12, 04 2015.
+
+tion Systems (ICIIS), 2020.
+
+[36] M. Arjovsky, S. Chintala, and L. Bottou, “Wasserstein generative [58] R. Timofte, E. Agustsson, L. Van Gool, M.-H. Yang, L. Zhang,
+
+36
+
+adversarial networks,” the 34th International Conference on Machine
+
+B. Lim, et al., “Ntire 2017 challenge on single image super-
+
+37
+
+Learning - Volume 70, p. 214–223, 2017.
+
+resolution: Methods and results,” in The IEEE Conference on Com-
+
+38 39
+
+[37] V. Ming and L. Holt, “Efficient coding in human auditory perception,” The Journal of the Acoustical Society of America, vol. 126, pp. 1312–20, 10 2009.
+
+puter Vision and Pattern Recognition (CVPR) Workshops, July 2017. [59] M. Bevilacqua, A. Roumy, C. Guillemot, and M.-L. Alberi-Morel,
+“Low-complexity single image super-resolution based on non-
+
+40
+
+[38] K. Friston, J. Kilner, and L. Harrison, “A free energy principle for
+
+negative neighbor embedding,” Electronic Proceedings of the British
+
+41 42 43 44 45 46 47
+
+the brain,” Journal of Physiology-Paris, vol. 100, no. 1-3, pp. 70–87, 2006.
+[39] K. Gu, G. Zhai, X. Yang, and W. Zhang, “Using free energy principle for blind image quality assessment,” IEEE Transactions on Multimedia, vol. 17, no. 1, pp. 50–63, 2014.
+[40] J. Liu, W. Zhou, X. Li, J. Xu, and Z. Chen, “Liqa: Lifelong blind image quality assessment,” IEEE Transactions on Multimedia, pp. 1– 16, 2022.
+[41] C. R. Sims, “Efficient coding explains the universal law of general-
+
+Machine Vision Conference 2012, 09 2012. [60] K. Aizawa, A. Fujimoto, A. Otsubo, T. Ogawa, Y. Matsui, K. Tsub-
+ota, and H. Ikuta, “Building a manga dataset “manga109” with annotations for multimedia applications,” IEEE MultiMedia, vol. 27, no. 2, pp. 8–18, 2020. [61] S. Su, Q. Yan, Y. Zhu, C. Zhang, X. Ge, J. Sun, and Y. Zhang, “Blindly assess image quality in the wild guided by a self-adaptive hyper network,” in 2020 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pp. 3664–3673, 2020. [62] Z. Kai, Z. Wangmeng, and L. Zhang, “Ffdnet: Toward a fast and
+
+48
+
+ization in human perception,” Science, vol. 360, no. 6389, pp. 652–
+
+flexible solution for cnn-based image denoising,” IEEE Transactions
+
+49 50
+
+656, 2018.
+[42] E. Prashnani, H. Cai, Y. Mostofi, and P. Sen, “Pieapp: Perceptual image-error assessment through pairwise preference,” in The IEEE
+
+on Image Processing, vol. 27, no. 9, pp. 4608–4622, 2018. [63] M. Jin, X. Gu, Y. He, and Y. Wang, Conformal Geometry: Compu-
+tational Algorithms and Engineering Applications. Springer Interna-
+
+51
+
+Conference on Computer Vision and Pattern Recognition (CVPR), June
+
+tional Publishing, 2018.
+
+52 53
+
+2018. [43] E. C. Larson and D. M. Chandler, “Most apparent distortion:
+full-reference image quality assessment and the role of strategy,”
+
+[64] Y. LeCun and C. Cortes, “Mnist: large-scale handwritten digit database,” Proceedings of the Institute of Radio Engineers, vol. 86, no. 11, pp. 2278–2323, 1998.
+
+54
+
+Journal of Electronic Imaging, vol. 19, pp. 011006–011006–21, Jan. [65] C. Ledig, L. Theis, F. Husza´r, J. Caballero, A. P. Aitken, A. Tejani,
+
+55 56
+
+2010. [44] N. Ponomarenko, L. Jin, O. Ieremeiev, V. Lukin, K. Egiazarian,
+J. Astola, B. Vozel, K. Chehdi, M. Carli, F. Battisti, and C.-C. Jay
+
+J. Totz, Z. Wang, and W. Shi, “Photo-realistic single image superresolution using a generative adversarial network,” 2017 IEEE Conference on Computer Vision and Pattern Recognition (CVPR),
+
+57
+
+Kuo, “Image database tid2013: Peculiarities, results and perspec-
+
+pp. 105–114, 2017.
+
+58 59
+
+tives,” Signal Processing: Image Communication, vol. 30, pp. 57–77, 2015.
+
+60
+
+Page 17 of 19
+
+*****For Peer Review Only*****
+
+1
+
+1
+
+2 3
+
+Image Quality Assessment: Measuring
+
+4 5
+
+Perceptual Degradation via Distribution
+
+6 7
+
+Measures in a Deep Feature Space
+
+8
+
+9
+
+10
+
+Xingran Liao, Xuekai Wei, Mingliang Zhou, Zhengguo Li, Senior Member, IEEE, and Sam
+
+11
+
+Kwong, Fellow, IEEE
+
+12
+
+13
+
+14
+
+15
+
+✦
+
+16
+
+17
+
+18
+
+19
+
+APPENDIX A
+
+where C1′ = µ2x + µ2y and C2′ = σx2 + σy2.
+
+20 21 22 23
+
+PROOF OF THEOREM 4.1.
+WSD case. We start from the following lemma [1]. Lemma A.1. Let X ∼ Nx(µx, σx2) and Y ∼ Ny(µy, σy2) be
+
+JSD case. Similar to the WSD, we start from a lemma based on KLD comparing the divergence of two Gaussian distributions.
+
+24
+
+one-dimensional Gaussian distributions, where µx, µy and σx, Lemma A.2. Let X ∼ Nx(µx, σx2) and Y ∼ Ny(µy, σy2) be
+
+25
+
+σy are the means and standard deviations of the corresponding one-dimensional Gaussian distributions; then, for KLD,
+
+26
+
+distributions; then,
+
+27
+
+W SD2(X , Y) = (µx − µy)2 + (σx − σy)2,
+
+(1)
+
+28
+
+KLD(X , Y)
+
+=
+
+log
+
+σy σx
+
+−
+
+1 2
+
++
+
+σx2
+
++
+
+(µx − 2σy2
+
+µy)2 .
+
+(9)
+
+29
+
+Such a lemma is a trivial one-dimensional corollary of
+
+30
+
+proposition 7 in [1]; we omit its proof and use it to derive Proof of Lemma A.2. Denote the probability density of X
+
+31 32 33 34 35 36 37 38 39 40 41
+
+our main conclusion.
+
+Proof of Theorem 4.1 for the WSD case. According to Eq. (1),
+
+W
+
+SD2(X
+
+,
+
+Y)
+
+=(µ2x
+
++
+
+µ2y )(1
+
+−
+
+2µxµy µ2x + µ2y
+
+)
+
++
+
+(σx2
+
++
+
+σy2)(1
+
+−
+
+2σxσy σx2 + σy2
+
+),
+
+(2)
+
+For σxσy,
+
+σxσy = (
+
+(X
+
+−
+
+E(X
+
+))2
+
+dP
+
+)
+
+1 2
+
+(
+
+(Y
+
+−
+
+E(Y ))2 dP
+
+1
+)2
+
+(3)
+
+Ω
+
+Ω
+
+pX of
+
+Y(z)pY=(z√) 2=1πσx√2e1πxσpy(e−x(pz−(2−σµx2x()z2−2)σµy2ayn)2d).thAeccporrodbianbgiltiotythdeendseiftiy-
+
+nition of KLD,
+
+KLD(X , Y)
+
+(10)
+
+=
+
+z
+
+pX (z) log
+
+√1 2πσx
+√1 2πσy
+
+exp exp
+
+(− (−
+
+(z −µx )2 2σx2
+(z−µy )2 2σy2
+
+) )
+
+dz
+
+(11)
+
+=
+
+z
+
+pX (z)(log
+
+σy σx
+
+−
+
+(z
+
+− µx)2 2σx2
+
++
+
+(z
+
+− µy 2σy2
+
+)2
+
+)dz.
+
+(12)
+
+42
+
+43
+
+≥ |(X − E(X ))(Y − E(Y))|dP
+Ω
+
+(4) Note that
+
+pX (z)dz = 1,
+
+(13)
+
+44
+
+z
+
+45
+
+≥ (X − E(X ))(Y − E(Y))dP
+
+Ω
+
+46
+
+= σxy,
+
+47
+
+(5) due to the definition of the probability density function and
+
+(6)
+
+pX (z)(z − µx)2dz = σx2,
+
+(14)
+
+48
+
+where the first and the second equations are the definitions
+
+z
+
+49
+
+of the standard deviations and E(X ) is the expectation of due to the definition of the variance. Additionally, the
+
+50
+
+the random variable X . The third equation is the definition following equations are used:
+
+51 52
+
+of the expectation, and the fourth inequality holds because of the Ho¨lder inequality, which takes the form
+
+(z − µy)2 = (z − µx + µx − µy)2
+
+(15)
+
+= (z − µx)2 + 2(z − µx)(µx − µy) + (µx − µy)2. (16)
+
+53 54
+
+|f (z)g(z)|dz ≤ ( f (z)pdz)1/p( g(z)pdz)1/p, (7) and it can be derived that
+
+Ω
+
+Ω
+
+Ω
+
+55 56
+
+where
+
+p, q
+
+≥
+
+1
+
+and
+
+1 p
+
++
+
+1 q
+
+=
+
+1.
+
+By
+
+applying
+
+Eq.
+
+(6)
+
+to
+
+Eq.
+
+(1),
+
+we obtain
+
+1 2σy2
+
+pX (z)(z − µy)2 dz
+z
+
+(17)
+
+57 58 59
+
+W SD2(X , Y) ≤ C1′ (1 −
+
+2µxµy µ2x + µ2y
+
+)
+
++
+
+C2′
+
+(1
+
+−
+
+2σxy σx2 + σy2
+
+),
+
+(8)
+
+=
+
+1 2σy2 (σx
+
++
+
+(µx
+
+−
+
+µy )2 ).
+
+(18)
+
+60
+
+*****For Peer Review Only*****
+
+Page 18 of 19
+
+2
+
+1 2
+
+Applying Eq. (13), Eq. (14) and Eq. (16) to Eq. (12), we can finally obtain the result.
+
+Then, we set C1′′
+
+=
+
+, C σx2 +σy2
+
+′′
+
+4σx2 σy2 (µ2x+µ2y )
+
+2
+
+=
+
+, (σx2 +σy2 )(σx+σy )2
+4σx2 σy2
+
+and C3′′ = log 2 and apply σxy < σxσy; then, we obtain
+
+3
+
+4
+
+Proof of Theorem 4.1 for the JSD case.
+
+5
+
+JSD(X ,
+
+Y)
+
+≤
+
+C1′′(1
+
+−
+
+2µxµy µ2x + µ2y
+
+)
+
++
+
+C2′′(1
+
+−
+
+2σxy σx2 + σy2
+
+)
+
++
+
+C3′′
+
+(31)
+
+6
+
+1
+
+1
+
+7
+
+JSD(X , Y) = KLD(X , M) + KLD(Y, M)
+
+2
+
+2
+
+(19)
+
+8 9
+
+1 =
+2
+
+z
+
+pX
+
+(z)
+
+log
+
+pX
+
+2pX (z) dz (z) + pY (z)
+
+SKLD case. The proof of the SKLD case is the direct conclusion of Lemma A.2
+
+10 11 12 13 14 15 16 17 18 19 20 21 22 23
+
+1 +
+2
+
+z
+
+pY (z)
+
+log
+
+pX
+
+2pY (z) (z) + pY (z)
+
+dz
+
+(20)
+
+1
+
+2
+
+= 2
+
+z pX (z) log 1 + pY (z)/pY (z) dz
+
+1
+
+2
+
++ 2
+
+z
+
+pY (z)
+
+log
+
+pX
+
+(z)/pY (z)
+
++
+
+dz 1
+
+(21)
+
+1 = log 2 −
+2
+
+z
+
+pX (z)
+
+log
+
+(1
+
++
+
+pY (z) )dz pX (z)
+
+1 −
+2
+
+z
+
+pY (z)
+
+log
+
+(1
+
++
+
+pX (z) )dz pY (z)
+
+(22)
+
+1 ≤ log 2 −
+2
+
+[pX
+z
+
+(z)
+
+log
+
+pY (z) pX (z)
+
++
+
+pY (z)
+
+log
+
+pX (z) pY (z)
+
+]dz
+
+(23)
+
+Proof of Theorem 4.1 for the SKLD case.
+
+1
+
+1
+
+SKLD(X , Y) = KLD(X , Y) + KLD(Y, X )
+
+2
+
+2
+
+(32)
+
+=
+
+−1
+
++
+
+σx2
+
++
+
+(µx − 2σy2
+
+µy )2
+
++
+
+σy2
+
++
+
+(µx − 2σx2
+
+µy )2
+
+(33)
+
+=
+
+−1
+
++
+
+σx4
+
++
+
+(σx2
+
++
+
+σy2)(µx 2σx2 σy2
+
+−
+
+µy )2
+
++
+
+σy4
+
+(34)
+
+=
+
+(σx2 − σy2)2 2σx2 σy2
+
++
+
+(σx2
+
++ σy2)(µx − µy)2 2σx2 σy2
+
+(35)
+
+=
+
+1 2σx2σy2 [(σx
+
++ σy)2(σx
+
+−
+
+σy )2
+
++
+
+(σx2
+
++ σy2)(µx
+
+− µy)2]
+
+(36)
+
+24 25 26 27 28
+
+1 = log 2 −
+2
+
+z
+
+pX (z)[log
+
+σy σx
+
+−
+
+(z
+
+− µy)2 2σy2
+
++
+
+(z
+
+− µx 2σx2
+
+)2
+
+]dz
+
+1 −
+2
+
+z
+
+pY (z)[log
+
+σx σy
+
+−
+
+(z
+
+− µx)2 2σx2
+
++
+
+(z
+
+− µy 2σy2
+
+)2
+
+]dz
+
+=
+
+σx2 + σy2 2σx2 σy2
+
+[(σx
+
+−
+
+σy )2
+
++
+
+(µx
+
+− µy)2] +
+
+(σx − σy)2 σxσy
+
+(37)
+
+=
+
+(σx2 + σy2)2 2σx2 σy2
+
+(1
+
+−
+
+2σxσy σx2 + σy2
+
+)
+
+29
+
+(24)
+
+30 31
+
+11 = log 2 − +
+22
+
+(z [pX (z)
+z
+
+− µy)2 2σy2
+
+(z + pY (z)
+
+− µx)2 2σx2
+
+]dz
+
++
+
+(σx2
+
++
+
+σy2)(µ2x 2σx2 σy2
+
++
+
+µ2y) (1
+
+−
+
+2µxµy µ2x + µ2y
+
+)
+
++
+
+(σx − σy)2 σxσy
+
+(38)
+
+32 33 34 35 36 37 38
+
+(25)
+
+11 = log 2 − +
+22
+
+z
+
+pX (z)z2
+
+−
+
+2µypX (z)z 2σy2
+
++
+
+µ2ypX (z) dz
+
+1 +
+2
+
+z
+
+pY (z)z2
+
+−
+
+2µxpY (z)z 2σy2
+
++
+
+µ2xpY (z) dz
+
+(26)
+
+Let C1′′′
+
+=
+
+C , (σx2 +σy2 )2
+2σx2 σy2
+
+′′′ 2
+
+=
+
+, (σx2 +σy2 )(µ2x+µ2y )
+2σx2 σy2
+
+and
+
+C3′′′
+
+=
+
+(σx −σy σx σy
+
+)2
+
+,
+
+and
+
+use
+
+σxy
+
+≤
+
+σx σy ;
+
+then,
+
+we
+
+obtain
+
+the
+
+upper
+
+bound:
+
+S K LD(X
+
+,
+
+Y)
+
+≤
+
+C1′′′ (1 −
+
+2σxσy σx2 + σy2
+
+) + C2′′′ (1 −
+
+2µxµy µ2x + µ2y
+
+) + C3′′′
+
+39 40
+
+1 = log 2 −
+2
+
+(39)
+
+41 42 43
+
++
+
+1 ( σx2 2
+
++ µ2x
+
+− 2µxµy 2σy2
+
++
+
+µ2y
+
++
+
+σy2
+
++
+
+µ2y
+
+− 2µxµy 2σx2
+
++ µ2x )
+
+(27)
+
+The upper bounds of the WSD, JSD, and SKLD take very similar forms as SSIM variants [2], which are complete metrics that lie in [0,2]. We denote it as SSIMadd, and its
+
+44 45 46
+
+=
+
+log 2
+
+−
+
+1 2
+
++
+
+σx2
+
++
+
+(µx − 4σy2
+
+µy )2
+
++
+
+σy2
+
++
+
+(µx − 4σx2
+
+µy )2
+
+(28)
+
+definition is
+
+SSIMadd(X , Y)
+
+=
+
+2
+
+−
+
+2µxµy + ϵ1 µ2x + µ2y + ϵ1
+
+−
+
+2σxy + ϵ2 σx2 + σy2 + ϵ2
+
+(40)
+
+47
+
+48 49
+
+where in Eq. (28), we use the definitions of variance z pY (z)z2 = σy2 +µ2y and z pX (z)z2 = σx2 +µ2x. Then, using
+
+≤
+
+2−
+
+2µxµy µ2x + µ2y
+
+−
+
+2σxy σx2 + σy2
+
+(41)
+
+50 51
+
+a similar trick in providing the WSD case, we can obtain the upper bound of the JSD case as
+
+where
+
+the
+
+inequality
+
+holds
+
+because
+
+a b
+
+≤
+
+a+c b+c
+
+and
+
+in
+
+DISTS [3], Ding et al. used such an SSIM variant to compare
+
+52 53 54
+
+JSD(X ,
+
+Y)
+
+≤
+
+log
+
+2
+
+−
+
+1 2
+
++
+
+σx4
+
++
+
+σy4
+
++
+
+(σx2 + σy2)(µx 4σx2 σy2
+
+−
+
+µy )2
+
+the deep network features and obtained good results. Herein, the purpose of the theorem and our proof is not
+to show the equivalence of the WSD, JSD, and SKLD to the
+
+55
+
+(29) SSIM variant. We focus on revealing the comparison philos-
+
+56 57 58 59
+
+=
+
+log
+
+2
+
++
+
+(σx2
+
+−
+
+σy2)2
+
++
+
+(σx2 + σy2)(µx 4σx2 σy2
+
+−
+
+µy )2
+
+(30)
+
+ophy of these measures, that is, comparing the difference in the pixel correlation among a group of pixels, such as comparing the mean and variance. The Gaussian hypothesis forms a bridge to better comprehend such a philosophy, and
+
+60
+
+Page 19 of 19
+
+*****For Peer Review Only*****
+
+3
+
+1
+
+the core idea is that we want to capture, comprehend, and
+
+2
+
+compare the correlation in the deep network features; even
+
+3
+
+if we cannot understand it intuitively, we should not ignore
+
+4
+
+the existing correlation.
+
+5
+
+6
+
+REFERENCES
+
+7
+
+[1] C. R. Givens and R. M. Shortt, “A class of Wasserstein metrics for
+
+8
+
+probability distributions.,” Michigan Mathematical Journal, vol. 31,
+
+9
+
+no. 2, pp. 231 – 240, 1984.
+
+10
+
+[2] D. Brunet, E. R. Vrscay, and Z. Wang, “On the mathematical properties of the structural similarity index,” IEEE Transactions on
+
+11
+
+Image Processing, vol. 21, no. 4, pp. 1488–1499, 2012.
+
+12
+
+[3] K. Ding, K. Ma, S. Wang, and E. P. Simoncelli, “Image quality assess-
+
+13
+
+ment: Unifying structure and texture similarity,” IEEE Transactions on Pattern Analysis and Machine Intelligence, vol. abs/2004.07728,
+
+14
+
+2020.
+
+15
+
+16
+
+17
+
+18
+
+19
+
+20
+
+21
+
+22
+
+23
+
+24
+
+25
+
+26
+
+27
+
+28
+
+29
+
+30
+
+31
+
+32
+
+33
+
+34
+
+35
+
+36
+
+37
+
+38
+
+39
+
+40
+
+41
+
+42
+
+43
+
+44
+
+45
+
+46
+
+47
+
+48
+
+49
+
+50
+
+51
+
+52
+
+53
+
+54
+
+55
+
+56
+
+57
+
+58
+
+59
+
+60
+

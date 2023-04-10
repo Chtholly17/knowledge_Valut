@@ -1,0 +1,183 @@
+Frequency-Aware Inverse-Consistent Deep Learning for OCT-Angiogram
+Super-Resolution
+Weiwen Zhang1(B), Dawei Yang2, Carol Y. Cheung2, and Hao Chen1(B)
+1 Department of Computer Science and Engineering, The Hong Kong University of Science and Technology, Hong Kong, China
+wzhangbu@connect.ust.hk 2 Department of Ophthalmology and Visual Sciences, The Chinese University of Hong Kong, Hong Kong, China
+Abstract. Optical Coherence Tomography Angiography (OCTA) is a novel imaging modality that captures the retinal and choroidal microvasculature in a non-invasive way. So far, 3 mm × 3 mm and 6 mm × 6 mm scanning protocols have been the two most widely-used ﬁeld-of-views. Nevertheless, since both are acquired with the same number of Ascans, resolution of 6 mm × 6 mm image is inadequately sampled, compared with 3 mm × 3 mm. Moreover, conventional supervised superresolution methods for OCTA images are trained with pixel-wise registered data, while clinical data is mostly unpaired. This paper proposes an inverse-consistent generative adversarial network (GAN) for archiving 6 mm × 6 mm OCTA images with super-resolution. Our method is designed to be trained with unpaired 3 mm × 3 mm and 6 mm × 6 mm OCTA image datasets. To further enhance the super-resolution performance, we introduce frequency transformations to reﬁne high-frequency information while retaining low-frequency information. Compared with other state-of-the-art methods, our approach outperforms them on various performance metrics.
+Keywords: OCTA · Image Super-Resolution · GAN · Frequency-aware · Inverse-consistency
+1 Introduction
+Optical coherence tomography angiography (OCTA) is a novel imaging technique that can provide depth-resolved angiographic ﬂow images by utilizing motion contrast [13]. It has been used in clinics for the assessment of diﬀerent retinal diseases, such as diabetic retinopathy (DR) [12,21] and age-related macular degeneration (AMD) [14,19], as it provides retinal and choroidal microvasculature visualization and perfusion estimation without the need of dye injection. Typically, 3 mm × 3 mm and 6 mm × 6 mm scanning protocols are two most widelyused ﬁeld-of-views in the clinics. However, since both scans are acquired with the same number of A-scans due to the limited scanning speed of most commercial
+c The Author(s), under exclusive license to Springer Nature Switzerland AG 2022 L. Wang et al. (Eds.): MICCAI 2022, LNCS 13432, pp. 645–655, 2022. https://doi.org/10.1007/978-3-031-16434-7_62
+
+646 W. Zhang et al.
+OCTA devices, it has been a common issue that the under-sampled 6 mm × 6 mm OCTA images are presented with an inadequate resolution. Hereinafter in this paper, 6 mm × 6 mm images are referred as low-resolution (LR) (B, Fig. 1), and 3 mm × 3 mm images are high-resolution (HR) capturing fovea-centered (C) and parafoveal area (D1 ∼ D4). Since above LR and HR have the same image size while the ratio of ﬁeld-of-view is 4:1, LR is upscaled ×2 to have the same size of parafoveal and fovea-center area (A, Fig. 1). Clinical studies have shown that HR images can provide better diagnosis performance for diﬀerent retinal and choroidal diseases [4,26]. However, due to the trade-oﬀ between ﬁeld-of-view and image resolution, only 3 mm × 3 mm images have been largely used. Therefore, the development of 6 mm × 6 mm OCTA image super-resolution is highly demanded in clinical practice. However, the existing super-resolution networks of OCTA images are supervised learning approaches [7,8], which strongly rely on pixel-wise registered images between LR and HR. It leads to challenges in collecting datasets in a largescale way and application of these methods in clinics.
+Unpaired Image Super-Resolution. eliminates the dependence of supervised learning on paired datasets in training process. Generative Adversarial Network (GAN) [9] has been deployed in unsupervised domain transformation in medical images analysis [2,3]. Inspired by Cycle-Consistent GAN (CycleGAN) [29], unsupervised super-resolution approaches were proposed to improve the resolution of the LR image using unpaired datasets [15–17,25,28]. Super-resolution is essentially inferring missing high-frequency information from low-resolution images [6]. Therefore, except for the spatial domain perspective, several approaches also took advantage of frequency domain perspective [15,25]. Existing supervised OCTA image super-resolution algorithms can only be trained on the paired dataset [7,8]. Unpaired OCTA image super-resolution methods can mitigate this limitation, but study on this topic remains to be further explored.
+Fig. 1. Illustration of OCTA imaging on diﬀerent ﬁeld-of-views. Red: Foveacenter area. Blue: Parafoveal area. Dashed box: LR patches. Solid box: HR. A: Upscaled LR image. B: Raw LR image. C: Fovea-center HR image. D1 ∼ D4: Parafoveal HR images.
+
+Frequency-Aware Inverse-Consistent Deep Learning 647 To address above challenges, this paper proposes an inverse-consistent deep learning method that can be trained on unpaired datasets to improve the resolution of the LR OCTA images. To better exploit image super-resolution in the frequency domain, we conduct the feature transformations in both spatial and frequency domains. Finally, by integrating features from above two domains, our approach quantitatively outperforms other methods and achieves satisfactory visual results.
+2 Method
+Our motivation is to enhance the resolution of LR images using the unpaired dataset by exploiting spatial and frequency information. In our work, a restoration GAN is proposed to enhance resolution of LR with unpaired data. To preserve the microvasculature during restoration, a degradation GAN is deployed under the constraint of inverse consistency (see Fig. 2). By utilizing frequency transformation and decomposition, our method ﬂexibly integrates frequency and spatial components to achieve more robust performance.
+2.1 Frequency-Aware Based Restoration and Degradation High-frequency details should be reﬁned in restoration network, denoted as Gres (LR) = LR↑. Then the degradation network reduces the resolution of HR by mainly retaining the low-frequency information, denoted as Gdeg (HR) = HR↓. The input is initially divided into high- and low-frequency components by
+Fig. 2. The overview of our method. FFT followed by HFB and LF decomposes frequency information. Gres and Gdeg process high- and low-frequency components separately. Then, feature maps are concatenated to reconstruct the images.
+
+648 W. Zhang et al.
+
+fast Fourier transformation (FFT), following high- and low-pass Gaussian ﬁlters (see Fig. 2). To maintain the structural integrity of the vessels while focusing on high-frequency information, we employ high-frequency boosting (HFB):
+
+X∗ = (X + fhp (X)) /2
+
+(1)
+
+where X represents the original input, X∗ represents the high-frequency boosted input, fhp(·) represents the high-pass ﬁlter. Meanwhile, the low-frequency features are decomposed from low-pass ﬁlter (LF ). Regarding discriminators, their prediction should also be based on frequency and spatial domains. We employed Haar discrete wavelet transformation (DWT) in horizontal and vertical directions with high- and low-pass ﬁlters [5] (see Fig. 3). Therefore, the DWT decomposition produces four components: one pure low-frequency component, denoted as Low-Low (LL), and three components containing high-frequency, denoted as Low-High (LH), High-Low (HL), and High-High (HH). Because the highfrequency information in HR is stronger than that in LR, discriminator should distinguish real or generated HR regarding high-frequency information and vice versa.
+
+2.2 Inverse-Consistency via CycleGAN
+Restoration and Degradation. Our method aims to construct the restoration (Gres) which is trained on the unpaired dataset. To let Gres maintain the structure of the vessels, a coupled degradation network (Gdeg) and the inverseconsistency loss is deployed. In Gres and Gdeg, high- and low-frequency information are treated in reverse ways. Speciﬁcally, Gres decomposes and boosts high-frequency information from LR using HFB operation and the following information is input into the deep neural network (see Fig. 2). The deep neural network contains eight residual blocks [10]. Meanwhile, a shallow network with only three convolutional layers extracts features from low-frequency components.
+
+Fig. 3. Architecture of discriminators. Discriminators of high- and low-resolution images are denoted as Dhr and Dlr. Two pipelines of discriminator separately process spatial information and frequency components decomposed by DWT. Final discrimination is aggregated in a weighted way.
+
+Frequency-Aware Inverse-Consistent Deep Learning 649
+Then, an upsampling module consisting of three residual blocks fuses high- and low-frequency feature maps to reconstruct HR image. Conversely, Gdeg processes low-frequency components from HR through the deep neural network, while the boosted high-frequency is processed by the shallow network. Then, features are also fused and reconstructed to the LR image through the upsampling module.
+
+Discriminators. The introduction of discriminators, Dhr and Dlr, is to distinguish HR and LR in views of both spatial and frequency domain [25] (see Fig. 3). In the spatial domain, original LR and HR images are directly provided for spatial discriminator. Meanwhile, components decomposed by DWT are provided for frequency discriminators. In Dlr, the pure low-frequency component LL decomposed by DWT is the input of the frequency discriminator of Dlr. Similarly, Dhr distinguishes results with components containing high-frequency, which is the concatenation of (LH, HL, HH). The ﬁnal discrimination is aggregated in a weighted way (α = 0.3) from results of spatial and frequency discriminators.
+
+2.3 Loss Function and Optimization
+
+Adversarial Loss: We adopt the adversarial loss (Ladv) following least-square GAN (LSGAN) [18]. Since our labelling scheme for images is that 1 indicates the real image and 0 represents the generated image, the output of the discriminator ranges from 0 to 1. Ladv computes the mean square error between the discriminating result and the image label.
+
+Ladv (Gres, Dhr, lr, hr) = E Dhr (hr) − 1 2 + E Dhr lr↑ 2
+
+(2)
+
+Ladv (Gdeg, Dlr, lr, hr) = E Dlr (lr) − 1 2 + E Dlr hr↓ 2
+
+(3)
+
+Inverse-Consistency Loss: Inverse consistency loss (Linv) measures L1 norm loss between one lr and the reconstructed image Gdeg(lr↑), and similarly for hr and Gres(hr↓) [29]. Since the generative model simulates the mapping between
+the source and target domains, the inverse consistency prevents the model from
+mapping various inputs to identical output, which is the regularization to the
+mode collapse of the GAN [9].
+
+Linv (Gres, Gdeg) = E Gdeg lr↑ − lr 1 + E Gres hr↓ − hr 1
+
+(4)
+
+Feature Distribution Loss: Feature distribution loss (Lfd) calculates the cross-entropy between features maps from the high-frequency branches of Gres and Gdeg. It enables the feature distributions between two models as identical as possible. φ(·) denotes the feature map (see Eq. 5).
+
+Lfd = −β1 [φ (Gdeg) log (φ (Gres))] − [φ (Gres) log (φ (Gdeg))]
+
+(5)
+
+650 W. Zhang et al.
+
+Identity Loss: Identity loss (Lidt) constrains the model to maintain content in LR (or HR) that is similar to HR (or LR) domain [29]. It calculates the L1 norm loss of an image, lr or hr, and its identical mapping, Gdeg(lr) or Gres(hr). The ideal output should be identical to the original input.
+
+Lidt = E [ Gres (hr) − hr 1] + E Gdeg (lr) − lr 1
+
+(6)
+
+Total Loss: Above terms are combined as our total loss (LT otal) (see Eq. 7). Coeﬃcients are set as β1 = 0.25, β2 = 10, β3 = 2.0, β4 = β5 = 0.5. Then, the optimization objective is a min-max game [9] on LT otal (see Eq. 8). It maximizes the probability of discriminator to distinguish real LR and HR, while minimizing the loss of Gres(lr) and Gdeg(hr).
+LT otal(Gres, Gdeg, Dlr, Dhr) = Lfd + β2Lidt + β3Linv (Gres, Gdeg) + β4Ladv (Gres, Dhr, lr, hr) + β5Ladv (Gdeg, Dlr, hr, lr) (7)
+G∗res, G∗deg = arg min max LT otal(Gres, Gdeg, Dlr, Dhr) (8)
+Gres,Gdeg Dlr ,Dhr
+3 Experiments
+
+3.1 Dataset and Pre-processing
+The dataset was retrospectively collected from the Chinese University of Hong Kong Sight-Threatening Diabetic Retinopathy (CUHK-STDR) study, which was an observational clinical study for studying diabetic retinal disease in subjects with Type 1 or Type 2 Diabetes Mellitus (DM) recruited from CUHK Eye Centre, Hong Kong Eye Hospital [22,23,27]. All participants underwent OCTA using a swept-source optical coherence tomography (DRI OCT Triton; Topcon, Tokyo, Japan). A total of 296 fovea-centered HR (C), 58 parafoveal HR (D1 ∼ D4) and 296 LR images (B) were used to train the model (see Fig. 1). For the testing set, 279 groups of paired HR (C, D1 ∼ D4) and LR (B) images were collected. For each group, ﬁve HR images, including one fovea-center (C) and four parafoveal (D1 ∼ D4), were acquired to generate a whole HR 6 mm × 6 mm montage registered for the original LR 6 mm × 6 mm image [1]. Notably, our model is trained with unpaired dataset but evaluated with paired images after proper registration. For pre-processing of training, images are randomly cropped into 128 × 128 for LR and 256 × 256 for HR ﬁrst. Then we upscale LR to 256 × 256 by bi-cubic interpolation. To prepare pixel-wise aligned dataset for quantitative evaluation, each LR has a paired HR from the same eye of the same patients. To mitigate slight structural changes due to time interval in capturing images, we utilized non-rigid registration to align the paired images.
+
+3.2 Implementation Details
+We implemented our method with Python and PyTorch on a Tesla P100-PCIe with 16 GB memory. To train the inverse-consistenct GAN, we randomly selected
+
+Frequency-Aware Inverse-Consistent Deep Learning 651
+one unaligned group of LR and HR images as input to the network for every iteration. We utilized AdamW as our optimizer. The parameters were initialized following standard normal distribution, and the initial learning rate was set to be 2e-4 for the ﬁrst 30 epochs and then decayed by cosine annealing scheduler to 0.
+
+3.3 Comparison with State-of-the-Art Methods
+Regarding the quantitative evaluation, we utilized Peak Signal-to-Noise Ratio (PSNR) [11], Structural Similarity Index Measure (SSIM) [24] and Normalized Mutual Information (NMI) as our metrics. We compared our method with CycleGAN [29] with ResNet [10] and UNet [20] as backbones, the inner cycle of Cycle-in-Cycle GAN (CinCGAN) that aims to restores degraded LR [28], and UnpairedSR using pseudo pairs [17] in experiments. Since the dataset of CinCGAN required an extra group of clean LR, its outer cycle was not applicable to our work. The comparisons were illustrated in both quantitative and visual results. Our results showed that our method outperformed other methods in all metrics (see Table 1). Higher NMI revealed that more information in highresolution images was recovered. Moreover, our method visually depressed noises in foveal avascular zone (FAZ) as well (see Fig. 4). Furthermore, the evaluation results for the whole area showed that our method achieved better performance not only in the fovea-central area but also in the parafoveal areas (see Table 1). We also visualized the reconstruction results on a whole 6 mm × 6 mm image (see Fig. 5), which indicated the details of vessel structures were well recovered.
+
+Table 1. Quantitative results of diﬀerent methods on the CUHK-STDR of fovea-central area and whole area. ↑ means the higher the better.
+
+Method
+
+Fovea-central area
+
+Whole area
+
+↑ PSNR ↑ SSIM ↑ NMI ↑ PSNR ↑ SSIM ↑ NMI
+
+CycleGAN-UNet [20] 16.803 0.447 1.051 16.920 0.462 1.055
+
+CycleGAN-ResNet [10] 16.821 0.450 1.052 17.039 0.481 1.058
+
+CinCGAN-Inner [28] 17.035 0.473 1.052 16.753 0.462 1.054
+
+UnpairedSR [17]
+
+16.886 0.348 1.048 17.196 0.411 1.056
+
+Ours
+
+17.401 0.484 1.058 17.622 0.499 1.061
+
+Table 2. Ablation study on the CUHK-STDR of fovea-central area and whole area. ↑ means the higher the better.
+
+Method Fovea-central area
+
+Whole area
+
+↑ PSNR ↑ SSIM ↑ NMI ↑ PSNR ↑ SSIM ↑ NMI
+
+Ours
+
+17.401 0.484 1.058 17.622 0.499 1.061
+
+w\o DWT 17.208 0.434 1.055 17.222 0.465 1.058
+
+w\o Lfd 17.116 0.471 w\o HFB 16.294 0.336
+
+1.055 16.838 0.486 1.047 15.638 0.359
+
+1.058 1.044
+
+652 W. Zhang et al.
+Fig. 4. Visual comparison results of diﬀerent methods.
+Fig. 5. Visual results of whole 6 mm × 6 mm OCTA image. A: LR 6 mm × 6 mm OCTA image, B: HR 6 mm × 6 mm OCTA image, C: Our restored whole 3 mm × 3 mm OCTA image.
+We conducted ablation studies by removing Lfd and DWT in discriminator, and replacing HFB with pure high-frequency components. The decrease of quantitative measurements indicated that the above designs in the network were necessary to retain the useful information while depressing noises (see Table 2).
+
+Frequency-Aware Inverse-Consistent Deep Learning 653
+4 Conclusion
+This paper proposes a frequency-aware inverse-consistent GAN to improve the resolution of OCTA images using unpaired dataset. The restoration GAN is coupled with a degradation version under the constraint of inverse-consistency. By employing frequency decomposition, we separate and fuse high- and lowfrequency components to restore HR. We conducted comparison experiments and ablation studies to validate the eﬃcacy of the proposed method. To our best knowledge, this is the ﬁrst study on unpaired OCTA super-resolution by frequency-decomposition and inverse-consistency. It could mitigate the challenges of large-scale paired data collection. In our future work, we plan to introduce regularization on the vessel coherence to further improve the performance.
+Acknowledgments. This work was supported by funding from Center for Aging Science, Hong Kong University of Science and Technology, and Shenzhen Science and Technology Innovation Committee (Project No. SGDX20210823103201011), and Direct Grants from The Chinese University of Hong Kong (Project Code: 4054419 & 4054487).
+References
+1. de Carlo, T.E., Salz, D.A., Waheed, N.K., Baumal, C.R., Duker, J.S., Witkin, A.J.: Visualization of the retinal vasculature using wide-ﬁeld montage optical coherence tomography angiography. Ophthal. Surg. Lasers Imaging Retina 46(6), 611 (2015)
+2. Chen, C., Dou, Q., Chen, H., Qin, J., Heng, P.A.: Synergistic image and feature adaptation: towards cross-modality domain adaptation for medical image segmentation. In: Proceedings of the AAAI Conference on Artiﬁcial Intelligence, vol. 33, pp. 865–872 (2019)
+3. Chen, C., Dou, Q., Chen, H., Qin, J., Heng, P.A.: Unsupervised bidirectional crossmodality adaptation via deeply synergistic image and feature alignment for medical image segmentation. IEEE Trans. Med. Imaging 39(7), 2494–2505 (2020)
+4. Cheung, C.M.G., et al.: Diabetic macular ischaemia-a new therapeutic target? Prog. Retinal Eye Res. 101033 (2021)
+5. Cotter, F.: Uses of Complex Wavelets in Deep Convolutional Neural Networks. Ph.D. thesis, University of Cambridge (2020)
+6. Fritsche, M., Gu, S., Timofte, R.: Frequency separation for real-world superresolution. In: 2019 IEEE/CVF International Conference on Computer Vision Workshop (ICCVW), pp. 3599–3608. IEEE (2019)
+7. Gao, M., Guo, Y., Hormel, T., Sun, J., Hwang, T., Jia, Y.: Reconstruction of highresolution 6×6-mm oct angiograms using deep learning. Biomed. Opt. Exp. 11, 3585–3600 (2020). https://doi.org/10.1364/BOE.394301
+8. Gao, M., et al.: An open-source deep learning network for reconstruction of highresolution oct angiograms of retinal intermediate and deep capillary plexuses. Investigat. Ophthalmol. Vis. Sci. 62, 1032–1032 (2021). https://doi.org/10.1167/ tvst.10.13.13
+9. Goodfellow, I., et al.: Generative adversarial nets. Adv. Neural Inf. Process. Syst. 27 (2014)
+10. He, K., Zhang, X., Ren, S., Sun, J.: Deep residual learning for image recognition. In: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pp. 770–778 (2016)
+
+654 W. Zhang et al.
+11. Hore, A., Ziou, D.: Image quality metrics: Psnr vs. ssim. In: 2010 20th International Conference on Pattern Recognition, pp. 2366–2369. IEEE (2010)
+12. Hwang, T.S., et al.: Optical coherence tomography angiography features of diabetic retinopathy. Retina 35(11), 2371 (2015)
+13. Jia, Y., et al.: Quantitative optical coherence tomography angiography of vascular abnormalities in the living human eye. Proc. Natl. Acad. Sci. 112(18), E2395– E2402 (2015)
+14. Jia, Y., et al.: Quantitative optical coherence tomography angiography of choroidal neovascularization in age-related macular degeneration. Ophthalmology 121(7), 1435–1444 (2014)
+15. Kim, G., et al.: Unsupervised real-world super resolution with cycle generative adversarial network and domain discriminator. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition Workshops, pp. 456–457 (2020)
+16. Lugmayr, A., Danelljan, M., Timofte, R.: Unsupervised learning for real-world super-resolution. In: 2019 IEEE/CVF International Conference on Computer Vision Workshop (ICCVW), pp. 3408–3416. IEEE (2019)
+17. Maeda, S.: Unpaired image super-resolution using pseudo-supervision. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 291–300 (2020)
+18. Mao, X., Li, Q., Xie, H., Lau, R.Y., Wang, Z., Paul Smolley, S.: Least squares generative adversarial networks. In: Proceedings of the IEEE International Conference on Computer Vision, pp. 2794–2802 (2017)
+19. Roisman, L., et al.: Optical coherence tomography angiography of asymptomatic neovascularization in intermediate age-related macular degeneration. Ophthalmology 123(6), 1309–1319 (2016)
+20. Ronneberger, O., Fischer, P., Brox, T.: U-Net: convolutional networks for biomedical image segmentation. In: Navab, N., Hornegger, J., Wells, W.M., Frangi, A.F. (eds.) MICCAI 2015. LNCS, vol. 9351, pp. 234–241. Springer, Cham (2015). https://doi.org/10.1007/978-3-319-24574-4 28
+21. Rosen, R.B., et al.: Earliest evidence of preclinical diabetic retinopathy revealed using optical coherence tomography angiography perfused capillary density. Am. J. Ophthalmol. 203, 103–115 (2019)
+22. Sun, Z.,et al.: Oct angiography metrics predict progression of diabetic retinopathy and development of diabetic macular edema: a prospective study. Ophthalmology 126(12), 1675–1684 (2019)
+23. Tang, F.Y., et al.: Determinants of quantitative optical coherence tomography angiography metrics in patients with diabetes. Sci. Rep. 7(1), 1–10 (2017)
+24. Wang, Z., Bovik, A.C., Sheikh, H.R., Simoncelli, E.P.: Image quality assessment: from error visibility to structural similarity. IEEE Trans. Image Process. 13(4), 600–612 (2004)
+25. Wei, Y., Gu, S., Li, Y., Timofte, R., Jin, L., Song, H.: Unsupervised real-world image super resolution via domain-distance aware training. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 13385– 13394 (2021)
+26. Wong, T.Y., Cheung, C.M.G., Larsen, M., Sharma, S., Sim´o, R.: Diabetic retinopathy. Nat. Rev. Dis. Primers 2(1), 16012 (2016)
+27. Yang, D.W., et al.: Clinically relevant factors associated with a binary outcome of diabetic macular ischaemia: an octa study. Br. J. Ophthalmol. (2022). https://doi. org/10.1136/bjophthalmol-2021-320779
+
+Frequency-Aware Inverse-Consistent Deep Learning 655
+28. Yuan, Y., Liu, S., Zhang, J., Zhang, Y., Dong, C., Lin, L.: Unsupervised image super-resolution using cycle-in-cycle generative adversarial networks. In: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition Workshops, pp. 701–710 (2018)
+29. Zhu, J.Y., Park, T., Isola, P., Efros, A.A.: Unpaired image-to-image translation using cycle-consistent adversarial networks. In: Computer Vision (ICCV), 2017 IEEE International Conference on (2017)
+

@@ -1,0 +1,952 @@
+IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 44, NO. 5, MAY 2022
+
+2567
+
+Image Quality Assessment: Unifying Structure and Texture Similarity
+
+Keyan Ding , Kede Ma , Member, IEEE, Shiqi Wang , Member, IEEE, and Eero P. Simoncelli , Fellow, IEEE
+
+Abstract—Objective measures of image quality generally operate by comparing pixels of a “degraded” image to those of the original. Relative to human observers, these measures are overly sensitive to resampling of texture regions (e.g., replacing one patch of grass with another). Here, we develop the ﬁrst full-reference image quality model with explicit tolerance to texture resampling. Using a convolutional neural network, we construct an injective and differentiable function that transforms images to multi-scale overcomplete representations. We demonstrate empirically that the spatial averages of the feature maps in this representation capture texture appearance, in that they provide a set of sufﬁcient statistical constraints to synthesize a wide variety of texture patterns. We then describe an image quality method that combines correlations of these spatial averages (“texture similarity”) with correlations of the feature maps (“structure similarity”). The parameters of the proposed measure are jointly optimized to match human ratings of image quality, while minimizing the reported distances between subimages cropped from the same texture images. Experiments show that the optimized method explains human perceptual scores, both on conventional image quality databases, as well as on texture databases. The measure also offers competitive performance on related tasks such as texture classiﬁcation and retrieval. Finally, we show that our method is relatively insensitive to geometric transformations (e.g., translation and dilation), without use of any specialized training or data augmentation. Code is available at https://github.com/dingkeyan93/DISTS
+Index Terms—Image quality assessment, structure similarity, texture similarity, perceptual optimization
+Ç
+
+IMAGE quality assessment (IQA) – the quantiﬁcation of human perception of image quality – is a fundamental problem in both human and computational vision, and is of paramount importance in a variety of real-world applications, such as image restoration, compression, and rendering. For more than 50 years, the mean squared error (MSE) was the standard full-reference method for assessing signal ﬁdelity and quality, and it continues to play a fundamental role in the development of signal and image processing algorithms, despite its poor correlation with human perception [1], [2].
+A variety of proposed full-reference IQA methods provide a better account of human perception than MSE [3], [4], [5], [6], [7], [8], and the Structural Similarity (SSIM) index [3] has become a de facto standard in the ﬁeld of image processing. But these methods rely on alignment of the images being compared, and are thus highly sensitive to differences between images of the same texture (e.g., two different cropped regions of the same bed of pebbles). Two samples of the same texture differ substantially in the precise arrangement of their
+ Keyan Ding, Kede Ma, and Shiqi Wang are with the Department of Computer Science, City University of Hong Kong, Kowloon, Hong Kong. E-mail: keyan.ding@my.cityu.edu.hk, {kede.ma, shiqwang}@cityu.edu.hk.
+ Eero P. Simoncelli is with the Flatiron Institute of the Simons Foundation, and the Center for Neural Science and the Courant Institute of Mathematical Sciences, New York University, New York, NY 10003 USA. E-mail: eero.simoncelli@nyu.edu.
+Manuscript received 18 Apr. 2020; revised 10 Nov. 2020; accepted 30 Nov. 2020. Date of publication 18 Dec. 2020; date of current version 1 Apr. 2022. (Corresponding author: Keyan Ding.) Recommended for acceptance by J. Wang. Digital Object Identiﬁer no. 10.1109/TPAMI.2020.3045810
+
+features, while appearing nearly the same to a human observer (see Fig. 1). Since textured surfaces are ubiquitous in photographic images, it is important to develop objective IQA metrics that are consistent with this aspect of perceptual similarity. Such a metric would allow the development of a new generation of image processing solutions - for example, a compression engine that statistically synthesizes texture regions rather than trying to exactly re-create the pixels of the original image [9], [10].
+We present the ﬁrst full-reference IQA method that is insensitive to resampling of visual textures. Our method is constructed by ﬁrst nonlinearly transforming images to a multi-scale overcomplete representation, using a variant of the VGG convolutional neural network (CNN) [14]. We show that the spatial averages of the feature maps provide a compact set of statistical constraints that is sufﬁcient to capture the visual appearance of textures [15]. Speciﬁcally, we use the test originally proposed by Julesz [16], and demonstrate that synthesizing a new image by forcing it to match the channel averages computed from a given texture image results in an image of similar visual appearance. Although the number of statistics in the set is substantially smaller than that of pixels in the image, we ﬁnd that the result holds for a wide variety of textures, regardless of the initialization, thus revealing the robustness of this model to adversarial examples [17].
+After transforming the original and corrupted images, we construct our measure by combining two terms over all feature maps: one that compares the spatial averages (and thus, the texture properties) of the two images, and a second that compares the structural details. The ﬁnal distortion score is computed as a weighted sum of these two terms,
+
+0162-8828 ß 2020 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See ht_tps://www.ieee.org/publications/rights/index.html for more information.
+
+2568
+
+IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 44, NO. 5, MAY 2022
+
+Fig. 1. Existing full-reference IQA models are overly sensitive to point-by-point deviations between images of the same texture. (a) A grass image and (b) the same image, distorted by JPEG compression. (c) Resampling of the same grass as in (a). Popular IQA measures, including PSNR, SSIM [3], FSIM [11], VIF [4], GMSD [12], DeepIQA [13], PieAPP [8], and LPIPS [7], predict that image (b) has a better perceived quality than image (c), which is in disagreement with human rating. In contrast, the proposed DISTS model makes the correct prediction. (Zoom in to improve visibility of details).
+
+with the weights adjusted to match human perception of image quality and invariance to resampled texture patches. The ﬁrst is achieved by comparing the responses of the model with a database of human image quality ratings. The second is achieved by minimizing the distance between pairs of patches sampled from the same texture images. We show that the resulting Deep Image Structure and Texture Similarity (DISTS) index can be transformed into a proper metric in the mathematical sense. Moreover, DISTS correlates well with human quality judgments in several independent datasets, and achieves a high degree of invariance to texture substitution. We also demonstrate competitive performance of DISTS on tasks of texture classiﬁcation and retrieval. Last, we show that DISTS is insensitive to mild local and global geometric distortions [18], [19], which may be imperceptible to the human visual system (HVS).
+1 BACKGROUND
+Pioneering work on perceptual full-reference IQA dated back to the 1970s, when Mannos and Sakrison [20] investigated a class of visual ﬁdelity measures in the context of rate-distortion optimization. A number of alternative models were subsequently proposed [21], [22], each mimicking certain functionalities of the HVS and penalizing the errors between the reference and distorted images “perceptually”. However, the HVS is a complex and highly nonlinear system [23], and most IQA measures within the error visibility framework rely on strong assumptions and simpliﬁcations (e.g., linear or quasi-linear models for early vision characterized by restricted visual stimuli), and exhibit shortcomings regarding the deﬁnition of visual quality, quantiﬁcation of suprathreshold distortions, and generalization to natural images [24]. The SSIM index [3] introduced the concept of comparing structure similarity (instead of measuring error visibility), opening the door to a new class of full-reference IQA measures [11], [12], [18], [25]. Other design methodologies for knowledge-driven IQA include informationtheoretic criterion [4] and perception-based pooling [26]. Recently, there has been a surge of interest in leveraging advances in large-scale optimization to develop data-driven IQA measures [7], [8], [13], [19]. However, databases of human quality scores are often insufﬁciently rich to constrain the large number of model parameters. As a result, these learned methods are at risk of over-ﬁtting [27].
+
+Nearly all knowledge-driven full-reference IQA models base their quality measurements on point-by-point comparisons between pixels or convolution responses (e.g., wavelets). As such, they are not capable of handling “visual textures”, which are loosely deﬁned as spatially homogeneous regions with repeated elements, often subject to some randomization in their location, size, color, and orientation [15]. Different images of the same texture can look nearly the same to the human eye, while differing substantially at the level of pixel intensities. Research on visual texture has a long history, and can be partitioned into four problems: texture classiﬁcation, texture segmentation, texture synthesis, and shape from texture. At the core of texture analysis is an efﬁcient description (i.e., representation) that matches human perception of visual textures. In this paper, we aim to measure perceptual texture similarity, a goal ﬁrst elucidated and explored in [28], [29].
+The response amplitudes and variances of computational texture features (e.g., Gabor basis functions [30], local binary patterns [31]) have achieved good performance for texture classiﬁcation, but are not well correlated with human perceptual ratings of texture similarity [28], [29]. Texture representations that incorporate more sophisticated statistical features, such as correlations of complex wavelet coefﬁcients [15], have shown signiﬁcantly more power for texture synthesis, suggesting that they may provide a good substrate for similarity measures. In recent years, the use of such statistics extracted from CNN-based representations [32], [33], [34] has led to even richer texture description.
+2 THE DISTS INDEX
+Our goal is to develop a new full-reference IQA model that combines sensitivity to structural distortions (e.g., artifacts due to noise, blur, or compression) with a tolerance of texture resampling (exchanging the content of a texture region with a new sample of the same texture). As is common in many IQA methods, we ﬁrst transform the reference and distorted images to a new representation, using a CNN. Within this representation, we develop a set of measurements that are sufﬁcient to capture the appearance of a variety of different visual textures. Finally, we combine these texture parameters with global structural measurements to form an IQA measure.
+
+DING ET AL.: IMAGE QUALITY ASSESSMENT: UNIFYING STRUCTURE AND TEXTURE SIMILARITY
+
+2569
+
+2.1 Initial Transformation
+
+Our model is built on an initial transformation, f : Rn 7! Rr,
+
+that maps the reference and distorted images (x and y,
+
+respectively) to “perceptual” representations (x~ and y~,
+
+respectively). The primary motivation is that perceptual dis-
+
+tances are non-uniform in the pixel space [35], [36], and this
+
+is the main reason that MSE is inadequate as a perceptual
+
+IQA model. The purpose of function f is to transform the
+
+pixel representation to a space that is more perceptually
+
+uniform. Previous IQA methods have used ﬁlter banks to
+
+capture the frequency-dependence of error visibility [5],
+
+[21]. Others have used transformations that mimic the early
+
+visual system [22], [37], [38], [39]. More recently, deep
+
+CNNs have shown surprising power in representing per-
+
+ceptual image distortions [7], [8], [13]. In particular, Zhang
+
+et al. [7] have demonstrated that pre-trained deep features
+
+from VGG can be used as a substrate for quantifying per-
+
+ceptual quality.
+
+As such, we also chose to base our model on the VGG16
+
+CNN [14], pre-trained for object recognition [40] on the
+
+ImageNet database [41]. The VGG transformation is con-
+
+structed by a feedforward cascade of layers, each including
+
+spatial convolution, halfwave rectiﬁcation, and downsam-
+
+pling. All operations are continuous and differentiable, both
+
+advantageous for an IQA method that is to be used in opti-
+
+mizing image processing systems. We modiﬁed the VGG
+
+architecture to achieve two additional desired properties.
+
+First, in order to provide a good substrate for the invarian-
+
+ces needed for texture resampling, we wanted the initial
+
+transformation to be aliasing-free. The “max pooling” opera-
+
+tion of the original VGG architecture has been shown to
+
+introduce visible aliasing artifacts when used to interpolate
+
+between images with geodesic sequences [42]. To avoid ali-
+
+asing when subsampling by a factor of two, the Nyquist the-
+
+orem requires blurring with a ﬁlter whose cutoff frequency
+
+is
+
+below
+
+p 2
+
+radians/sample
+
+[43].
+
+Following
+
+this
+
+principle,
+
+we
+
+replaced all max pooling layers in VGG with weighted ‘2
+
+pooling [42]
+
+pﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+
+P ðxÞ ¼ g Ã ðx  xÞ;
+
+(1)
+
+where  denotes pointwise product, and the blurring kernel gðÁÞ was implemented by a Hanning window that approximately enforces the Nyquist criterion with a stride of 2. As additional motivation, we note that ‘2 pooling has been used to describe the behavior of complex cells in primary visual cortex [44], and is also closely related to the complex modulus used in the scattering transform [45].
+A second desired property for our transformation is that it should be injective: distinct inputs should map to distinct outputs. This is necessary to ensure that the ﬁnal quality measure is a proper metric (in the mathematical sense) - if the representation of an image is non-unique, then equality of the output representations will not imply equality of the input images. This property has proven useful in perceptual optimization, although it is not present in many recent methods. For example, the mapping function in GMSD [12] extracts image gradients, discarding local luminance information that is essential to human perception of image quality. Similarly, GTI-CNN [19], makes deliberate use of a surjective transformation, in an attempt to achieve invariance to mild geometric
+
+transformations, but throws away a substantial amount of structural information that is perceptually important.
+Considerable effort has been made in developing invertible CNN-based transformations in the context of density modeling [46], [47], [48], [49]. These methods place strict constraints on either network architectures [46], [48] or network parameters [49], which limit the expressiveness in learning quality-relevant representations. Ma et al. [50] proved that under Gaussian-distributed random weights and ReLU nonlinearity, a two-layer CNN is injective provided that it is sufﬁciently expansive (i.e., the output dimension of each layer should increase by at least a logarithmic factor). Although mathematically appealing, this result does not constrain parameter settings of CNNs of more than two layers. In addition, a Gaussian-weighted CNN is less likely to be perceptually relevant [19], [32].
+Like most CNNs, VGG discards information at each stage of transformation. To ensure an injective mapping, we simply included the input image as an additional feature map (the “zeroth” layer of the network). The representation then consists of the input image x, concatenated with the convolution responses of ﬁve VGG layers (labelled conv1 2, conv2 2, conv3 3, conv4 3, and conv5 3)
+
+fðxÞ ¼ fx~ðjiÞ; i ¼ 0; . . . ; m; j ¼ 1; . . . ; nig;
+
+(2)
+
+where m ¼ 5 denotes the number of convolution layers cho-
+sen to construct f, ni is the number of feature maps in the ith convolution layer, and x~ð0Þ ¼ x. Similarly, we also com-
+puted the representation of the distorted image
+
+fðyÞ ¼ fy~ðjiÞ; i ¼ 0; . . . ; m; j ¼ 1; . . . ; nig:
+
+(3)
+
+We used a na¨ıve task – reference image recovery – to visually demonstrate the necessity of injective feature transformations. Speciﬁcally, given an original image x and an initial image y0, we aim to recover x by numerically optimizing y? ¼ arg miny Dðx; yÞ, where D denotes a full-reference IQA measure with a lower score indicating higher predicted quality, and y? is the recovered image. For example, if D is the MSE, the (trivial) analytical solution is y? ¼ x, indicating full recoverability. For the majority of existing IQA models, which are continuous and differentiable, solutions must be sought numerically, using gradient-based iterative solvers. Fig. 2 shows the recovery results of our method from a JPEGcorrupted copy of the original image and a white Gaussian noise image, respectively, in comparison to three state-ofthe-art models: GTI-CNN [19], GMSD [12], and LPIPS [7]. The ﬁrst two, which are based on surjective mappings, fail dramatically on this simple task when initialized with purely white Gaussian noise. LPIPS, which is built on VGG but with no enforcement of the injective property, recovers most structures and details, but leaves some visible artifacts in the converged image (Fig. 2j). In contrast, DISTS successfully recovers the reference image from any initialization.
+
+2.2 Texture Representation
+The visual appearance of textures is often characterized in terms of sets of local statistics [16] that are presumably measured by the HVS. Models consisting of various sets of features [15], [32], [51], [52] have been tested using synthesis:
+
+2570
+
+IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 44, NO. 5, MAY 2022
+
+Fig. 2. Recovery of a reference image by optimization of IQA measures. Recovery is implemented by solving y? ¼ arg minyDðx; yÞ with gradient descent, where D is an IQA distortion measure and x is a given reference image. (a) Reference image. (b) Corrupted initial image y0, obtained by compressing the reference image using JPEG at a low bitrate. (c)-(f) Images recovered from (b) by optimizing different metrics (as indicated). (g) Cor-
+rupted initial image, obtained by adding white Gaussian noise. (h)-(k) Images recovered from (g) by optimizing indicated metrics. In all cases, the opti-
+mization converges, yielding a distortion score substantially lower than that of the initial.
+
+one generates an image with statistics that match those of a texture photograph. If the set of statistical measurements is a complete description of the appearance of the texture, then the synthesized image should be perceptually indistinguishable from the original [16], at least based on preattentive judgments [53].
+Portilla and Simoncelli [15] found that the local correlations (and other pairwise statistics) of complex wavelet responses were sufﬁcient to capture the visual appearance of a wide variety of textures, while at the same time being of low enough dimensionality ($ 700 dimensions). Gatys et al. [32] used correlations across channels of many layers in a VGG network, and were able to synthesize consistently better textures, albeit with a much larger set of statistics ($ 306K parameters). Since the number of statistics is typically larger than that of pixels in the input image, it is likely that this image was unique in matching these statistics. In this case, diversity in the synthesis results reﬂects local optima of the optimization procedure, rather than the entropy of the implicitly represented probability distribution. Ustyuzhaninov et al. [54] provided more direct evidence of this hypothesis: If the number of the statistical measurements is sufﬁciently large (on the order of millions), a singlelayer CNN with random ﬁlters can always produce textures that are visually indiscernible to the human eye. Subsequent results suggest that a reduced set of statistics, containing only the mean and variance of CNN channels, is sufﬁcient for texture classiﬁcation or style transfer [55], [56], [57].
+In our experiments, we found that an even more reduced set, containing only the spatial means of the feature maps (a total of 1,475 statistics), provides an effective parametric model for visual textures. Speciﬁcally, we used this model to synthesize textures [15] by solving
+
+y?
+
+¼
+
+arg min Dðx; yÞ
+y
+
+¼
+
+arg
+
+min
+y
+
+Xmðx~ijÞ
+i;j
+
+À mðy~ijÞ2;
+
+(4)
+
+where x is the target texture image, and y? is the synthesized
+
+texture image, obtained by gradient descent optimization
+
+afrvoemragaesraonfdcohmannineiltsiax~liðjizÞaatinodn.y~ðjmiÞðx,~ijÞreasnpdectmivðy~ijeÞ lyar. eFitgh.e3
+
+spatial shows
+
+the synthesis results of our texture model using statistical
+
+constraints from individual and combined convolution
+
+layers of the pre-trained VGG. Similar to observations in
+
+Gatys et al. [32], we found that measurements from early
+
+layers appear to capture basic intensity and color informa-
+
+tion, and those from later layers summarize the shape and
+
+structure information. When matching statistics up to layer
+
+conv5 3, the synthesized texture appears visually similar to
+
+the reference.
+
+Fig. 4 shows three synthesis results of our 1475-parame-
+
+ter texture model in comparison with the 710-parameter tex-
+
+ture model of Portilla & Simoncelli [15] and the $ 306k-
+
+parameter model of Gatys et al. [32]. As one might expect,
+
+the visual quality of samples synthesized by our model lies
+
+between the other two.
+
+2.3 Perceptual Distance Measure
+Next, we speciﬁed quality measurements based on fðxÞ and fðyÞ. Fig. 5 visualizes some feature maps of the six stages of the reference image “Buildings”. As can been seen, spatial structures are present at all stages, indicating strong statistical dependencies between neighbouring coefﬁcients. Therefore, use of an ‘p-norm, that assumes statistical independence of errors at different locations, is not appropriate. Inspired by the form of SSIM [3], we deﬁned separate quality measurements for the texture (using the global means) and the structure (using the global correlations) of each pair of corresponding feature maps:
+
+lðx~ðjiÞ; y~ðjiÞÞ ¼ mðx~2ijÞmðx2~ijþÞmðy~mijÞ ðy~þijÞc21þc1 ;
+
+(5)
+
+sðx~ðjiÞ; y~ðjiÞÞ ¼ sðx~ijÞ2s2þðx~ijÞy~jsþðy~ijÞc22þc2 ;
+
+(6)
+
+DING ET AL.: IMAGE QUALITY ASSESSMENT: UNIFYING STRUCTURE AND TEXTURE SIMILARITY
+
+2571
+
+Fig. 3. Images synthesized to match the mean values of channels up to a given layer (top) or from individual layers (bottom) of the pre-trained VGG network. (a) Reference texture. (b) Up to conv1 2. (c) Up to conv2 2. (d) Up to conv3 3. (e) Up to conv4 3. (f) Up to conv5 3. (g) Only conv1 2. (h) Only conv2 2. (i) Only conv3 3. (j) Only conv4 3. (k) Only conv5 3.
+
+where
+
+mðx~ijÞ ,
+
+mðy~ijÞ ,
+
+ðsðx~ijÞÞ2,
+
+ðsðy~ijÞÞ2,
+
+and
+
+s
+
+ðiÞ x~j y~j
+
+represent
+
+the
+
+global
+
+amnecaenbseatwndeevnarx~iðjaiÞncaensdoy~fðjix~Þ ,ðjiÞreasnpdecy~tiðjviÞ ,elayn. dTwthoe
+
+global covarismall positive
+
+constants, c1 and c2, are included to avoid numerical insta-
+
+bility when the denominators are close to zero. The normali-
+
+zation mechanisms in Eqs. (5) and (6) serve to equalize the
+
+magnitudes of feature maps at different stages.
+
+Finally, the proposed DISTS model combines the quality
+
+measurements from different convolution layers using a
+
+weighted sum
+
+Dðx;
+
+y;
+
+a;
+
+bÞ
+
+¼
+
+1
+
+À
+
+X m
+
+X ni  aij
+
+lðx~ðjiÞ
+
+;
+
+y~ðjiÞÞ
+
+þ
+
+bijsðx~ðjiÞ;
+
+ y~ðjiÞÞ ;
+
+i¼0 j¼1
+
+(7)
+
+P whmi¼e0rePfnj¼ai 1ijð;abijijþg
+
+are bijÞ
+
+positive learnable ¼ 1. Note that the
+
+weights, satisfying convolution kernels
+
+are ﬁxed throughout the development of the method. Fig. 6 shows the full computation diagram of our quality assessment system.
+
+Lemma 1. For 8 x~ðjiÞ; y~ðjiÞ 2 Rnþ (as is the case for responses after
+
+ReLU nonlinearity), it can be shown that
+
+pﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+
+dðx; yÞ ¼ Dðx; yÞ;
+
+(8)
+
+is a proper metric, satisfying
+
+ non-negativity: dðx; yÞ ! 0;  symmetry: dðx; yÞ ¼ dðy; xÞ;  triangle inequality: dðx; zÞ dðx; yÞ þ dðy; zÞ;  identity of indiscernibles (i.e., unique minimum):
+dðx; yÞ ¼ 0 , x ¼ y.
+
+Proof. The non-negative and symmetric properties are
+
+immediately apparent. The identity of indiscernibles is
+
+guaranteed due to the injective mapping function and the
+
+use of SSIM-motivated quality measurements. To verify the triangle inequality, we ﬁrst rewrite dðx; yÞ as
+
+dðx; yÞ ¼ v u u tﬃX ﬃmﬃﬃﬃﬃﬃﬃX ﬃﬃnﬃﬃiﬃﬃﬃﬃdﬃﬃ2iﬃjﬃﬃðﬃﬃxﬃﬃﬃ;ﬃﬃyﬃﬃÞﬃ;
+
+(9)
+
+i¼0 j¼1
+
+Fig. 4. Synthesis results for three example texture photographs. (a) Reference textures. (b) Images synthesized using the method of Portilla & Simoncelli [15]. (c) Images synthesized using Gatys et al. [32]. (d) Images synthesized using our texture model (Eq. (4)).
+
+Fig. 5. Selected feature maps from the six layers of the VGG decomposition of the “buildings” image. (a) Zeroth stage (original image). (b) First stage. (c) Second stage. (d) Third stage. (e) Fourth stage. (f) Fifth stage. The feature map intensities are re-scaled for better visibility.
+
+2572
+
+IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 44, NO. 5, MAY 2022
+
+E2ðz; a; bÞ ¼ Dðz1; z2; a; bÞ:
+
+(15)
+
+We selected texture images from the describable textures dataset (DTD) [60], consisting of 5,640 images (47 categories and 120 images for each category). In practice, we randomly sampled two minibatches Q and T from KADID-10k and DTD, respectively, and used a variant of stochastic gradient descent to adjust the parameters fa; bg
+
+1X
+
+1X
+
+EðQ; T ; a; bÞ ¼ jQj x;y2Q E1ðx; y; a; bÞ þ  jT j z2T E2ðz; a; bÞ;
+
+(16)
+
+where  governs the trade-off between the two terms.
+
+Fig. 6. VGG-based perceptual representation for the proposed DISTS model. It contains a total of six stages (including the zeroth stage of raw pixels), and the numbers of feature maps at each stage are 3, 64, 128, 256, 512 and 512, respectively. Global texture and structure similarity measurements are made at each stage, and combined with a weighted summation, giving rise to the ﬁnal model deﬁned in Eq. (7).
+
+where qﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+dijðx; yÞ ¼ aijð1 À lðx~ðjiÞ; y~ðjiÞÞÞ þ bijð1 À sðx~ðjiÞ; y~ðjiÞÞÞ: (10)
+
+Brunet et al. [58] have proved that dijðx; yÞ is a metric for
+
+aij ! 0 and bij ! 0. Then
+
+sﬃX ﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+
+dðx; yÞ
+
+ðdijðx; zÞ þ dijðz; yÞÞ2
+
+(11)
+
+i;j
+
+sﬃX ﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ sﬃX ﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃﬃ
+
+d2ijðx; zÞ þ
+
+d2ijðy; zÞ
+
+(12)
+
+i;j
+
+i;j
+
+¼ dðx; zÞ þ dðz; yÞ;
+
+(13)
+
+where Eq. (12) follows from the Cauchy–Schwarz
+
+inequality.
+
+tu
+
+2.4 Model Training
+The perceptual weights fa; bg in Eq. (7) were jointly optimized for human perception of image quality and texture invariance. Speciﬁcally, for image quality, we minimized the absolute error between model predictions and human ratings
+
+E1ðx; y; a; bÞ ¼ jDðx; y; a; bÞ À qðyÞÞj;
+
+(14)
+
+where qðyÞ denotes the normalized ground-truth quality score of y collected from psychophysical experiments. We chose the large-scale IQA dataset KADID-10k [59] as the training set, which contains 81 reference images, each of which is distorted by 25 distortion types at 5 distortion levels. In addition, we explicitly enforced the model to be invariant to texture substitution in a data-driven fashion. We minimized the distance (measured by Eq. (7)) between two patches ðz1; z2Þ sampled from the same texture image z
+
+2.5 Connections to Other Full-Reference IQA Methods
+The proposed DISTS model has a close relationship to a number of existing IQA methods.
+ SSIM and its variants [3], [25], [63]: The multi-scale extension of SSIM [63] incorporates the variations of viewing conditions in IQA, and calibrates the crossscale parameters via subjective testing on artiﬁcially synthesized images. Our model follows a similar approach, building on a multi-scale hierarchical representation and directly calibrating cross-scale parameters (i.e., a; b) using subject-rated natural images with various distortions. The extension of SSIM into the complex wavelet domain [25] gains invariance to small geometric transformations by measuring relative phase patterns of the wavelet coefﬁcients. As we show in Section 3.5, by optimizing for texture invariance, DISTS inherits insensitivity to mild geometric transformations. It is worth noting that unlike SSIM and its variants, DISTS is based on global spatial statistics, and thus does not provide a spatial map of quality.
+ The adaptive linear system framework [18] decomposes the distortion between two images into a linear combination of components that are adapted to local image structures, separating structural and nonstructural distortions. It generalizes many IQA models, including MSE, space/frequency weighting [20], [65], transform domain masking [22], and the tangent distance [66]. DISTS can be seen as an adaptive nonlinear system, where structure comparison captures structural distortions, and texture comparison measures non-structural distortions, with basis functions adapted to global image content.
+ Style and content separation [55] based on the pretrained VGG network has reignited the ﬁeld of style transfer. Speciﬁcally, the style loss is built upon the correlations between convolution responses at the same stages (i.e., the Gram matrix) while the content loss is deﬁned by the MSE between the two representations. These two components are redundant, and the combined loss does not have the desired property of unique minima we seek.
+ Image restoration losses [67] in the era of deep learning are typically deﬁned as a weighted sum of ‘p-norm
+
+DING ET AL.: IMAGE QUALITY ASSESSMENT: UNIFYING STRUCTURE AND TEXTURE SIMILARITY
+
+2573
+
+TABLE 1 Performance Comparison on Three Standard IQA Databases
+
+Method
+PSNR SSIM [3] MS-SSIM [63] VSI [64] MAD [5] VIF [4] FSIMc [11] NLPD [39] GMSD [12]
+DeepIQA [13] PieAPP [8] LPIPS [7]
+DISTS (ours)
+
+PLCC
+0.865 0.937 0.940 0.948 0.968 0.960 0.961 0.932 0.957
+0.940 0.908 0.934
+0.954
+
+LIVE [61]
+SRCC
+0.873 0.948 0.951 0.952 0.967 0.964 0.965 0.937 0.960
+0.947 0.919 0.932
+0.954
+
+KRCC
+0.680 0.796 0.805 0.806 0.842 0.828 0.836 0.778 0.827
+0.791 0.750 0.765
+0.811
+
+PLCC
+0.819 0.852 0.889 0.928 0.950 0.913 0.919 0.923 0.945
+0.901 0.877 0.896
+0.928
+
+CSIQ [5]
+SRCC
+0.810 0.865 0.906 0.942 0.947 0.911 0.931 0.932 0.950
+0.909 0.892 0.876
+0.929
+
+KRCC
+0.601 0.680 0.730 0.786 0.797 0.743 0.769 0.769 0.804
+0.732 0.715 0.689
+0.767
+
+Larger PLCC, SRCC and KRCC values indicate better performance. CNN-based methods are highlighted in italics.
+
+PLCC
+0.677 0.777 0.830 0.900 0.827 0.771 0.877 0.839 0.855
+0.834 0.859 0.749
+0.855
+
+TID2013 [62]
+SRCC
+0.687 0.727 0.786 0.897 0.781 0.677 0.851 0.800 0.804
+0.831 0.876 0.670
+0.830
+
+KRCC
+0.496 0.545 0.605 0.718 0.604 0.518 0.667 0.625 0.634
+0.631 0.683 0.497
+0.639
+
+distances computed on the raw pixels and several stages of VGG feature maps, where the weights are manually tuned for tasks at hand. Later stages of the VGG representation are often preferred so as to incorporate image semantics into low-level vision, encouraging perceptually meaningful details that are not necessarily aligned with the underlying image. This type of loss does not achieve the level of texture invariance we are looking for.
+3 EXPERIMENTS
+In this section, we present the implementation details of the proposed DISTS. We then compare our method with a wide range of image similarity models in terms of quality prediction, texture similarity, texture classiﬁcation/retrieval, and invariance of geometric transformations.
+3.1 Implementation Details We ﬁxed the ﬁlter kernels of the pre-trained VGG, and learned the perceptual weights fa; bg. The training was carried out by optimizing the objective function in Eq. (16), assuming a value of  ¼ 1, using Adam [68] with a batch size of 32 and an initial learning rate of 1 Â 10À4. After every 1K iterations, we reduced the learning rate by a factor of 2. We trained DISTS for 5K iterations, which takes approximately one hour on an NVIDIA GTX 2080 GPU. To ensure a unique minimum of our model, we projected the weights of the zeroth stage onto the interval ½0:02; 1 after each gradient step. We chose a 5 Â 5 Hanning window to reduce subsampling-induced aliasing in the VGG representation. Both c1 in Eq. (5) and c2 in Eq. (6) were set to 10À6. During training and testing, we followed the suggestions in [3], and rescaled the input images such that the smaller dimension has 256 pixels. The size of texture patches as input to Eq. (15) was 256 Â 256 Â 3, cropped from the same texture images.
+3.2 Performance on Quality Prediction After training on the entire KADID dataset [59], DISTS was tested on the other three standard IQA databases LIVE [61], CSIQ [5] and TID2013 [62]. We used the Pearson linear
+
+correlation coefﬁcient (PLCC), the Spearman rank correlation coefﬁcient (SRCC), and the Kendall rank correlation coefﬁcient (KRCC) as evaluation criteria. Before computing PLCC, we ﬁtted a four-parameter function to allow and compensate for a smooth nonlinear relationship
+
+D^ ¼ ðh1 À h2Þ=ð1 þ expðÀðD À h3Þ=jh4jÞÞ þ h2;
+
+(17)
+
+where fhig4i¼1 are parameters. We compared DISTS against a set of full-reference IQA methods, including nine knowledge-driven models and three data-driven CNN-based models. The implementations of all methods were obtained from the respective authors, except for DeepIQA [13], which was retrained on KADID for fair comparison. As LPIPS [7] has different conﬁgurations, we chose the default one (known as LPIPS-VGG-lin).
+Results, reported in Table 1, demonstrate that DISTS performs favorably in comparison to both classic methods (e.g., PSNR and SSIM [3]) and CNN-based models (e.g., DeepIQA [13] and LPIPS [7]). Overall, the best performances across all three databases and all comparison metrics are obtained with MAD [5], FSIMc [11] and GMSD [12]. It is worth noting that these three databases have been re-used for many years throughout the algorithm design processes, and recent full-reference IQA methods may be unintentionally over-adapting via extensive computational module selection, raising the risk of over-ﬁtting (see Fig. 2). Fig. 7 shows scatter plots of raw model predictions of representative IQA methods versus subjective mean opinion scores (MOSs) on the TID2013 database. From the ﬁtted functions (Eq. (17)), one can observe that DISTS is nearly linear in MOS.
+We also tested DISTS on BAPPS [7], a large-scale and highly-varied patch similarity dataset. BAPPS contains traditional synthetic distortions, such as geometric and photometric manipulation, noise contamination, blurring and compression, CNN-based distortions (e.g., from denoising autoencoders and image restoration tasks), and distortions generated by real-world image processing systems. The human judgments are obtained from a two-alternative forced choice (2AFC) experiment. The evaluation criterion is the 2AFC score [7], which quantiﬁes the proportion of
+
+2574
+
+IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 44, NO. 5, MAY 2022
+
+Fig. 7. Comparison of human mean opinion scores (MOSs) against SSIM, FSIMc, VSI, and DISTS (ours) on the TID2013 database.
+
+human agreement with the IQA model, computed as pp^ þ ð1 À pÞð1 À p^Þ, where p is the percentage of human choices in favor of a given image in each pair, and p^ 2 f0; 1g is the preference of the IQA model. Larger values indicate better agreement between model predictions and human judgments. Results are compiled in Table 2, showing that DISTS (which was not trained on BAPPS, or any similar database) achieves a comparable performance to LPIPS [7] (which was trained on BAPPS). We conclude that DISTS predicts image quality well, and generalizes well to challenging unseen distortions, such as those caused by real-world algorithms.
+3.3 Performance on Texture Similarity
+We also tested the performance of DISTS on texture quality assessment. Since most knowledge-driven full-reference IQA models are not good at measuring texture similarity (see Fig. 1), we only included a subset for reference. To these we added CW-SSIM [25] and three computational models speciﬁcally designed for texture similarity - STSIM [29], NPTSM [69] and IGSTQA [70]. STSIM is available in several conﬁgurations, and we chose local STSIM-2 that is publicly available.1
+We used a synthesized texture quality assessment database SynTEX [71], consisting of 21 reference textures with 105 synthesized versions generated by ﬁve texture synthesis algorithms. Table 3 shows the results of correlation coefﬁcients, where we can see that texture similarity models generally perform better than IQA models. Focusing on texture similarity, IGSTQA [70] achieves a relatively high performance, but is still inferior to DISTS. This indicates that the VGG-based global measurements of DISTS capture the essential features and attributes of visual textures.
+
+To further test the capabilities of DISTS in quantifying texture distortions, we constructed a texture quality database (TQD), based on 10 texture images selected from Pixabay.2 Each texture image was corrupted with seven traditional synthetic distortions: additive white Gaussian noise, Gaussian blur, JPEG compression, JPEG2000 compression, pink noise, chromatic aberration, and image color quantization. For each distortion type, we randomly selected one distortion level from a set of three levels, and applied it to each texture image. We then created four copies of each texture using different texture synthesis algorithms, including two classical ones (a parametric model [15] and a non-parametric model [72]) and two CNN-based algorithms [32], [73]. Last, to produce “high-quality” images, we randomly cropped four subimages from each of the original textures. In total, TQD has 10 Â 15 images. We gathered human data from 10 subjects, who had general knowledge of image processing but were unaware of the detailed purpose of the study. The viewing distance was ﬁxed to enforce a visual resolution 32 pixels per degree of visual angle. Each subject was shown all ten sets of images, one set at a time, starting with the reference image, and was asked to rank the images according to their perceptual similarity to the reference. Rather than simply averaging the human opinions, we used reciprocal rank fusion [74] to obtain the ﬁnal ranking
+
+X K 1
+
+rðxÞ
+
+¼
+
+k¼1
+
+g
+
+þ
+
+; rkðxÞ
+
+(18)
+
+where rkðxÞ is the rank of x given by the kth subject and g is an additive constant that helps to mitigate the impact of
+
+1. https://github.com/andreydung/Steerable-ﬁlter
+
+2. https://pixabay.com/images/search/texture
+
+DING ET AL.: IMAGE QUALITY ASSESSMENT: UNIFYING STRUCTURE AND TEXTURE SIMILARITY
+
+2575
+
+TABLE 2 Performance Comparison of Various IQA Methods on the BAPPS [7] Dataset Using the 2AFC Score,
+Which Quantiﬁes the Agreement With Human Judgments
+
+Method
+
+Synthetic distortions
+
+Distortions by real-world algorithms
+
+All
+
+Traditional CNN-based All Super resolution Video deblurring Colorization Frame interpolation All
+
+Human PSNR SSIM [3] MS-SSIM [63] VSI [64] MAD [5] VIF [4] FSIMc [11] NLPD [39] GMSD [12]
+
+0.808 0.573 0.605 0.585 0.630 0.598 0.556 0.627 0.550 0.609
+
+0.844 0.801 0.806 0.768 0.818 0.770 0.744 0.794 0.764 0.772
+
+0.826 0.687 0.705 0.676 0.724 0.684 0.650 0.710 0.657 0.690
+
+0.734 0.642 0.647 0.638 0.668 0.655 0.651 0.660 0.655 0.677
+
+0.671 0.590 0.589 0.589 0.592 0.593 0.594 0.590 0.584 0.594
+
+0.688 0.624 0.624 0.524 0.597 0.490 0.515 0.573 0.528 0.517
+
+0.686 0.543 0.573 0.572 0.568 0.581 0.597 0.581 0.552 0.575
+
+0.695 0.739 0.614 0.633 0.617 0.640 0.596 0.617 0.622 0.648 0.599 0.621 0.603 0.615 0.615 0.640 0.600 0.615 0.613 0.633
+
+DeepIQA [13] PieAPP [8] LPIPS [7]
+
+0.703
+0.727 0.760
+
+0.794
+0.770 0.828
+
+0.748
+0.746 0.794
+
+0.660
+0.684 0.705
+
+0.582
+0.585 0.605
+
+0.585
+0.594 0.625
+
+0.598
+0.598 0.630
+
+0.615 0.650
+0.627 0.659 0.641 0.692
+
+DISTS (ours) 0.772
+
+0.822 0.797
+
+0.710
+
+0.600
+
+0.627
+
+0.625
+
+0.651 0.689
+
+Values lie in the range [0,1], with a higher value indicating better agreement.
+
+outliers [74]. Table 3 lists the results, where we computed the correlations within each texture pattern and averaged them across textures. We found that nearly all existing models perform poorly on the new database, including those tailored for texture similarity. In contrast, DISTS signiﬁcantly outperforms these methods by a large margin. Fig. 8 shows a set of texture examples, where we noticed that DISTS gives high rankings to resampled images and low rankings to images suffering from visible distortions. This demonstrates that DISTS is in close agreement with human perception of texture quality, and suggests potential uses in other texture analysis problems, such as high-quality texture retrieval.
+
+3.4 Applications to Texture Classiﬁcation and Retrieval
+We also applied DISTS to texture classiﬁcation and retrieval. We used the grayscale and color Brodatz texture databases [75] (denoted by GBT and CBT, respectively), each of which contains 112 different texture images. We resampled nine non-overlapping 256 Â 256 Â 3 patches from each texture pattern. Fig. 9 shows a representative texture image from CBT, partitioned into nine patches.
+
+TABLE 3 Performance Comparison on Two Texture Quality Databases
+
+Method
+
+SynTEX [71]
+
+TQD (proposed)
+
+PLCC SRCC KRCC PLCC SRCC KRCC
+
+SSIM [3] CW-SSIM [25] DeepIQA [13] PieAPP [8] LPIPS [7] STSIM [29] NPTSM [69] IGSTQA [70] DISTS (ours)
+
+0.619 0.532 0.550 0.719 0.674 0.650 0.505 0.816 0.901
+
+0.620 0.497 0.512 0.715 0.663 0.643 0.496 0.820 0.923
+
+0.446 0.335 0.354 0.532 0.478 0.469 0.361 0.621 0.759
+
+0.330 0.344 0.458 0.721 0.402 0.422 0.678 0.804 0.903
+
+0.307 0.325 0.444 0.718 0.392 0.408 0.679 0.802 0.910
+
+0.185 0.238 0.323 0.556 0.301 0.315 0.547 0.651 0.785
+
+Texture similarity models are highlighted in italics.
+
+The texture classiﬁcation problem consists of assigning an unknown sample image to one of the known texture classes. For each texture, we randomly chose ﬁve patches for training, two for validation, and the remaining two for testing. A simple k-nearest neighbors (k-NN) classiﬁcation algorithm was implemented, which allowed us to incorporate and compare different similarity models as distance measures. The predicted label of a test image was determined by a majority vote over its k nearest neighbors in the training set, where the value of k was chosen using the validation set. We implemented a baseline model - the bag-of-words of SIFT features [76] with k-NN. The classiﬁcation accuracy results are listed in Table 4, where we can see that this baseline model beats most image similarity-based k-NN classiﬁers, except LPIPS (on CBT) and DISTS. This shows that our model is effective at discriminating and classifying textures that are visually different to the human eye.
+The content-based texture retrieval problem consists of searching for images from a large database that are visually similar. In our experiment, for each texture, we set three patches as the queries, and aimed to retrieve the remaining six patches. Speciﬁcally, the distances between each query and the remaining images in the dataset were computed and ranked so as to retrieve the images with minimal distances. To evaluate the retrieval performance, we used mean average precision (mAP), which is deﬁned by
+
+!
+
+mAP ¼ 1 XQ 1 X K P ðkÞ Â relðkÞ ; Q q¼1 K k¼1
+
+(19)
+
+where Q is the number of queries, K is the number of similar images in the database, P ðkÞ is the precision at cut-off k in the ranked list, and relðkÞ is an indicator function equal to one if the item at rank k is a similar image and zero otherwise. As seen in Table 4, DISTS achieves the best performance on both CBT and GBT datasets. The classiﬁcation/retrieval errors are primarily due to textures with noticeable inhomogeneities (e.g., middle patch in Fig. 9).
+
+2576
+
+IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 44, NO. 5, MAY 2022
+
+Fig. 8. One set of texture images from TQD, ordered according to their rankings by DISTS. (a) Reference image. (b)-(p) Corrupted images ranked by DISTS from high quality to low quality, respectively.
+
+In addition, the performance on GBT is slightly reduced compared with that on CBT, indicating the importance of color information in these tasks.
+Classiﬁcation and retrieval of texture patches resampled from the same images are relatively easy tasks. We also tested DISTS on a more challenging large-scale texture database, the Amsterdam Library of Textures (ALOT) [77], containing photographs of 250 textured surfaces, from 100 different viewing angles and illumination conditions. Again, we adopted a na¨ıve k-NN method (k ¼ 100) using our model as the measure of distance, and tested it on 20 percent of the samples randomly selected from the database. Without training on ALOT, DISTS achieves a reasonable classiﬁcation accuracy of 0.926, albeit lower than the value of 0.959 achieved by a knowledge-driven method [78] with handcrafted features and support vector machines, and the value of 0.993 achieved by a data-driven CNN-based method [79]. The primary cause of errors when using DISTS in this task is that images from the same textured surface can appear quite
+
+different under different lighting or viewpoint conditions, as seen in the example in Fig. 10. DISTS, which is designed to capture visual appearance only, could likely be improved for this task by ﬁne-tuning the perceptual weights (along with the VGG network parameters) on a small subset of humanlabelled ALOT images.
+3.5 Invariance to Geometric Transformations Apart from texture similarity, most full-reference IQA measures fail dramatically when the original and distorted images are misregistered, either globally or locally. The underlying reason is again reliance on the assumption of pixel alignment. Although pre-registration can alleviate this issue, it comes with substantial computational complexity, and does not work well in the presence of severe distortions [19]. In this subsection, we investigated the degree of invariance of DISTS to geometric transformations that are imperceptible to the visual system.
+
+DING ET AL.: IMAGE QUALITY ASSESSMENT: UNIFYING STRUCTURE AND TEXTURE SIMILARITY
+
+2577
+
+TABLE 4 Classiﬁcation and Retrieval Performance Comparison
+on the Brodatz Texture Dataset [75]
+
+Method
+SSIM [3] CW-SSIM [25] DeepIQA [13] PieAPP [8] LPIPS [7] STSIM [29] NPTSM [69] IGSTQA [70] SIFT [76] DISTS (ours)
+
+Classiﬁcation acc.
+
+CBT
+
+GBT
+
+0.397 -
+0.388 0.173 0.960
+0.924 0.995
+
+0.210 0.424 0.308 0.115 0.861 0.708 0.895 0.862 0.928 0.968
+
+Retrieval mAP
+
+CBT
+
+GBT
+
+0.371 -
+0.389 0.257 0.951
+0.859 0.988
+
+0.145 0.351 0.293 0.153 0.839 0.632 0.837 0.798 0.865 0.951
+
+optimizing for invariance to texture resampling (see also
+
+Fig. 9. Nine non-overlapping patches sampled from an example texture photograph in the Brodatz color texture dataset.
+
+Fig. 11).
+
+As there are no subject-rated IQA databases designed for this speciﬁc purpose, we augmented the LIVE database [61] (LIVE Aug) with geometric transformations. In real-world scenarios, an image should ﬁrst undergo geometric transformations (e.g., camera movement) and then distortions (e.g., JPEG compression). We followed the suggestion in [19], and implemented an equivalent but much simpler approach directly applying the transformations to the original image. Speciﬁcally, we augmented reference images using four geometric transformations: 1) shift by 5 percent pixels in horizontal direction, 2) clockwise rotation by a degree of 3, 3) dilation by a factor of 1.05, and 4) their combination. This yields a set of ð4 þ 1Þ Â 779 reference-distortion pairs in the augmented LIVE database. Since the transformations are modest, the quality scores of distorted images with respect to the modiﬁed reference images are assumed to be the same as with respect to the original reference image.
+The SRCC results of the augmented LIVE database are shown in Table 5. We found that data-driven methods based on CNNs signiﬁcantly outperform traditional ones. Even so, their performance is often made worse by sensitivity to transformations that arises during downsampling without proper Nyquist band limiting. Trained on augmented data by geometric transformations, GTI-CNN [19] achieves desirable invariance at the cost of discarding perceptually important features (see Fig. 2). DISTS is seen to perform extremely well across all distortions and exhibit a high degree of robustness to geometric transformations, which we believe arises from 1) replacing max pooling with ‘2 pooling, 2) using global quality measurements, and 3)
+
+3.6 Ablation Study
+In this subsection, we conducted ablation experiments to single out the individual contributions of key modiﬁcations of DISTS, in comparison to the most closely related alternative - LPIPS. We trained a series of intermediate models between LPIPS and DISTS:
+(a) Original LPIPS; (b) Replace max pooling in LPIPS with ‘2 pooling; (c) Add the input image on the top of (b); (d) Replace the euclidean distance in LPIPS with local
+SSIM measurements (within a sliding window of size 11 Â 11) on top of (c); (e) Replace the euclidean distance in LPIPS with global SSIM measurements on top of (c); (f) Train (c) by adding the E2 term in Eq. (15); (g) Train (d) by adding the E2 term; (h) Train (e) by adding the E2 term, which is equivalent to DISTS. Performance of these models is shown in Table 6, from which we draw several conclusions. First, ‘2 pooling is slightly better than max pooling. The main motivation of adopting ‘2 pooling is to de-alias the intermediate representations, as documented in [42]. Second, incorporating the input image in the representation has little impact on the performance, but it ensures a unique minimum of DISTS, which is beneﬁcial in perceptual optimization [80]. Third, the global SSIM-like distance outperforms the euclidean distance, especially in measuring similarity of visual textures and invariance to geometric transformations. We also tested
+
+Fig. 10. Five images of “soil”, photographed under different lighting and viewpoint conditions, from the ALOT dataset. We computed the DISTS score for each of the images (b)-(e) with respect to the reference (a). Consistent with the signiﬁcantly higher values, (d) and (e) are visually distinct from (a), although all of these images are drawn from the same category.
+
+2578
+
+IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 44, NO. 5, MAY 2022
+
+TABLE 5 SRCC Comparison of IQA Models to Human Perception Using
+the LIVE Database Augmented With Geometric Transformations
+
+Method
+
+Translation Rotation Dilation Mixed Total
+
+PSNR SSIM [3] MS-SSIM [63] CW-SSIM [25] VSI [64] MAD [5] VIF [4] FSIMc [11] NLPD [39] GMSD [12]
+
+0.159 0.171 0.165 0.207 0.282 0.354 0.296 0.380 0.062 0.252
+
+0.153 0.168 0.174 0.312 0.360 0.630 0.433 0.396 0.074 0.299
+
+0.152 0.177 0.198 0.364 0.372 0.587 0.522 0.408 0.083 0.303
+
+0.146 0.166 0.174 0.219 0.297 0.453 0.387 0.365 0.066 0.247
+
+0.195 0.190 0.177 0.194 0.309 0.327 0.294 0.339 0.112 0.288
+
+DeepIQA [13] PieAPP [8] LPIPS [7] GTI-CNN [19]
+
+0.822 0.850 0.811 0.864
+
+0.919 0.903 0.908 0.906
+
+0.918 0.902 0.893 0.904
+
+0.881 0.879 0.861 0.890
+
+0.859 0.874 0.779 0.875
+
+DISTS (ours)
+
+0.948
+
+0.939 0.946 0.937 0.928
+
+local SSIM measurements within a sliding window size of 11 Â 11 (d), which gives inferior performance. Last, training with the E2 term is important for texture-related tasks, improving invariance to geometric transformations, although
+
+it slightly hurts the performance on standard IQA databases. We concluded that the improved quality prediction and texture similarity performance of DISTS relative to LPIPS is due to the combination of these key modiﬁcations.
+4 CONCLUSION
+We have presented a new full-reference IQA method, DISTS, which is the ﬁrst of its kind with built-in tolerance to texture resampling. Our model uniﬁes structure and texture similarity, providing good predictions of human quality ratings on both textures and natural photographs, is robust to mild geometric distortions, and performs well in texture classiﬁcation and retrieval.
+DISTS is based on the pre-trained VGG network for object recognition. By computing the global means of convolution responses at each stage, we established a universal parametric texture model similar to that of Portilla & Simoncelli [15]. These statistical measurements provide a rich but relatively low-dimensional characterization of texture appearance, as veriﬁed using synthesis (Fig. 4). Despite the empirical success, we believe an important direction for future work is to analyze this “black box” to understand 1) what and how certain texture features and attributes are captured by the pre-trained network, and 2) the importance
+
+Fig. 11. A visual example to demonstrate robustness of DISTS to geometric transformations. (a) Reference image. (b) Translated rightward by 5 percent pixels. (c) Dilated by a factor 1.05. (d) Rotated by 3 degrees. (e) Cloud movement. (f) Corrupted with additive Gaussian noise. (g) Gaussian blur. (h) JPEG compression. (i) JPEG2000 compression. Below each image are the values of SSIM and DISTS, respectively. SSIM values are similar or better (larger) for the bottom row, whereas our model reports better (smaller) values for the top row, consistent with human perception.
+
+TABLE 6 Ablation Experiments: Proposed DISTS Model (Last Line) Compared to LPIPS (First Line), and Intermediate Variations
+
+Model
+
+Quality prediction
+
+LIVE [61]
+
+TID2013 [62]
+
+Texture similarity
+
+SynTEX [71]
+
+TQD (proposed)
+
+Geometric invariance LIVE_Aug
+
+PLCC SRCC KRCC PLCC SRCC KRCC PLCC SRCC KRCC PLCC SRCC KRCC PLCC SRCC KRCC
+
+(a) LPIPS (b) a + ‘2 pooling (c) b + input image (d) c + local SSIM (e) c + global SSIM (f) c + E2 term (g) d + E2 term (h) e + E2 = DISTS
+
+0.934 0.937 0.935 0.950 0.955 0.934 0.929 0.954
+
+0.936 0.938 0.935 0.951 0.957 0.935 0.931 0.954
+
+0.769 0.770 0.768 0.797 0.816 0.768 0.766 0.811
+
+0.850 0.851 0.851 0.853 0.859 0.791 0.801 0.855
+
+0.824 0.824 0.825 0.828 0.835 0.776 0.783 0.830
+
+0.626 0.626 0.627 0.631 0.641 0.608 0.615 0.639
+
+0.591 0.594 0.582 0.738 0.868 0.780 0.774 0.901
+
+0.589 0.592 0.581 0.744 0.877 0.782 0.778 0.923
+
+0.452 0.459 0.449 0.602 0.739 0.630 0.625 0.759
+
+0.403 0.410 0.410 0.664 0.780 0.680 0.672 0.903
+
+0.401 0.406 0.409 0.667 0.795 0.685 0.678 0.910
+
+0.302 0.305 0.303 0.559 0.698 0.588 0.579 0.785
+
+0.801 0.807 0.795 0.798 0.899 0.830 0.820 0.931
+
+0.793 0.802 0.789 0.790 0.881 0.823 0.816 0.928
+
+0.629 0.633 0.625 0.626 0.724 0.655 0.649 0.762
+
+All models trained on KADID
+
+DING ET AL.: IMAGE QUALITY ASSESSMENT: UNIFYING STRUCTURE AND TEXTURE SIMILARITY
+
+2579
+
+of cascaded convolution and subsampled pooling in summarizing useful texture information. It is also of interest to extend the current model to measure distortions locally, as is done in SSIM. In this case, the distance measure could be reformulated to adaptively select between structure and texture measures as appropriate, instead of linearly combining them with ﬁxed weights.
+The most direct use of IQA measures is for performance assessment and comparison of image processing systems. But perhaps more importantly, they may be used to optimize image processing methods, so as to improve the visual quality of their results. In this context, most existing IQA measures present major obstacles due to the fact that they lack desired mathematical properties that aid optimization (e.g., injectivity, differentiability and convexity). In many cases, they rely on surjective mappings, and minima are non-unique (see Fig. 2). Although DISTS enjoys several advantageous mathematical properties, it is still highly non-convex (with abundant saddle points and plateaus), and recovery from random noise using stochastic gradient descent methods (see Fig. 2) requires many more iterations than for SSIM. In practice, the larger the weight of the structure term s at the zeroth stage (b0j in Eq. (6)), the faster the optimization converges. However, to Preach a reasonable level of Ptexture invariance, the learned i;j aij should be larger than i;j bij, hindering optimization. We are currently analyzing DISTS in the context of perceptual optimization. Our initial results indicate that DISTS-based optimization of image processing applications, including denoising, deblurring, super-resolution, and compression, can lead to noticeable improvements in visual quality [80].
+ACKNOWLEDGMENT
+This work was supported in part by the National Natural Science Foundation of China (62071407 to KDM and 62022002 to SQW), the CityU SRG-Fd and APRC Grants (7005560 and 9610487 to KDM), the Hong Kong RGC Early Career Scheme (9048122 to SQW), the Howard Hughes Medical Institute (through an investigatorship to EPS), and the Simons Foundation.
+REFERENCES
+[1] Z. Wang and A. C. Bovik, “Mean squared error: Love it or leave it? A new look at signal ﬁdelity measures,” IEEE Signal Process. Mag., vol. 26, no. 1, pp. 98–117, Jan. 2009.
+[2] B. Girod, “What’s wrong with mean-squared error,” in Digital Images and Human Vision, A. B. Watson, Ed. Cambridge, MA, USA: MIT Press, 1993, pp. 207–220.
+[3] Z. Wang, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli, “Image quality assessment: From error visibility to structural similarity,” IEEE Trans. Image Process., vol. 13, no. 4, pp. 600–612, Apr. 2004.
+[4] H. R. Sheikh and A. C. Bovik, “Image information and visual quality,” IEEE Trans. Image Process., vol. 15, no. 2, pp. 430–444, Feb. 2006.
+[5] E. C. Larson and D. M. Chandler, “Most apparent distortion: Fullreference image quality assessment and the role of strategy,” J. Electron. Imag., vol. 19, no. 1, pp. 1–21, 2010.
+[6] V. Laparra, A. Berardino, J. Balle, and E. P. Simoncelli, “Perceptually optimized image rendering,” J. Opt. Soc. America A, vol. 34, no. 9, pp. 1511–1525, 2017.
+[7] R. Zhang, P. Isola, A. A. Efros, E. Shechtman, and O. Wang, “The unreasonable effectiveness of deep features as a perceptual metric,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2018, pp. 586–595.
+
+[8] E. Prashnani, H. Cai, Y. Mostoﬁ, and P. Sen, “PieAPP: Perceptual image-error assessment through pairwise preference,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2018, pp. 1808–1817.
+[9] K. Popat and R. W. Picard, “Cluster-based probability model and its application to image and texture processing,” IEEE Trans. Image Process., vol. 6, no. 2, pp. 268–284, Feb. 1997.
+[10] J. Balle, A. Stojanovic, and J.-R. Ohm, “Models for static and dynamic texture synthesis in image and video compression,” IEEE J. Sel. Topics Signal Process., vol. 5, no. 7, pp. 1353–1365, Nov. 2011.
+[11] L. Zhang, L. Zhang, X. Mou, and D. Zhang, “FSIM: A feature similarity index for image quality assessment,” IEEE Trans. Image Process., vol. 20, no. 8, pp. 2378–2386, Aug. 2011.
+[12] W. Xue, L. Zhang, X. Mou, and A. C. Bovik, “Gradient magnitude similarity deviation: A highly efﬁcient perceptual image quality index,” IEEE Trans. Image Process., vol. 23, no. 2, pp. 684–695, Feb. 2014.
+[13] S. Bosse, D. Maniry, K.-R. Mu€ller, T. Wiegand, and W. Samek, “Deep neural networks for no-reference and full-reference image quality assessment,” IEEE Trans. Image Process., vol. 27, no. 1, pp. 206–219, Jan. 2018.
+[14] K. Simonyan and A. Zisserman, “Very deep convolutional networks for large-scale image recognition,” in Proc. Int. Conf. Learn. Representations, 2015, pp. 1–14.
+[15] J. Portilla and E. P. Simoncelli, “A parametric texture model based on joint statistics of complex wavelet coefﬁcients,” Int. J. Comput. Vis., vol. 40, no. 1, pp. 49–70, 2000.
+[16] B. Julesz, “Visual pattern discrimination,” IRE Trans. Inf. Theory, vol. 8, no. 2, pp. 84–92, 1962.
+[17] C. Szegedy et al.,“Intriguing properties of neural networks,” in Proc. Int. Conf. Learn. Representations, 2013, pp. 1–10.
+[18] Z. Wang and E. P. Simoncelli, “An adaptive linear system framework for image distortion analysis,” in Proc. IEEE Int. Conf. Image Process., 2005, pp. 1160–1163.
+[19] K. Ma, Z. Duanmu, and Z. Wang, “Geometric transformation invariant image quality assessment using convolutional neural networks,” in Proc. IEEE Int. Conf. Acoust. Speech Signal Process., 2018, pp. 6732–6736.
+[20] J. Mannos and D. Sakrison, “The effects of a visual ﬁdelity criterion of the encoding of images,” IEEE Trans. Inf. Theory, vol. TIT-20, no. 4, pp. 525–536, Jul. 1974.
+[21] S. J. Daly, “Visible differences predictor: An algorithm for the assessment of image ﬁdelity,” in Human Vision, Visual Processing, and Digital Display III. Bellingham, WA, USA: SPIE, 1992, pp. 2–15.
+[22] P. C. Teo and D. J. Heeger, “Perceptual image distortion,” in Human Vision, Visual Processing, and Digital Display V. Bellingham, WA, USA: SPIE, 1994, pp. 127–141.
+[23] B. A. Wandell, Foundations of Vision. Sunderland, MA, USA: Sinauer Associates, 1995.
+[24] Z. Wang and A. C. Bovik, Modern Image Quality Assessment. San Rafael, CA, USA: Morgan & Claypool, 2006.
+[25] Z. Wang and E. P. Simoncelli, “Translation insensitive image similarity in complex wavelet domain,” in Proc. IEEE Int. Conf. Acoust. Speech Signal Process., 2005, pp. ii/573–ii/576.
+[26] Z. Wang and Q. Li, “Information content weighting for perceptual image quality assessment,” IEEE Trans. Image Process., vol. 20, no. 5, pp. 1185–1198, May 2011.
+[27] K. Ma et al., “Group maximum differentiation competition: Model comparison with few samples,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 42, no. 4, pp. 851–864, Apr. 2020.
+[28] A. D. Clarke, F. Halley, A. J. Newell, L. D. Grifﬁn, and M. J. Chantler, “Perceptual similarity: A texture challenge,” in Proc. Brit. Mach. Vis. Conf., 2011, pp. 1–10.
+[29] J. Zujovic, T. N. Pappas, and D. L. Neuhoff, “Structural texture similarity metrics for image analysis and retrieval,” IEEE Trans. Image Process., vol. 22, no. 7, pp. 2545–2558, Jul. 2013.
+[30] B. S. Manjunath and W. Y. Ma, “Texture features for browsing and retrieval of image data,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 18, no. 8, pp. 837–842, Aug. 1996.
+[31] T. Ojala, M. Pietik€ainen, and T. M€aenp€a€a, “Multiresolution grayscale and rotation invariant texture classiﬁcation with local binary patterns,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 24, no. 7, pp. 971–987, Jul. 2002.
+[32] L. Gatys, A. S. Ecker, and M. Bethge, “Texture synthesis using convolutional neural networks,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2015, pp. 262–270.
+
+2580
+
+IEEE TRANSACTIONS ON PATTERN ANALYSIS AND MACHINE INTELLIGENCE, VOL. 44, NO. 5, MAY 2022
+
+[33] H. Zhang, J. Xue, and K. Dana, “Deep TEN: Texture encoding network,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2017, pp. 2896–2905.
+[34] Y. Gao, Y. Gan, L. Qi, H. Zhou, X. Dong, and J. Dong, “A perception-inspired deep learning framework for predicting perceptual texture similarity,” IEEE Trans. Circuits Syst. Video Technol., vol. 30, no. 10, pp. 3714–3726, Oct. 2020.
+[35] Z. Wang and E. P. Simoncelli, “Maximum differentiation (MAD) competition: A methodology for comparing computational models of perceptual quantities,” J. Vis., vol. 8, no. 12, pp. 1–13, Sep. 2008.
+[36] A. Berardino, V. Laparra, J. Balle, and E. Simoncelli, “Eigen-distortions of hierarchical representations,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2017, pp. 3530–3539.
+[37] J. Malo, I. Epifanio, R. Navarro, and E. P. Simoncelli, “Nonlinear image representation for efﬁcient perceptual coding,” IEEE Trans. Image Process., vol. 15, no. 1, pp. 68–80, Jan. 2006.
+[38] V. Laparra, J. Mun~oz-Marı, and J. Malo, “Divisive normalization image quality metric revisited,” J. Opt. Soc. America A, vol. 27, no. 4, pp. 852–864, 2010.
+[39] V. Laparra, J. Balle, A. Berardino, and E. P. Simoncelli, “Perceptual image quality assessment using a normalized Laplacian pyramid,” Electron. Imag., vol. 2016, no. 16, pp. 1–6, 2016.
+[40] A. Krizhevsky, I. Sutskever, and G. E. Hinton, “ImageNet classiﬁcation with deep convolutional neural networks,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2012, pp. 1097–1105.
+[41] J. Deng, W. Dong, R. Socher, L.-J. Li, K. Li, and L. Fei-Fei, “ImageNet: A large-scale hierarchical image database,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2009, pp. 248–255.
+[42] O. J. Henaff and E. P. Simoncelli, “Geodesics of learned representations,” in Proc. Int. Conf. Learn. Representations, 2016, pp. 1–10.
+[43] A. V. Oppenheim, A. S. Willsky, and S. H. Naweb, Signals and Systems. London, U.K.: Pearson Education, 1998.
+[44] B. Vintch, J. A. Movshon, and E. P. Simoncelli, “A convolutional subunit model for neuronal responses in macaque V1,” J. Neurosci., vol. 35, no. 44, pp. 14 829–14 841, 2015.
+[45] J. Bruna and S. Mallat, “Invariant scattering convolution networks,” IEEE Trans. Pattern Anal. Mach. Intell., vol. 35, no. 8, pp. 1872–1886, Aug. 2013.
+[46] L. Dinh, D. Krueger, and Y. Bengio, “NICE: Non-linear independent components estimation,” in Proc. Int. Conf. Learn. Representations, 2015, pp. 1–13.
+[47] J. Balle, V. Laparra, and E. P. Simoncelli, “End-to-end optimized image compression,” in Proc. Int. Conf. Learn. Representations, 2017, pp. 1–27.
+[48] D. P. Kingma and P. Dhariwal, “Glow: Generative ﬂow with invertible 1 Â 1 convolutions,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2018, pp. 10 215–10 224.
+[49] J. Behrmann, W. Grathwohl, R. T. Q. Chen, D. Duvenaud, and J.H. Jacobsen, “Invertible residual networks,” in Proc. Int. Conf. Mach. Learn., 2019, pp. 573–582.
+[50] F. Ma, U. Ayaz, and S. Karaman, “Invertibility of convolutional generative networks from partial measurements,” in Proc. Int. Conf. Neural Inf. Process. Syst., 2018, pp. 9628–9637.
+[51] D. J. Heeger and J. R. Bergen, “Pyramid-based texture analysis/ synthesis,” in Proc. 22nd Annu. Conf. Comput. Graph. Interactive Techn., 1995, pp. 229–238.
+[52] S. C. Zhu, Y. Wu, and D. Mumford, “Filters, random ﬁelds and maximum entropy (FRAME): Towards a uniﬁed theory for texture modeling,” Int. J. Comput. Vis., vol. 27, no. 2, pp. 107–126, 1998.
+[53] J. Malik and P. Perona, “Preattentive texture discrimination with early vision mechanisms,” J. Opt. Soc. America A, vol. 7, no. 5, pp. 923–932, 1990.
+[54] I. Ustyuzhaninov, W. Brendel, L. A. Gatys, and M. Bethge, “What does it take to generate natural textures?” in Proc. Int. Conf. Learn. Representations, 2017, pp. 1–13.
+[55] L. A. Gatys, A. S. Ecker, and M. Bethge, “Image style transfer using convolutional neural networks,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2016, pp. 2414–2423.
+[56] V. Dumoulin, J. Shlens, and M. Kudlur, “A learned representation for artistic style,” in Proc. Int. Conf. Learn. Representations, 2017, pp. 1–11.
+[57] Y. Li, N. Wang, J. Liu, and X. Hou, “Demystifying neural style transfer,” in Proc. Int. Joint Conf. Artif. Intell., 2017, pp. 2230–2236.
+[58] D. Brunet, E. R. Vrscay, and Z. Wang, “On the mathematical properties of the structural similarity index,” IEEE Trans. Image Process., vol. 21, no. 4, pp. 1488–1499, Apr. 2012.
+
+[59] H. Lin, V. Hosu, and D. Saupe, “KADID-10k: A large-scale artiﬁcially distorted IQA database,” in Proc. IEEE Int. Conf. Qual. Multimedia Experience, 2019, pp. 1–3.
+[60] M. Cimpoi, S. Maji, I. Kokkinos, S. Mohamed, and A. Vedaldi, “Describing textures in the wild,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit., 2014, pp. 3606–3613.
+[61] H. R. Sheikh, Z. Wang, A. C. Bovik, and L. Cormack, “Image and video quality assessment research at LIVE,” 2006. [Online]. Available: http://live.ece.utexas.edu/research/quality/
+[62] N. Ponomarenko et al., “Image database TID2013: Peculiarities, results and perspectives,” Signal Process. Image Commun., vol. 30, pp. 57–77, Jan. 2015.
+[63] Z. Wang, E. P. Simoncelli, and A. C. Bovik, “Multiscale structural similarity for image quality assessment,” in Proc. IEEE Asilomar Conf. Signals Syst. Comput., 2003, pp. 1398–1402.
+[64] L. Zhang, Y. Shen, and H. Li, “VSI: A visual saliency-induced index for perceptual image quality assessment,” IEEE Trans. Image Process., vol. 23, no. 10, pp. 4270–4281, Oct. 2014.
+[65] A. B. Watson, G. Y. Yang, J. A. Solomon, and J. Villasenor, “Visibility of wavelet quantization noise,” IEEE Trans. Image Process., vol. 6, no. 8, pp. 1164–1175, Aug. 1997.
+[66] P. Y. Simard, Y. A. LeCun, J. S. Denker, and B. Victorri, “Transformation invariance in pattern recognition—tangent distance and tangent propagation,” in Neural Networks: Tricks of the Trade. Berlin, Germany: Springer, 1998, pp. 239–274.
+[67] J. Johnson, A. Alahi, and F.-F. Li, “Perceptual losses for real-time style transfer and super-resolution,” in Proc. Eur. Conf. Comput. Vis., 2016, pp. 694–711.
+[68] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,” in Proc. Int. Conf. Learn. Representations, 2015, pp. 1–15.
+[69] M. Alfarraj, Y. Alaudah, and G. AlRegib, “Content-adaptive nonparametric texture similarity measure,” in Proc. IEEE Int. Workshop Multimedia Signal Process., 2016, pp. 1–6.
+[70] S. A. Golestaneh and L. J. Karam, “Synthesized texture quality assessment via multi-scale spatial and statistical texture attributes of image and gradient magnitude coefﬁcients,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit. Workshop, 2018, pp. 851–8516.
+[71] S. A. Golestaneh, M. M. Subedar, and L. J. Karam, “The effect of texture granularity on texture synthesis quality,” in Proc. SPIE Appl. Digit. Image Process., 2015, pp. 356–361.
+[72] A. A. Efros and T. K. Leung, “Texture synthesis by non-parametric sampling,” in Proc. IEEE Int. Conf. Comput. Vis., 1999, pp. 1033–1038.
+[73] X. Snelgrove, “High-resolution multi-scale neural texture synthesis,” in Proc. ACM SIGGRAPH Asia Tech. Briefs, 2017, pp. 13:1–13:4.
+[74] G. V. Cormack, C. L. Clarke, and S. Buettcher, “Reciprocal rank fusion outperforms condorcet and individual rank learning methods,” in Proc. 32nd Int. ACM Special Interest Group Inf. Retrieval, 2009, pp. 758–759.
+[75] S. Abdelmounaime and H. Dong-Chen, “New brodatz-based image databases for grayscale color and multiband texture analysis,” ISRN Mach. Vis., vol. 2013, pp. 1–14, 2013.
+[76] D. G. Lowe, “Distinctive image features from scale-invariant keypoints,” Int. J. Comput. Vis., vol. 60, no. 2, pp. 91–110, 2004.
+[77] G. J. Burghouts and J.-M. Geusebroek, “Material-speciﬁc adaptation of color invariant features,” Pattern Recognit. Lett., vol. 30, no. 3, pp. 306–313, 2009.
+[78] M. Sulc and J. Matas, “Fast features invariant to rotation and scale of texture,” in Proc. Eur. Conf. Comput. Vis., 2014, pp. 47–62.
+[79] M. Cimpoi, S. Maji, I. Kokkinos, and A. Vedaldi, “Deep ﬁlter banks for texture recognition, description, and segmentation,” Int. J. Comput. Vis., vol. 118, no. 1, pp. 65–94, 2016.
+[80] K. Ding, K. Ma, S. Wang, and E. P. Simoncelli, “Comparison of image quality models for optimization of image processing systems,” CoRR, 2020. [Online]. Available: https://arxiv.org/abs/ 2005.01338
+Keyan Ding received the BE degree from the China Jiliang University, Hangzhou, China, in 2015, and the MS degree from the Soochow University, Suzhou, China, in 2018. He is currently working toward the PhD degree from the Department of Computer Science, City University of Hong Kong, Hong Kong. His current research interests include computer vision, image processing, and quality assessment.
+
+DING ET AL.: IMAGE QUALITY ASSESSMENT: UNIFYING STRUCTURE AND TEXTURE SIMILARITY
+
+2581
+
+Kede Ma (Member, IEEE) received the BE degree from the University of Science and Technology of China, Hefei, China, in 2012, and the MS and PhD degrees in electrical and computer engineering from the University of Waterloo, Waterloo, ON, Canada, in 2014 and 2017, respectively. He was a research associate with the Howard Hughes Medical Institute and New York University, New York, in 2018. He is currently an assistant professor at the Department of Computer Science, City University of Hong Kong. His research interests include perceptual image processing, computational vision, and computational photography.
+Shiqi Wang (Member, IEEE) received the BS degree in computer science from the Harbin Institute of Technology, Harbin, China, in 2008, and the PhD degree in computer application technology from Peking University, Beijing, China, in 2014. From March 2014 to March 2016, he was a postdoctoral fellow with the Department of Electrical and Computer Engineering, University of Waterloo, Waterloo, ON, Canada. From April 2016 to April 2017, he was a research fellow with the Rapid-Rich Object Search Laboratory, Nanyang Technological University, Singapore. He is currently an assistant professor at the Department of Computer Science, City University of Hong Kong. His research interests include video compression, image/video quality assessment, and image/video search and analysis.
+
+Eero P. Simoncelli (Fellow, IEEE) received the BS degree in physics from Harvard University, Cambridge, Massachusetts, in 1984. He studied applied mathematics with Cambridge University, Cambridge, U.K., for a year and a half, and then received the MS and PhD degrees in electrical engineering from the Massachusetts Institute of Technology, Cambridge, Massachusetts, in 1988 and 1993, respectively. He was an assistant professor with the Computer and Information Science Department, University of Pennsylvania, Philadelphia, from 1993 to 1996. In September 1996, he moved to New York University, New York, where he is currently a professor in neural science and mathematics. In August 2000, he became an investigator with the Howard Hughes Medical Institute, New York, under their new program in computational biology. In September 2020, he became the director of the Center for Computational Neuroscience, FlatIron Insitute of the Simons Foundation. His research interests include a wide range of topics in the representation and analysis of visual images, in both machine and biological systems.
+" For more information on this or any other computing topic, please visit our Digital Library at www.computer.org/csdl.
+

@@ -1,0 +1,13 @@
+{
+  "blue-topaz-theme@@color-scheme-options": "color-scheme-options-simplicity-topaz",
+  "blue-topaz-theme@@background-image-settings-switch": false,
+  "blue-topaz-theme@@dark-background-file": false,
+  "blue-topaz-theme@@folder-icons": true,
+  "blue-topaz-theme@@transparent-setting-panel": false,
+  "blue-topaz-theme@@disable-auto-hide-header": false,
+  "blue-topaz-theme@@font-family-change-to-default": false,
+  "blue-topaz-theme@@font-text-theme": "Bookerly,'Inter', 'Segoe UI','霞鹜文楷 GB', 'LXGW WenKai', 'Segoe UI Emoji',var(--font-default)",
+  "blue-topaz-theme@@font-family-vault": "Bookerly,'Inter', 'Segoe UI', 'LXGW WenKai Screen', 'LXGW WenKai Screen R', '霞鹜文楷 GB', 'LXGW WenKai', 'Segoe UI Emoji', var(--font-default)",
+  "Blue-Topaz-Codebox-Highlight@@code-theme-selection": "code-theme-bt-default",
+  "Blue-Topaz-Codebox-Highlight@@mute-code-indent-line": true
+}

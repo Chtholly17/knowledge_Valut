@@ -1,0 +1,85 @@
+
+close this message
+arXiv Forum: How do we make accessible research papers a reality?
+
+If research isn't accessible, can we really call it "Open" Science? In response to the high interest in this event we have expanded our online hosting capacity and re-opened registration. Grab your seat .
+Learn More
+Skip to main content
+Electrical Engineering and Systems Science > Image and Video Processing
+(eess)
+[Submitted on 13 Jun 2019 ( v1 ), last revised 8 Feb 2020 (this version, v3)]
+Title: Robust and interpretable blind image denoising via bias-free convolutional neural networks
+Authors: Sreyas Mohan , Zahra Kadkhodaie , Eero P. Simoncelli , Carlos Fernandez-Granda
+Download a PDF of the paper titled Robust and interpretable blind image denoising via bias-free convolutional neural networks, by Sreyas Mohan and 2 other authors
+Download PDF
+
+    Abstract: Deep convolutional networks often append additive constant ("bias") terms to their convolution operations, enabling a richer repertoire of functional mappings. Biases are also used to facilitate training, by subtracting mean response over batches of training images (a component of "batch normalization"). Recent state-of-the-art blind denoising methods (e.g., DnCNN) seem to require these terms for their success. Here, however, we show that these networks systematically overfit the noise levels for which they are trained: when deployed at noise levels outside the training range, performance degrades dramatically. In contrast, a bias-free architecture -- obtained by removing the constant terms in every layer of the network, including those used for batch normalization-- generalizes robustly across noise levels, while preserving state-of-the-art performance within the training range. Locally, the bias-free network acts linearly on the noisy image, enabling direct analysis of network behavior via standard linear-algebraic tools. These analyses provide interpretations of network functionality in terms of nonlinear adaptive filtering, and projection onto a union of low-dimensional subspaces, connecting the learning-based method to more traditional denoising methodology. 
+
+Comments: 	Published as conference paper in ICLR 2020
+Subjects: 	Image and Video Processing (eess.IV) ; Computer Vision and Pattern Recognition (cs.CV); Machine Learning (cs.LG); Machine Learning (stat.ML)
+Cite as: 	arXiv:1906.05478 [eess.IV]
+  	(or arXiv:1906.05478v3 [eess.IV] for this version)
+  	https://doi.org/10.48550/arXiv.1906.05478
+Focus to learn more
+arXiv-issued DOI via DataCite
+Submission history
+From: Sreyas Mohan [ view email ]
+[v1] Thu, 13 Jun 2019 04:48:21 UTC (2,285 KB)
+[v2] Fri, 14 Jun 2019 03:18:09 UTC (2,285 KB)
+[v3] Sat, 8 Feb 2020 05:55:05 UTC (7,154 KB)
+Full-text links:
+Download:
+
+    Download a PDF of the paper titled Robust and interpretable blind image denoising via bias-free convolutional neural networks, by Sreyas Mohan and 2 other authors
+    PDF
+    Other formats 
+
+( license )
+Current browse context:
+eess.IV
+< prev   |   next >
+new | recent | 1906
+Change to browse by:
+cs
+cs.CV
+cs.LG
+eess
+stat
+stat.ML
+References & Citations
+
+    NASA ADS
+    Google Scholar
+    Semantic Scholar
+
+a export BibTeX citation Loading...
+Bookmark
+BibSonomy logo Mendeley logo Reddit logo ScienceWISE logo
+Bibliographic Tools
+Bibliographic and Citation Tools
+Bibliographic Explorer Toggle
+Bibliographic Explorer ( What is the Explorer? )
+Litmaps Toggle
+Litmaps ( What is Litmaps? )
+scite.ai Toggle
+scite Smart Citations ( What are Smart Citations? )
+Code, Data, Media
+Demos
+Related Papers
+About arXivLabs
+Which authors of this paper are endorsers? | Disable MathJax ( What is MathJax? )
+
+    About
+    Help
+
+    contact arXiv Click here to contact arXiv Contact
+    subscribe to arXiv mailings Click here to subscribe Subscribe
+
+    Copyright
+    Privacy Policy
+
+    Web Accessibility Assistance
+
+    arXiv Operational Status
+    Get status notifications via email or slack
+

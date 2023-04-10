@@ -1,0 +1,214 @@
+{
+  "main": {
+    "id": "8f4cbe5a13aa19eb",
+    "type": "split",
+    "children": [
+      {
+        "id": "4c014048b65245bf",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "e176459e30f13eda",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Obsidian/Course/2023Spring/计算机视觉/作业/实验一/图像生成模型探索.md",
+                "mode": "source",
+                "source": false
+              }
+            }
+          },
+          {
+            "id": "4e1faae6fd238bf5",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Obsidian/Course/2023Spring/计算机网络/数据链路层.md",
+                "mode": "source",
+                "source": false
+              }
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "a103c835cf08d4f4",
+    "type": "split",
+    "children": [
+      {
+        "id": "3e4f68bfccf5f322",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "07abada0ca746a67",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "aa9aba948101e2d1",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              }
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200
+  },
+  "right": {
+    "id": "003dc9600c532e62",
+    "type": "split",
+    "children": [
+      {
+        "id": "136ec7e57002cc5b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "c10f355e263b4294",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Obsidian/Course/2023Spring/计算机网络/数据链路层.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "8825ddad3f46251d",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Obsidian/Course/2023Spring/计算机网络/数据链路层.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "aee86e002fa78d9c",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Obsidian/Course/2023Spring/计算机网络/数据链路层.md"
+              }
+            }
+          },
+          {
+            "id": "f2345d6c8173bcfb",
+            "type": "leaf",
+            "state": {
+              "type": "advanced-tables-toolbar",
+              "state": {}
+            }
+          },
+          {
+            "id": "9fa7584e7983183d",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              }
+            }
+          }
+        ],
+        "currentTab": 4
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "templates:Insert template": false,
+      "table-editor-obsidian:Advanced Tables Toolbar": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "4e1faae6fd238bf5",
+  "lastOpenFiles": [
+    "Obsidian/Course/2023Spring/计算机网络/img/image-20230410122253951.png",
+    "Obsidian/Course/2023Spring/计算机视觉/作业/实验一/图像生成模型探索.md",
+    "Obsidian/work/env/Chrome bookmark lose.md",
+    "better-bibtex.sqlite-journal",
+    "zotero.sqlite-journal",
+    "zotero.sqlite.tmp",
+    "better-bibtex.sqlite.tmp",
+    "Obsidian/vaultIndex~.md",
+    "tmp/VTKFEYZD.zip",
+    "Obsidian/Projects/MIC实习/paper/Understanding and Simplifying Perceptual Distances.md",
+    "Obsidian/Projects/MIC实习/paper/blauPerceptionDistortionTradeoff2018.md",
+    "Obsidian/Projects/MIC实习/paper/Deep Fourier Up-Sampling.md",
+    "Obsidian/Projects/MIC实习/Relative Algorithm Learning/WassersteinDistanceDiscussion.md",
+    "Obsidian/Projects/MIC实习/Relative Algorithm Learning/img/image-20230407155000734.png",
+    "Obsidian/Projects/MIC实习/paper/freirichTheoryDistortionPerceptionTradeoff2021.md",
+    "Obsidian/Projects/MIC实习/paper/img/Pasted image 20230407154728.png",
+    "Obsidian/Projects/MIC实习/Relative Algorithm Learning/WassersteinDistanceDiscussion~.md",
+    "tmp/GPSM7QXQ.nssyncsc",
+    "tmp/GPSM7QXQ.zip",
+    "storage/GPSM7QXQ/25071913.html",
+    "storage/GPSM7QXQ",
+    "storage/tmp-uveUdX/25071913.html",
+    "Obsidian/Projects/MIC实习/paper/img/Pasted image 20230407134316.png",
+    "Obsidian/Projects/MIC实习/paper/img/Pasted image 20230407133735.png",
+    "Obsidian/Projects/MIC实习/paper/img/Pasted image 20230407133622.png",
+    "Obsidian/Projects/MIC实习/paper/img/Pasted image 20230407133501.png",
+    "Obsidian/Projects/MIC实习/paper/img/Pasted image 20230407133440.png",
+    "Obsidian/Projects/MIC实习/paper/img/Pasted image 20230407123152.png",
+    "Obsidian/Projects/MIC实习/paper/img/Pasted image 20230407122553.png",
+    "Obsidian/Projects/MIC实习/paper/img/Pasted image 20230407120944.png",
+    "Obsidian/Projects/MIC实习/paper/liuClassificationDistortionPerceptionTradeoff2019.md",
+    "Obsidian/work/web/frontend/项目实践：使用开源前端模版.md",
+    "Obsidian/work/web/frontend/VUE Flatform.md",
+    "Obsidian/work/web/frontend/Webstorm and Frontend Environment.md",
+    "Obsidian/work/web/frontend/Ajax Environment.md",
+    "Obsidian/Leetcode/可能的二分法.md",
+    "Obsidian/Course/courseIndex.md",
+    "Obsidian/work/web/backend/IDEA and Java Backend environment.md",
+    "Obsidian/work/env/Env List.md",
+    "Obsidian/work/python/import imageio.md",
+    "Obsidian/work/env/vmware 主机ssh连接虚拟机.md",
+    "Obsidian/Course/2023Spring/软件工程/小组项目/IDEA and Springboot setting.md",
+    "Obsidian/Course/2023Spring/软件工程/小组项目/User Management.md",
+    "Obsidian/Course/2023Spring/软件工程/小组项目/Cloud Database.md",
+    "Obsidian/work/other/Vivado启动失败.md",
+    "Obsidian/other/Index.md",
+    "Untitled.canvas",
+    "Obsidian/Untitled.canvas"
+  ]
+}

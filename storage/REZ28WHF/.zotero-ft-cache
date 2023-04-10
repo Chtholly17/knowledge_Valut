@@ -1,0 +1,610 @@
+arXiv:1904.08816v1 [cs.IT] 18 Apr 2019
+
+On The Classiﬁcation-Distortion-Perception Tradeoﬀ
+Dong Liu, Haochen Zhang, Zhiwei Xiong University of Science and Technology of China
+dongeliu@ustc.edu.cn
+April 19, 2019
+Abstract
+Signal degradation is ubiquitous and computational restoration of degraded signal has been investigated for many years. Recently, it is reported that the capability of signal restoration is fundamentally limited by the perceptiondistortion tradeoﬀ, i.e. the distortion and the perceptual diﬀerence between the restored signal and the ideal “original” signal cannot be made both minimal simultaneously. Distortion corresponds to signal ﬁdelity and perceptual diﬀerence corresponds to perceptual naturalness, both of which are important metrics in practice. Besides, there is another dimension worthy of consideration, namely the semantic quality or the utility for recognition purpose, of the restored signal. In this paper, we extend the previous perception-distortion tradeoﬀ to the case of classiﬁcation-distortionperception (CDP) tradeoﬀ, where we introduced the classiﬁcation error rate of the restored signal in addition to distortion and perceptual diﬀerence. Two versions of the CDP tradeoﬀ are considered, one using a predeﬁned classiﬁer and the other dealing with the optimal classiﬁer for the restored signal. For both versions, we can rigorously prove the existence of the CDP tradeoﬀ, i.e. the distortion, perceptual diﬀerence, and classiﬁcation error rate cannot be made all minimal simultaneously. Our ﬁndings can be useful especially for computer vision researches where some low-level vision tasks (signal restoration) serve for high-level vision tasks (visual understanding).
+Keywords: Bayes decision, classiﬁcation, distortion, error rate, perception, tradeoﬀ.
+1 Introduction
+1.1 Motivation
+Signal degradation refers to the corruption of the signal due to many diﬀerent reasons such as interference and the blend of interested signal and uninterested signal or noise, which is observed ubiquitously in practical information systems. The cause of signal degradation may be physical factors, such as the imperfectness of data acquisition devices and the noise in data transmission medium; or may be artiﬁcial factors, such as the lossy data compression and the transmission of multiple sources over the same medium at the same time. In addition, in cases where we want to enhance signal, we may assume the signal to have been somehow “degraded,” for example as we want to enhance the resolution of an image, we assume the image is a degraded version of an ideal “original” image that has high resolution [1].
+To tackle signal degradation or to fulﬁll signal enhancement, computational restoration of degraded signal has been investigated for many years. There are various signal restoration tasks corresponding to diﬀerent degradation reasons. Taken image as example, image denoising [2], image deblur [3], single image super-resolution [1], image contrast enhancement [4], image compression artifact removal [5], image inpainting [6], . . . , all belong to image restoration tasks.
+Diﬀerent restoration tasks have various objectives. Some tasks may be keen to recover the “original” signal as faithfully as possible, like image denoising is to recover the noise-free image, compression artifact removal is to recover the uncompressed image. Some other tasks may concern more about the perceptual quality of the restored signal, like image super-resolution is to produce image details to make the enhanced image look like “high-resolution,” image inpainting is to generate a complete image that looks “natural.” Yet some other tasks may serve for recognition or understanding purpose: for one example, an image containing a car license plate may have blur, and image deblur can achieve a less blurred image so as recognize the license plate [7]; for another example, an image taken at night is diﬃcult to identify, and image contrast enhancement can produce a more naturally looking image that is better understood [8]. Recent years have witnessed more and more eﬀorts about the last category [9, 10].
+1
+
+Given the diﬀerent objectives, it is apparent that a signal restoration method designed for one speciﬁc task shall be evaluated with the speciﬁc metric that corresponds to the task’s objective. Indeed, the aforementioned objectives correspond to three groups of evaluation metrics:
+1. Signal ﬁdelity metrics that evaluate how similar is the restored signal to the “original” signal. These include all the full-reference quality metrics, such as the well-known mean-squared-error (MSE) and its counterpart peak signal-to-noise ratio (PSNR), the structural similarity (SSIM) [11], and the diﬀerence in features extracted from original signal and restored signal [12], to name a few.
+2. Perceptual naturalness metrics that evaluate how “natural” is the restored signal with respect to human perception. Perceptual naturalness was evaluated by human and approximated by no-reference quality assessment methods [13, 14]. Recently, the popularity of generative adversarial network (GAN) has motivated a formulation of perceptual naturalness [15].
+3. Semantic quality metrics that evaluate how “useful” is the restored signal in the sense that it better serves for the following semantic-related analyses. For example, how well a classiﬁer performs on the restored signal is a measure of the semantic quality. There are only a few studies about semantic quality assessment methods [16].
+It is worth noting that signal ﬁdelity metrics have dominated in the researches of signal restoration. However, is one method optimized for signal ﬁdelity also optimal for perceptual naturalness or semantic quality? This question has been overlooked for a long while until recently. Blau and Michaeli considered signal ﬁdelity and perceptual naturalness and concluded that both metrics cannot be optimized simultaneously [15]. Indeed, they provided a rigorous proof of the existence of the perception-distortion tradeoﬀ: with distortion representing signal ﬁdelity and perceptual diﬀerence representing perceptual naturalness, one signal restoration method cannot achieve both low distortion and low perceptual diﬀerence (up to a bound). This conclusion reveals the fundamental limit of the capability of signal restoration, and inspires the adoption of perceptual naturalness metrics in related tasks [17, 18].
+Following the work of the perception-distortion tradeoﬀ, in this paper, we aim to consider the three groups of metrics jointly, i.e. we want to study the relation between signal ﬁdelity, perceptual naturalness, and semantic quality. We consider classiﬁcation error rate as the representative of semantic quality, because classiﬁcation is the most fundamental semantic-related analysis. We ﬁnd there is indeed a tradeoﬀ between the three metrics, which is named the classiﬁcation-distortion-perception (CDP) tradeoﬀ. In short, the CDP tradeoﬀ claims that the distortion, perceptual diﬀerence, and classiﬁcation error rate cannot be made minimal simultaneously. Our proof indicates the essential diﬀerence between the three quality metrics. In practice, it implies the adoption of semantic quality metrics instead of signal ﬁdelity or perceptual naturalness metrics, if a signal restoration method is meant to serve for recognition purpose.
+
+1.2 Problem Deﬁnition
+Consider the process: X → Y → Xˆ , where X denotes the ideal “original” signal, Y denotes the degraded signal, and Xˆ denotes the restored signal. We formulate X, Y , and Xˆ each as a discrete random variable. The cases of continuous random variables can be deduced in a similar manner, and thus are omitted hereafter. The probability mass function of X is denoted by pX (x), x ∈ X. The degradation model is denoted by PY |X , which is characterized by a conditional mass function p(y|x). The restoration method is then denoted by PXˆ |Y and characterized by p(xˆ|y).
+We are interested in classifying the signal into two categories in this paper. Thus, we assume each sample of the original signal belongs to one of two classes: ω1 or ω2. The a priori probabilities and the conditional mass functions are assumed to be known as P1, P2 and pX1(x), pX2(x), respectively. In other words, X follows a two-component mixture model: pX (x) = P1pX1(x) + P2pX2(x). Accordingly, Y follows the model: pY (y) = P1pY1(y) + P2pY2(y), and Xˆ follows the model: pXˆ (xˆ) = P1pXˆ 1(xˆ) + P2pXˆ 2(xˆ), where
+
+pYi(y) =
+
+p(y|x)pXi(x), i = 1, 2
+
+(1)
+
+x∈X
+
+pXˆ i(xˆ) =
+
+p( xˆ | y)pY i ( y)
+
+y∈Y
+
+=
+
+p(xˆ|y)p(y|x)pXi(x), i = 1, 2
+
+(2)
+
+yx
+
+2
+
+A binary classiﬁer can be denoted by
+
+c(t) = c(t|R) = ω1, if t ∈ R
+
+(3)
+
+ω2, otherwise
+
+If we apply this classiﬁer on the original signal X, we shall achieve an error rate
+
+ε(X |c) = ε(X |R) = P2 pX2(x) + P1 pX1(x)
+
+(4)
+
+x∈R
+
+xR
+
+The optimal classiﬁer is deﬁned as the classiﬁer that achieves the minimal error rate for a given signal, e.g. cX∗ = arg minc ε(X |c). According to the Bayes decision rule (see [19] for proof), the optimal classiﬁer shall be
+
+cX∗
+
+=
+
+c(·
+
+|
+
+R
+
+∗ X
+
+),
+
+where
+
+R∗X
+
+=
+
+{x|P1 pX1(x)
+
+≥
+
+P2 pX 2 ( x )}
+
+(5)
+
+which leads to the minimal error rate, a.k.a. the Bayes error rate
+
+ǫ(X)
+
+=
+
+min
+c
+
+ε(X
+
+|c)
+
+=
+
+ε(X
+
+|R∗X
+
+)
+
+= min[P1pX1(x), P2pX2(x)]
+
+x
+
+(6)
+
+=
+
+1 2
+
+−
+
+1 2
+
+x
+
+|P1pX1(x) − P2pX2(x)|
+
+1.3 Main Theorems
+
+We prove two versions of the CDP tradeoﬀ. For the ﬁrst version, we consider using a predeﬁned classiﬁer c0 = c(·|R0) on the restored signal. This leads to
+
+Deﬁnition 1. The classiﬁcation-distortion-perception (CDP) function is
+
+C(D,
+
+P)
+
+=
+
+min
+PXˆ |Y
+
+ε(Xˆ |c0), subject
+
+to
+
+E[∆(X,
+
+Xˆ )]
+
+≤
+
+D,
+
+d(pX,
+
+pXˆ )
+
+≤
+
+P
+
+(7)
+
+where E is to take expectation, ∆(·, ·) : X × Xˆ → R+ is a function to measure distortion between the original and the restored signals, and d(·, ·) is a function to measure the diﬀerence between two probability mass functions, which is claimed to be indicative for perceptual diﬀerence [15].
+
+Theorem 1. Consider (7), if d(·, q) is convex in q, then C(D, P) is
+
+1. monotonically non-increasing,
+
+2. convex in D and P.
+
+Note that the convexity of the perceptual diﬀerence is assumed, which is claimed to be satisﬁed by a large number of commonly used diﬀerence functions, including any f-divergence (e.g. Kullback-Leibler divergence, total variation, Hellinger) and the Rényi divergence [20, 21].
+For the second version, we consider using the optimal classiﬁer on the restored signal, i.e. the classiﬁer is adaptive to the restored signal. According to the Bayes decision rule, we are actually considering the Bayes error rate of Xˆ . This leads to
+
+Deﬁnition 2. The strong classiﬁcation-distortion-perception (SCDP) function is
+
+CS (D,
+
+P)
+
+=
+
+min
+PXˆ |Y
+
+ǫ(Xˆ ),
+
+subject
+
+to
+
+E[∆(X,
+
+Xˆ )]
+
+≤
+
+D,
+
+d(pX,
+
+pXˆ )
+
+≤
+
+P
+
+(8)
+
+Theorem 2. Consider (8), CS(D, P) is monotonically non-increasing.
+
+3
+
+1.4 Paper Organization
+In the following sections, we ﬁrst give some properties of the classiﬁcation error rate, especially the Bayes error rate, which will be helpful in our proofs of the main theorems. Then we prove the two theorems one by one. Discussion and conclusion are ﬁnally presented.
+
+2 Properties of the Classiﬁcation Error Rate
+
+2.1 Classiﬁcation Error Rate is Linear
+
+Theorem 3. Let U follow a two-component mixture model: pU (u) = P1pU1(u) + P2pU2(u), similarly V follow:
+
+pV (v) = P1pV 1(v) + P2pV2(v). Let W be the random variable with pW (w) = λpU (w) + (1 − λ)pV (w) where 0 ≤ λ ≤ 1.
+
+Let c0 be a ﬁxed classiﬁer, then
+
+ε(W |c0) = λε(U|c0) + (1 − λ)ε(V |c0)
+
+(9)
+
+Proof. As c0 is a ﬁxed classiﬁer, it can be denoted in general by c0 = c(·|R0). Then we have
+
+ε(U |c0) = P2 pU2(u) + P1 pU1(u)
+
+(10)
+
+u ∈R0
+
+u R0
+
+ε(V |c0) = P2 pV 2(v) + P1 pV1(v)
+
+(11)
+
+v ∈ R0
+
+v R0
+
+Thus
+
+ε(W |c0) = P2
+
+pW2(w) + P1
+
+pW 1(w)
+
+w ∈R0
+
+w R0
+
+= P2 [λpU2(w) + (1 − λ)pV2(w)] + P1 [λpU1(w) + (1 − λ)pV1(w)]
+
+w ∈R0
+
+w R0
+
+(12)
+
+= λ P2
+
+pU2(w) + P1
+
+pU1(w) + (1 − λ) P2
+
+pV2(w) + P1
+
+pV 1(w)
+
+w ∈R0
+
+w R0
+
+w ∈R0
+
+w R0
+
+= λε(U|c0) + (1 − λ)ε(V |c0)
+
+2.2 Bayes Error Rate is Concave
+Theorem 4. Let U, V, and W be deﬁned as in Theorem 3, then
+
+ǫ(W) ≥ λǫ(U) + (1 − λ)ǫ(V)
+
+(13)
+
+Proof. cW∗ (1 − λ)ε(V
+
+denotes the optimal classiﬁer for W, then ǫ(W |cW∗ ). Note that ǫ(U) = min ε(U|·) and ǫ(V ) =
+
+) = ε(W |cW∗ min ε(V |·).
+
+). According to (9) we Thus ǫ(W) ≥ λǫ(U) +
+
+have (1 −
+
+ǫ (W ) λ)ǫ (V
+
+= ).
+
+λε(U
+
+|cW∗
+
+)
+
++
+
+2.3 Bayes Error Rate is Non-Decreasing
+
+Theorem 5. Let the process of X → Y be denoted by PY |X , which is characterized by a conditional mass function
+
+p(y|x), then ǫY ≥ ǫX and ǫY = ǫX if and only if p(y|x) satisﬁes: ∀x1 ∈ R+, ∀x2 ∈ R−, ∀y, p(y|x1)p(y|x2) = 0, where
+
+R+
+
+=
+
+{x|P1 pX1(x)
+
+>
+
+P2pX2(x)}, and R−
+
+=
+
+{x|P1 pX1(x)
+
+<
+
+P2 pX 2 ( x )}.
+
+Note that R+
+
+is
+
+slightly
+
+diﬀerent
+
+from
+
+R
+
+∗ X
+
+deﬁned in (5).
+
+4
+
+Proof.
+
+ǫY = min[P1pY1(y), P2pY2(y)]
+
+y
+
+=
+
+1 2
+
+−
+
+1 2
+
+y
+
+|P1pY1(y) − P2pY2(y)|
+
+11
+
+=2−2
+
+y
+
+P1
+x
+
+p(y|x)pX1(x) − P2
+x
+
+p( y | x )pX2 ( x )
+
+=
+
+1 2
+
+−
+
+1 2
+
+y
+
+p(y|x)[P1pX1(x) − P2pX2(x)]
+x
+
+(14)
+
+≥ 1−1 2 2y
+
+p(y|x)|P1pX1(x) − P2pX2(x)|
+x
+
+=
+
+1 2
+
+−
+
+1 2
+
+x
+
+|P1pX1(x) − P2pX2(x)|
+
+y
+
+p( y | x )
+
+11 = 2 − 2 x |P1pX1(x) − P2pX2(x)| = ǫX
+
+When ǫY = ǫX , for any y, we need to have
+
+p(y|x)[P1pX1(x) − P2pX2(x)] = p(y|x)|P1pX1(x) − P2pX2(x)|
+
+(15)
+
+x
+
+x
+
+which is equivalent to: all the x’s that satisfy p(y|x) 0 shall have either P1pX1(x) − P2pX2(x) ≥ 0 or P1pX1(x) −
+P2pX2(x) ≤ 0. The condition is further equivalent to: the x’s that satisfy p(y|x) 0 shall be either all in R+ ∪ R0, or all in R− ∪ R0, where R0 = {x|P1 pX1(x) = P2pX2(x)}. In other words, ∀x1 ∈ R+, ∀x2 ∈ R−, p(y|x1)p(y|x2) = 0.
+
+We can compare Theorem 5 with the data processing theorem in the information theory: consider the process of X → Y as a deterministic function Y = f (X), then I(X; Y ) ≤ H(X), and I(X; Y ) = H(X) if and only if f is invertible [22]. That says, the information quantity we have about the source X is non-increasing after data processing. Similarly, Theorem 5 claims that the Bayes error rate is non-decreasing after data processing, because we lose information, at best not. Moreover, not only invertible function satisﬁes the condition required in Theorem 5, but also a large group of non-invertible functions as well as probabilistic mappings satisfy the condition, which is quite diﬀerent from the data processing theorem. In other words, we may lose information but that information loss may not aﬀect classiﬁcation.
+
+3 Proof of the CDP Tradeoﬀ (Theorem 1)
+
+Proof. For the ﬁrst point, simply note that when increasing D or P, the feasible domain of PXˆ |Y is enlarged; as C(D, P) is the minimal value of ε(Xˆ |c0) over the feasible domain, and the feasible domain is enlarged, the minimal value will not increase.
+For the second point, it is equivalent to prove:
+
+λC(D1, P1) + (1 − λ)C(D2, P2) ≥ C(λD1 + (1 − λ)D2, λP1 + (1 − λ)P2)
+
+(16)
+
+for any λ ∈ [0, 1]. First, let µ(xˆ|y) (resp. ν(xˆ|y)) denote the optimal restoration method under constraint (D1, P1) (resp. (D2, P2)), and Xˆµ (resp. Xˆν) be the restored signal, i.e.
+
+ε(Xˆµ |c0)
+
+=
+
+min
+PXˆ |Y
+
+ε(Xˆ |c0), subject
+
+to
+
+E[∆(X,
+
+Xˆ )]
+
+≤
+
+D1,
+
+d(pX,
+
+pXˆ )
+
+≤
+
+P1
+
+(17)
+
+ε(Xˆν |c0)
+
+=
+
+min
+PXˆ |Y
+
+ε(Xˆ |c0),
+
+subject
+
+to
+
+E[∆(X,
+
+Xˆ )]
+
+≤
+
+D2,
+
+d(pX,
+
+pXˆ )
+
+≤
+
+P2
+
+(18)
+
+Then the left hand side of (16) becomes
+
+λε(Xˆµ|c0) + (1 − λ)ε(Xˆν |c0) = ε(Xˆλ|c0)
+
+(19)
+
+5
+
+where we have used Theorem 3 and Xˆλ denotes the restored signal corresponding to pλ(xˆ|y) = λµ(xˆ|y) + (1 − λ)ν(xˆ|y). Let Dλ = E[∆(X, Xˆλ)], Pλ = d(pX, pXˆλ ), then by deﬁnition
+
+ε(Xˆλ|c0) ≥ C(Dλ, Pλ)
+
+(20)
+
+Next, as d(·, ·) in (7) is convex in its second argument, we have
+
+Pλ = d(pX, λpXˆµ + (1 − λ)pXˆν )
+
+≤ λd(pX, pXˆµ ) + (1 − λ)d(pX, pXˆν )
+
+(21)
+
+≤ λP1 + (1 − λ)P2
+
+the last inequality is due to (17) and (18). Similarly, we have
+
+Dλ = E[∆(X, Xˆλ)]
+
+= EY E[∆(X, Xˆλ)|Y ]
+
+= EY [λE[∆(X, Xˆµ)|Y ] + (1 − λ)E[∆(X, Xˆν)|Y]]
+
+(22)
+
+= λE[∆(X, Xˆµ)] + (1 − λ)E[∆(X, Xˆν)]
+
+≤ λD1 + (1 − λ)D2
+
+the last inequality is again due to (17) and (18). Finally, note that C(D, P) is non-increasing with respect to D and P,
+
+C(Dλ, Pλ) ≥ C(λD1 + (1 − λ)D2, λP1 + (1 − λ)P2)
+
+(23)
+
+Combining (19), (20), and (23), we have (16).
+
+4 Proof of the CDP Tradeoﬀ (Theorem 2)
+Proof. Simply note that when increasing D or P, the feasible domain of PXˆ |Y is enlarged; as CS(D, P) is the minimal value of ǫ(Xˆ ) over the feasible domain, and the feasible domain is enlarged, the minimal value will not increase.
+
+5 Discussion and Conclusion
+We would like to mention the diﬀerence between Theorem 1 and Theorem 2. Theorem 2 is more fundamental as we deal with the theoretically minimal error rate of the restored signal. However in practice, this error rate is not achievable if the degradation model is unknown. Clearly, if p(y|x) is not available, we cannot make any meaningful conclusion regarding the mass function pY (y), which prohibits the search for the optimal restoration method together with the optimal classiﬁer. From a practical perspective, we usually adopt a ﬁxed classiﬁer (for example the classiﬁer trained by some samples of the original signal) and adjust the restoration method only. On the other hand, if the degradation model is known, then it is possible to consider the optimal classiﬁer for the degraded signal Y directly: actually it is better in theory to consider Y instead of Xˆ because we have conﬁrmed that ǫ(Xˆ ) ≥ ǫ(Y ) (Theorem 5). In other words, signal restoration has no use to improve the classiﬁcation accuracy as long as the degradation model is known. According to these analyses, Theorem 2 is less appealing in practice.
+Note that we do not prove the convexity of the strong CDP function, as we have done for the CDP function in Theorem 1. This is due to the essential diﬀerence between classiﬁcation error rate with a ﬁxed classiﬁer and Bayes error rate: the former is linear and the latter is concave (Theorems 3 and 4). Note that the distortion is also linear but the perceptual diﬀerence is convex. We suspect the strong CDP function may be not convex, which is to be conﬁrmed in the future.
+Our ﬁndings can be useful especially for computer vision researches where some low-level vision tasks (signal restoration) serve for high-level vision tasks (visual understanding). If the degradation model is known, we recommend directly classifying the degraded signal without any restoration; at this time the classiﬁer can be trained by samples that are simulated with the known degradation on the original signal. If the degradation model is unknown, we recommend using a ﬁxed classiﬁer, which can be trained for example using samples of the original signal; meanwhile, we recommend searching for the restoration method with the classiﬁcation error rate as the objective (or one of the objectives) of optimization. This strategy is clearly diﬀerent from previous works that optimize for various kinds of distortion metrics for improving the classiﬁcation performance.
+
+6
+
+References
+[1] C. Dong, C. C. Loy, K. He, and X. Tang, “Learning a deep convolutional network for image super-resolution,” in ECCV, 2014, pp. 184–199.
+[2] K. Zhang, W. Zuo, Y. Chen, D. Meng, and L. Zhang, “Beyond a Gaussian denoiser: Residual learning of deep CNN for image denoising,” IEEE Transactions on Image Processing, vol. 26, no. 7, pp. 3142–3155, 2017.
+[3] S. Su, M. Delbracio, J. Wang, G. Sapiro, W. Heidrich, and O. Wang, “Deep video deblurring for hand-held cameras,” in CVPR, 2017, pp. 1279–1288.
+[4] M. Gharbi, J. Chen, J. T. Barron, S. W. Hasinoﬀ, and F. Durand, “Deep bilateral learning for real-time image enhancement,” ACM Transactions on Graphics, vol. 36, no. 4, p. 118, 2017.
+[5] C. Dong, Y. Deng, C. C. Loy, and X. Tang, “Compression artifacts reduction by a deep convolutional network,” in ICCV, 2015, pp. 576–584.
+[6] J. Yu, Z. Lin, J. Yang, X. Shen, X. Lu, and T. S. Huang, “Generative image inpainting with contextual attention,” in CVPR, 2018, pp. 5505–5514.
+[7] Q. Lu, W. Zhou, L. Fang, and H. Li, “Robust blur kernel estimation for license plate images from fast moving vehicles,” IEEE Transactions on Image Processing, vol. 25, no. 5, pp. 2311–2323, 2016.
+[8] H. Kuang, X. Zhang, Y.-J. Li, L. L. H. Chan, and H. Yan, “Nighttime vehicle detection based on bio-inspired image enhancement and weighted score-level feature fusion,” IEEE Transactions on Intelligent Transportation Systems, vol. 18, no. 4, pp. 927–936, 2017.
+[9] J. Shermeyer and A. Van Etten, “The eﬀects of super-resolution on object detection performance in satellite imagery,” arXiv preprint arXiv:1812.04098, 2018.
+[10] R. G. VidalMata, S. Banerjee, B. RichardWebster et al., “Bridging the gap between computational photography and visual recognition,” arXiv preprint arXiv:1901.09482, 2019.
+[11] Z. Wang, A. C. Bovik, H. R. Sheikh, and E. P. Simoncelli, “Image quality assessment: From error visibility to structural similarity,” IEEE Transactions on Image Processing, vol. 13, no. 4, pp. 600–612, 2004.
+[12] J. Johnson, A. Alahi, and L. Fei-Fei, “Perceptual losses for real-time style transfer and super-resolution,” in ECCV, 2016, pp. 694–711.
+[13] A. Mittal, A. K. Moorthy, and A. C. Bovik, “No-reference image quality assessment in the spatial domain,” IEEE Transactions on Image Processing, vol. 21, no. 12, pp. 4695–4708, 2012.
+[14] M. A. Saad, A. C. Bovik, and C. Charrier, “Blind image quality assessment: A natural scene statistics approach in the DCT domain,” IEEE Transactions on Image Processing, vol. 21, no. 8, pp. 3339–3352, 2012.
+[15] Y. Blau and T. Michaeli, “The perception-distortion tradeoﬀ,” in CVPR, 2018, pp. 6228–6237.
+[16] D. Liu, D. Wang, and H. Li, “Recognizable or not: Towards image semantic quality assessment for compression,” Sensing and Imaging, vol. 18, no. 1, pp. 1–20, 2017.
+[17] Y. Blau, R. Mechrez, R. Timofte, T. Michaeli, and L. Zelnik-Manor, “The 2018 PIRM challenge on perceptual image super-resolution,” in ECCV, 2018, pp. 1–22.
+[18] T. Vu, C. Van Nguyen, T. X. Pham, T. M. Luu, and C. D. Yoo, “Fast and eﬃcient image quality enhancement via desubpixel convolutional neural networks,” in ECCV, 2018, pp. 1–17.
+[19] K. Fukunaga, Introduction to Statistical Patten Recognition (2nd Edition). San Diego, CA, USA: Academic Press, 1990, ch. 3.1, pp. 51–65.
+[20] I. Csiszár and P. C. Shields, “Information theory and statistics: A tutorial,” Foundations and Trends® in Communications and Information Theory, vol. 1, no. 4, pp. 417–528, 2004.
+7
+
+[21] T. Van Erven and P. Harremos, “Rényi divergence and Kullback-Leibler divergence,” IEEE Transactions on Information Theory, vol. 60, no. 7, pp. 3797–3820, 2014.
+[22] T. M. Cover and J. A. Thomas, Elements of Information Theory. John Wiley & Sons, 2012.
+8
+

@@ -1,0 +1,484 @@
+Rethinking FUN: Frequency-Domain Utilization Networks
+
+Kﬁr Goldberg1,2 Stav Shapiro2 Elad Richardson2 1Tel-Aviv University 2Penta-AI
+
+Shai Avidan1
+
+arXiv:2012.03357v1 [cs.CV] 6 Dec 2020
+
+Abstract
+The search for efﬁcient neural network architectures has gained much focus in recent years, where modern architectures focus not only on accuracy but also on inference time and model size. Here, we present FUN, a family of novel Frequency-domain Utilization Networks. These networks utilize the inherent efﬁciency of the frequencydomain by working directly in that domain, represented with the Discrete Cosine Transform. Using modern techniques and building blocks such as compound-scaling and inverted-residual layers we generate a set of such networks allowing one to balance between size, latency and accuracy while outperforming competing RGB-based models. Extensive evaluations veriﬁes that our networks present strong alternatives to previous approaches. Moreover, we show that working in frequency domain allows for dynamic compression of the input at inference time without any explicit change to the architecture.
+1. Introduction
+The introduction of well-designed convolutional neural networks (CNNs) has revolutionized the computer vision ﬁeld [13, 1, 2, 17, 6]. While early efforts in the design of such networks focused mostly on maximizing accuracy, recent works [19, 8, 15, 22, 18] have shown the importance of architectures that are not only accurate, but also efﬁcient. More speciﬁcally, these works focus on lowering the number of ﬂoating point operations (FLOPs), inference latency and the number of model parameters while maximizing model accuracy.
+An increasingly popular avenue for research on CNNs efﬁciency is to leverage frequency domain representations of images, most commonly achieved using the Discrete Cosine Transform (DCT). Being part of the JPEG codec, the DCT is both widely used and convenient to work with. As a result, previous works used the DCT coefﬁcients as inputs to CNNs, achieving faster inference [5, 3] and more control [25] over the input size. We build upon these works by introducing a family of novel
+Code available at https://github.com/kfir99/FUN
+
+Figure 1: ImageNet Accuracy vs Model Size
+Frequency-domain Utilization Networks (FUN). As the name suggests, FUN networks utilize the advantages inherent in the frequency domain representations. We present a family of architectures that allow for trade-offs between model accuracy, model size, and inference latency, while also allowing for different levels of input compression.
+Motivated by the results presented in [5], we explore similar design principles in the widely used ResNet architectures. The resulting frequency domain architecture, named ResFUN, is superior in terms of efﬁciency and model size to both the original ResNet and the modiﬁed DCT based architecture in [5]. Next, we apply these design principles to more efﬁciency oriented class of architectures [16, 19] whose main building block is the Inverted Residual Block (MBConv). The resulting DCTbased architecture, named eFUN, is signiﬁcantly faster and lighter than the equivalent RGB-based architectures, while achieving comparable, and at times, even better accuracy. We further extend our FUN family by using
+
+1
+
+the compound scaling method [19], generating models with a range of sizes, speeds, and accuracy, providing different degrees of freedom when selecting a model for different computational budgets. Figure 1 summarizes our performance on the ImageNet classiﬁcation task, showing that eFUN outperforms other competing models.
+Extensive evaluations are performed to measure the effectiveness and beneﬁts of our eFUN family of models compared to highly-optimized RGB-based networks. For example, on the ImageNet classiﬁcation task, our base model, eFUN, is 20% smaller and 65% faster than EfﬁcientNet-B0, while dropping only a small percentage of accuracy. Notably our results show that due to the inherent properties of the DCT representation, one can remove more than half of the input channels of a model trained on ImageNet with a drop of less than 1% in top-1 accuracy with no additional training.
+Our main contributions are:
+• A novel, DCT-based, CNN architecture achieving state-of-the-art results on ImageNet classiﬁcation.
+• A family of frequency-based models constructed using the compound scaling method introduced in [19].
+2. Related Work
+Efﬁcient CNNs In recent years, CNNs have signiﬁcantly improved, becoming increasingly more accurate over time. However, this accuracy has come at a cost in the form of slower, larger architectures [20, 24, 9]. As these CNNs have gotten bigger, we have begun reaching hardware capacity limitations. For example, GPIPE [9] with over 560M parameters requires a dedicated infrastructure for training. Therefore, recent works [18, 8, 16, 19, 27, 10] have focused on designing more efﬁcient architectures without compensating for accuracy. While many works have done so using more standard techniques such as pruning [4] and quantization [23], it has become common to design highlyoptimized architectures obtained using a Neural Architecture Search (NAS) aimed at optimizing the FLOP count as a proxy for inference latency that is agnostic of the underlying hardware. Contrary to these works, we approach the efﬁciency problem by changing the representation of the data, from RGB to DCT coefﬁcients, and design efﬁcient architectures operating on the DCT inputs.
+Frequency Domain Based Networks The utilization of the frequency domain for CNNs has been studied in the past for various reasons. [5] have shown that feeding DCT inputs to ResNet-based CNNs can lead to a signiﬁcant speedup in inference latency while maintaining accuracy close to that of RGB-based models. The speedup provided by their architectures is due to the shallower network and the lower
+
+spatial size of the DCT inputs. We extend this work, utilizing more modern architectural building blocks and achieving better efﬁciency in terms of inference latency, model size, and input size. [25] trade-off the spatial size of the input with the number of DCT coefﬁcients used to represent each block in the DCT. They suggest using DCT inputs with larger spatial dimensions (448×448 compared to 224×224 for RGB), while keeping only a certain number of DCT coefﬁcients from each block. We show that our FUN models can work well even when drastically reducing the number of DCT channels used for each block, without any need to change the spatial size of the input, thus enabling the use of highly compressed inputs. Finally, [21] propose using a new block, the Harmonic block, in RGB-based architectures, which relies on the DCT ﬁlters.
+3. Frequency-Domain Utilization Networks
+In this section we introduce a set of novel architectures operating on inputs in the frequency domain. We ﬁrst describe the preprocessing required for the DCT inputs, followed by the network design process for the different architectures.
+3.1. The DCT Preprocessing Pipeline
+Our preprocessing stage is described in Figure 2. Similar to [5], the RGB-represented input image is ﬁrst converted to its corresponding YCbCr representation, representing the luminance (Y) and chroma (Cb, Cr) of the image. The two chroma channels are then down-sampled by a factor of 2, as is done in the JPEG codec. Each of the three channels is then split into 8 × 8 blocks and passed through the DCT converting each to its frequency-domain representation. Next, the two chroma channels are up-sampled to have the same spatial size as the luminance channel. Finally, the three channels are stacked over the frequency domain.
+
+224 224
+
+224
+Y 224
+112
+112 Cb
+112
+112 Cr
+
+28 64 28
+14 64 14
+14 64 14
+
+28 64 28
+
+28 64 28
+28 64 28
+
+28
+
+192
+
+28
+
+Figure 2: RGB to DCT preprocessing for FUN
+
+2
+
+224 224
+
+28
+28
+DCT Preprocess
+
+192 28
+28
+
+512
+
+14 768
+
+7 1024
+
+14
+
+7
+
+1x1x1024
+
+Res Block Res Block Res Block
+
+x4
+
+x6
+
+x3
+
+(a)
+
+224 224
+
+28
+28
+DCT Preprocess
+
+192
+
+128 28
+
+14 160
+
+1x1x1280 14 192
+
+28
+
+14
+
+14
+
+MBConv4 MBConv4 MBConv6
+
+x3
+
+x6
+
+x1
+
+(b)
+
+Figure 3: FUN architectures, (a) presents ResFUN, (b) presents eFUN.
+
+3.2. The ResFUN Architecture
+First, as an illustrative example, we present the ResFUN architecture described in Figure 3a. Similar to the standard ResNet architecture [6], ResFUN is constructed using Residual Blocks. In the case of ResFUN, however, the input layer must be changed to accommodate the DCTrepresented inputs. In a similar fashion to [5], we remove the ﬁrst convolutional layer and ﬁrst Residual Block of the ResNet, corresponding to the initial ×8 down-sampling of the original RGB input image, to ﬁt the 28 × 28 spatial size of the DCT-based inputs.
+Additionally, to further reduce the number of parameters in our model, we decrease the number of ﬁlters in each of the ResNet stages — from 512, 1024, 2048 in ResNet-50 to 512, 768, 1024 in our ResFUN architecture, respectively. Doing so reduces the model size by a factor of 2.5, from 25.5M parameters in ResNet-50, to 10.4M in our ResFUN model. This additional reduction in model size is possible since our DCT inputs are already a processed, more compact representation than the RGB inputs, for which the standard ResNets are designed.
+3.3. The eFUN Architecture
+Having successfully converted the ResNet architecture to operate on DCT-represented inputs, we then turn to more efﬁciency-oriented architectures. Speciﬁcally, we focus on
+
+the class of architectures utilizing the Inverted Residual Block (MBConv) [16, 7, 18, 19, 15]. A notable example of such architectures is the EfﬁcientNet [19] family of architectures, which additionally introduces the compound model scaling technique. There, one can generate scaled-up versions of a baseline model by intelligently balancing the width, depth, and input resolution to maximize performance for a given computational budget. Following these recent architectural advancements, we present a family of FUN models, efﬁcientFUN (eFUN). Our baseline eFUN model, illustrated in Figure 3b is inspired by EfﬁcientNet-B0, but with several key differences.
+Shallower Architecture As EfﬁcientNet-B0 receives RGB inputs of size 224 × 224 × 3, their input is only downsampled to a spatial dimension of 28 × 28 after the ﬁrst six layers. Conversely, our eFUN models are given DCT inputs already with a spatial resolution of 28 × 28. The smaller input resolution enables us to create a shallower network, leading to lower inference latency compared to the larger EfﬁcientNet counterpart.
+Wider Bottleneck In EfﬁcientNet-B0, the stages with equivalent input resolutions to the DCT domain are 5 and 6. To compensate for the loss of representation strength from stages 1 through 4, we widen stages 5 and 6 of EfﬁcientNet-
+
+3
+
+B0 channels from 80 and 112, to 128 and 160 respectively.
+Scaled-Down Models Given the base model constructed above, the compound scaling method is leveraged to generate additional architectures. In contrast to [19] however, we scale down our eFUN model and generate the smaller eFUN-S+ and eFUN-S models in addition to scaling up to obtain the larger eFUN-L model.
+3.4. The Beneﬁts of FUN
+The shallower design of the eFUN and ResFUN architectures is a direct consequence of working in the frequency domain. Speciﬁcally in the case of DCT, this results in a wider but shallower network. In the following sections we show that this design change in the eFUN architecture is superior to the original design in both accuracy and model size. Our results are in agreement with [26] where it was shown that the wider but shallower deep residual networks outperformed previous deeper but thinner versions of the same networks.
+Additionally, due to the parallel compute paradigm in modern GPUs, a known rule of thumb is that, all else being equal, shallow and wide beats deep and narrow in terms of inference latency. For our eFUN network, this can lead to between 30% and 80% inference time improvements compared to baseline RGB architectures.
+Finally, FUNs allow for dynamic reduction of the input size. Unlike the RGB or YCbCr representations, where all 3 input channels have similar importance, in DCT coefﬁcients the lower frequencies tend to have a larger visual importance. This insight is leveraged to show how the eFUN architectures can work well even when signiﬁcantly reducing the number of input channels of a trained model, with no additional training or modiﬁcations needed.
+3.5. Implementation Details
+All of our FUN models take as input 224x224 RGB images, which ﬁrst pass through the preprocessing presented in Section 3.1. We use the computed DCT of each input image, with the same conﬁguration as the standard JPEG DCT, and use JPEG image quality set to 100, meaning the DCT coefﬁcients are not further compressed. The DCT coefﬁcients obtained from the JPEG pipeline are in the shape of 28x28x64 for the Y channel, and 14x14x64 for each of the Cb and Cr channels. The chroma channels are then up-sampled and all three channels are stacked over the frequency dimension, resulting in a ﬁnal input of size 28x28x192.
+The eFUN models are trained on ImageNet using a similar settings to that of [19]: The RMSProp optimizer is used with decay of 0.9 and momentum of 0.9; weight decay of 1e-5; and a learning rate scheduler with an initial learning rate of 0.048 with a decay of 0.97 every 2.4 epochs. We
+
+Model
+ResFUN ResNet18 ResNet34
+
+Top-1 Acc.
+72.8% 69.8% 73.3%
+
+# Parameters (M)
+10.4 11.7 21.8
+
+Images / sec.
+167 330 180
+
+Table 1: ResFUN performance compared to ResNets with different depths
+
+also use stochastic depth with a drop probability of 0.2 for eFUN-S+, eFUN-S and eFUN, and 0.3 drop probability for eFUN-L. The models are trained for 450 epochs using 4 NVIDIA V100 GPUs and a batch size of 512 and inference latency of all models is measured using a single NVIDIA V100 GPU with a batch size of 1. All latency measurements are computed as if the images were already loaded in the relevant representation (RGB/DCT), thus the timing improvement possible due to reduced JPEG decompression time for DCT representation is not taken into account. The results for RGB-based models are reported using the same implementation 1 where EfﬁcientNet-B0 and EfﬁcientNetB1 are trained using the same settings as the eFUN models. Additionally, Our ResFUN model is trained using the SGD optimizer with a learning rate of 0.1 for 90 epochs, 0.01 for 20 epochs, and 0.001 for 20 epochs.
+4. Experiments
+In this section an evaluation of the FUN models introduced in Section 3 is performed. We start by evaluating our ResFUN architecture in comparison to the standard ResNet architectures. We then conduct an extensive evaluation of our eFUN family of models, and compare them to a wide variety of efﬁciency-oriented RGB-based models. We continue by investigating the transfer-learning capabilities of our models compared to those of RGB-based models. Finally, we perform an ablation study to explore different possible architectural choices.
+4.1. ImageNet Results on ResFUN
+We ﬁrst show results obtained on the ImageNet classiﬁcation task using our constructed ResFUN architecture compared to standard ResNet architectures operating on inputs represented in RGB. Results are summarized in Table 1. While the RGB-based ResNets offer different tradeoffs between accuracy and model size by changing the depth of the model, our frequency-based ResFUN offers appealing advantages. Compared to the smallest ResNet model, ResNet-18, ResFUN is both shallower and uses less ﬁlters in each block while achieving a higher top-1 accu-
+1https : / / github . com / rwightman / pytorch - image models
+
+4
+
+Model
+eFUN-S+ RegNetX-400MF [15] MobileNet-V2 1.0 [16] MobileNet-V3-Large 0.75 [7] eFUN-S FBNet-C[22] SEMNASNet 1.0 [18] MobileNet-V3-Large 1.0 [7] RegNetY-800MF [15] eFUN EfﬁcientNet-B0 [19] eFUN-L EfﬁcientNet-B1 [19]
+
+Top-1 Acc.
+73.3% 72.4% 73% 73.4% 75.6% 75.1% 75.4% 75.8% 76.3% 77% 77.4% 78.8% 79.3%
+
+# Parameters (M)
+2.5 5.2 3.5 4 3.4 5.6 3.9 5.5 6.3 4.2 5.3 6.2 7.8
+
+Images / sec.
+145 70 148 95 132 122 122 94 77 124 77 101 56
+
+#FLOPs (M)
+520 400 300 150 600 375 300 220 800 850 400 1, 600 700
+
+Table 2: eFUN performance on ImageNet. CNNs with similar top-1 accuracy are grouped together for clear comparison.
+
+racy by approximately 3% and being smaller in size. Although the larger ResNet-34 architecture out-performs our model with respect to top-1 accuracy, the ResFUN architecture provides an attractive alternative being ×2 smaller than the standard ResNet-34 architecture. These comparisons show that the ResFUN architecture manages to be smaller than the ResNet18 while being almost as accurate as the ResNet34, making ResFUN signiﬁcantly more efﬁcient than the ResNet architectures.
+4.2. ImageNet Results on eFUN
+The results of our eFUN models are presented in Table 2 and show that the eFUN model is 20% smaller and 65% faster than the highly-efﬁcient, state-of-the-art EfﬁcientNet-B0 model, while being very close in terms of accuracy (77.4% for EfﬁcientNet-B0 compared to 77% eFUN). Building on the eFUN model, we use EfﬁcientNet’s compound scaling method, allowing us to scale up and scale down the eFUN architecture to provide ﬂexibility with respect to the desired computational budget. In particular, the smallest architecture generated by compound scaling of the eFUN model is the eFUN-S+ architecture, which is 30% smaller and 0.3% more accurate than the comparable MobileNet-V2-100 model. Although both models obtain similar inference latency (Figure 4), MobileNet-V2 was speciﬁcally designed and optimized for inference latency, while eFUN-S+ is inherently fast due to the advantages offered by FUN, while also being smaller and more accurate than the former.
+Table 2 shows that while eFUN models are typically faster than similar RGB-based models at inference time, their FLOP count is signiﬁcantly higher. FLOPs are usually used as a proxy to estimate the run time of models on different CPUs without measuring on a speciﬁc setup. Our
+
+Figure 4: ImageNet Accuracy vs. Latency.
+results show that FLOPs are not a good indicator for inference latency when measured on GPUs, due to their highly paralleled nature. Since eFUN models are generally significantly shallower (10 − 13 layers) than EfﬁcientNet models (18 layers for EfﬁcientNet-B0), their execution on GPUs, proportional to the depth of the network, is faster.
+4.3. Transfer Learning Results for FUN Architectures
+To show that FUN generalizes for different tasks, we present an evaluation of our models on three commonly
+
+5
+
+Figure 5: Transfer learning results, from left to right: CIFAR100 [12], FGVC aircraft [14], Stanford Cars [11].
+
+Dataset
+CIFAR-100 [12] Stanford Cars [11] FGVC Aircraft [14]
+
+Train size
+50,000 8,144 6,667
+
+Test Size
+10,000 8,041 3,333
+
+# Classes
+100 196 100
+
+Table 3: Transfer Learning Datasets.
+
+used transfer learning datasets, which are presented in Table 3. For these experiments, the same settings deﬁned in Section 3.5 are applied, where each model is ﬁrst pretrained on ImageNet and then ﬁne-tuned on its task.
+Figure 5 illustrates the trade-off between model accuracy, model size and inference latency for three transfer learning datasets. For each model, we report results for top-1 accuracy, inference speed (in images per second), and model size (in number of parameters). One can see that eFUN models signiﬁcantly outperform the competing models in terms of model size and inference latency, while providing comparable accuracy. Speciﬁcally, when considering the popular CIFAR-100 dataset [12], the eFUN model outperforms the EfﬁcientNet-B0 model by 0.9% accuracy, while still being 20%smaller and 65% faster. Our eFUNS+ model is lower in accuracy compared to EfﬁcientNet-B0 model (82.5% for EfﬁcientNet-B0 compared to 81.1% for eFUN-S+), but is 53% smaller and 91% faster.
+4.4. Architecture Ablation Study
+In this section we conduct an ablation study with various alternative architectures to those presented above in order to validate our architecture design. The ﬁrst architecture considered is the standard EfﬁcientNet-B0 architecture presented in [19], with a few key changes. First, the ﬁrst convolution layer is removed and the number of strides is reduced accordingly, in order to keep the spatial dimension
+
+Stage i
+
+Operator Fˆi
+
+Resolution # Channels # Layers
+
+Hˆi × Wˆ i
+
+Cˆi
+
+Lˆi
+
+1
+
+MBConv1, k3x3
+
+28 × 28
+
+16
+
+1
+
+2
+
+MBConv6, k3x3
+
+28 × 28
+
+24
+
+2
+
+3
+
+MBConv6, k5x5
+
+28 × 28
+
+40
+
+2
+
+4
+
+MBConv6, k3x3
+
+28 × 28
+
+80
+
+3
+
+5
+
+MBConv6, k5x5
+
+14 × 14 112
+
+3
+
+6
+
+MBConv6, k5x5
+
+14 × 14 192
+
+4
+
+7
+
+MBConv6, k3x3
+
+7×7
+
+320
+
+1
+
+8 Conv1x1 & Pooling & FC 7 × 7
+
+1280
+
+1
+
+Table 4: The eFUN-variant-A architecture. Each row describes a stage, i, with Lˆi layers, input resolution Hˆi, Wˆ i and output channels Cˆi.
+
+Stage i
+
+Operator Fˆi
+
+Resolution # Channels # Layers
+
+Hˆi × Wˆ i
+
+Cˆi
+
+Lˆi
+
+1
+
+MBConv6, k3x3
+
+28 × 28
+
+80
+
+3
+
+2
+
+MBConv6, k5x5
+
+14 × 14 112
+
+3
+
+3
+
+MBConv6, k5x5
+
+14 × 14 192
+
+4
+
+4
+
+MBConv6, k3x3
+
+7×7
+
+320
+
+1
+
+5 Conv1x1 & Pooling & FC 7 × 7
+
+1280
+
+1
+
+Table 5: The eFUN-variant-B architecture. Each row describes a stage, i, with Lˆi layers, input resolution Hˆi, Wˆ i and output channels Cˆi.
+
+of the output layer the same as the original architecture. The modiﬁed architecture is presented in Table 4 and is denoted eFUN-variant-A. The second architecture was designed by following the modiﬁcations made to the ResNet-50 model in order to create the ResFUN architecture. In this architecture, the DCT inputs are fed directly to the stage in the original EfﬁcientNet architecture which is designed to have inputs with the same spatial size as eFUN’s DCT inputs (28 × 28). The rest of the network is the same as the ﬁ-
+
+6
+
+Architecture Top-1 Acc. # Parameters (M)
+
+eFUN
+
+77
+
+4.2
+
+eFUN-variant-A 75
+
+5.3
+
+eFUN-variant-B 74.9
+
+5.6
+
+Table 6: Architecture ablation study, presented on the ImageNet dataset.
+
+# Input Channels Y/Cb/Cr Top-1 Acc. # Parameters (M)
+
+192
+
+64/64/64 77.01
+
+4.23
+
+88
+
+64/12/12 76.02
+
+3.99
+
+64
+
+44/10/10 73.95
+
+3.96
+
+48
+
+32/8/8 69.45
+
+3.93
+
+24
+
+14/5/5 51.85
+
+3.91
+
+Table 7: The effects of dropping input channels on eFUN performance.
+
+nal stages of the standard EfﬁcientNet-B0 architecture. The modiﬁed architecture is denoted eFUN-variant-B and presented in Table 5.
+Our results, presented in Table 6, show that the original eFUN model outperforms both variants. We conclude that the balance between the width and resolution of the network is crucial and that a naive change to the architecture does not yield the same results. In particular, we ﬁnd that EfﬁcientNet-B0 is not suitable for DCT inputs due to the large difference in input resolution required. Thus, intelligent modiﬁcations are needed to design a smaller architecture able to exploit the strengths of the DCT representation.
+4.5. Input Compression
+In this experiment, we take a trained eFUN show the effects of discarding input channels on the model accuracy and size. To do so, during inference selected Y, Cb, and Cr channels are zeroed-out. We show that one can signiﬁcantly reduce the number of frequency channels used to represent the input by keeping only the lowest frequency channels in each of Y, Cb, and Cr.
+Our results, presented in Table 7, show that when using FUN, it is possible to signiﬁcantly reduce the size of the input, while maintaining a relatively high accuracy. For example, dropping 54% of the input channels (from 192 to 88) results in a 1% drop in accuracy while dropping 75% of the input channels results in a 7.5% drop in accuracy. These results offer a desirable property: as no additional training is performed here, FUN models inherently support different possible operating points with regard to the input compression ratio. Figure 6 shows the effect of compression on the Top-1 accuracy for both our DCT eFUN model
+
+Figure 6: ImageNet accuracy vs. input compression ratio.
+and an RGB EfﬁcientNet-B0, where simple down-sampling is used to simulate compression for RGB-based models.
+4.6. A Learnable DCT Transformation
+The core advantage of FUN comes from the usage of the DCT representation, which is static and not learned. In this experiment, we study whether the input DCT can be replaced with a learnable convolutional layer. In particular, the new convolutional layer receives as input a YCbCr image obtained from its RGB representation. It then transforms each 8 × 8 × 1 input block into 1 × 1 × 64 outputs. The ﬁnal DCT output, of size 28 × 28 × 192, is then fed into the original network, as before.
+We propose two methods of learning this transformation:
+1. Adding a DCT-like convolutional layer before an already trained eFUN model and training only the added convolutional layer, this Learnable-eFUN variant is denoted LeFUN.
+2. Adding a DCT-like convolutional layer before the eFUN architecture and training the entire network endto-end, denoted LeFUNe2e.
+Intuitively, the second approach implements an ”encoderdecoder” architecture, where the decoder is a ﬁxed eFUN network and the encoder is trained to produce inputs similar to those expected by the decoder.
+The results achieved by each of the methods are presented in Table 8. The results show that LeFUNe2e provides the best accuracy, while resulting in a slightly larger model compared to the standard eFUN model, and LeFUN
+
+7
+
+Figure 7: Dct ﬁlters. From left to right: LeFUN, LeFUNe2e, standard DCT.
+
+Model Top-1 Acc. # Parameters (M)
+
+eFUN
+
+77
+
+4.2
+
+LeFUN
+
+72.8
+
+4.3
+
+LeFUNe2e 77.2
+
+4.3
+
+Table 8: Comparison of ﬁxed and learnable transforms.
+
+provides the worst accuracy by a large margin. The ﬁlters learned by each of the three methods are presented in Figure 7. One can see that some of the ﬁlters learned by our new layers seem similar to those of the standard DCT, as they include vertical and horizontal lines in some frequency. However, most ﬁlters still look rather different than those of the DCT, showing the usefulness of using the static DCT ﬁlters, which allows an higher level of understanding and has meaningful ordering of the ﬁlters.
+Our results show that using a DCT-like learned convolutional layer for RGB inputs can provide results similar to those of eFUN models in terms of model size, latency, and top-1 accuracy. However, using a learned transformation makes it difﬁcult to analyze the importance of each input channel and does not provide inherent support for dynamic input compression presented in Section 4.5.
+5. Conclusions
+In this paper we have presented the FUN family. These architectures were designed, using modern building blocks, to utilize DCT inputs instead of the standard RGB ones. We show that using this representation one can create architectures that are much more efﬁcient, in terms of size and latency, while still maintaining the accuracy of RGBbased models. The effectiveness of this representation is then shown using an extensive set of experiments. We hope
+
+that, apart from its direct impact, FUN would inspire more research into the effectiveness of the frequency-domain for training neural networks.
+References
+[1] Md Zahangir Alom, Tarek M Taha, Christopher Yakopcic, Stefan Westberg, Paheding Sidike, Mst Shamima Nasrin, Brian C Van Esesn, Abdul A S Awwal, and Vijayan K Asari. The history began from alexnet: A comprehensive survey on deep learning approaches. arXiv preprint arXiv:1803.01164, 2018. 1
+[2] Alexis Conneau, Holger Schwenk, Loıc Barrault, and Yann Lecun. Very deep convolutional networks for natural language processing. arXiv preprint arXiv:1606.01781, 2, 2016. 1
+[3] Max Ehrlich and Larry S. Davis. Deep residual learning in the jpeg transform domain. In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV), October 2019. 1
+[4] Jonathan Frankle and Michael Carbin. The lottery ticket hypothesis: Finding sparse, trainable neural networks. arXiv preprint arXiv:1803.03635, 2018. 2
+[5] Lionel Gueguen, Alex Sergeev, Ben Kadlec, Rosanne Liu, and Jason Yosinski. Faster neural networks straight from jpeg. In Advances in Neural Information Processing Systems, pages 3933–3944, 2018. 1, 2, 3
+[6] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. Deep residual learning for image recognition. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 770–778, 2016. 1, 3
+[7] Andrew Howard, Mark Sandler, Grace Chu, Liang-Chieh Chen, Bo Chen, Mingxing Tan, Weijun Wang, Yukun Zhu, Ruoming Pang, Vijay Vasudevan, et al. Searching for mobilenetv3. In Proceedings of the IEEE International Conference on Computer Vision, pages 1314–1324, 2019. 3, 5
+[8] Andrew G Howard, Menglong Zhu, Bo Chen, Dmitry Kalenichenko, Weijun Wang, Tobias Weyand, Marco Andreetto, and Hartwig Adam. Mobilenets: Efﬁcient convolu-
+
+8
+
+tional neural networks for mobile vision applications. arXiv preprint arXiv:1704.04861, 2017. 1, 2 [9] Yanping Huang, Youlong Cheng, Ankur Bapna, Orhan Firat, Dehao Chen, Mia Chen, HyoukJoong Lee, Jiquan Ngiam, Quoc V Le, Yonghui Wu, et al. Gpipe: Efﬁcient training of giant neural networks using pipeline parallelism. In Advances in neural information processing systems, pages 103–112, 2019. 2 [10] Forrest N. Iandola, Song Han, Matthew W. Moskewicz, Khalid Ashraf, William J. Dally, and Kurt Keutzer. Squeezenet: Alexnet-level accuracy with 50x fewer parameters and ¡0.5mb model size, 2016. 2 [11] Jonathan Krause, Jia Deng, Michael Stark, and Li Fei-Fei. Collecting a large-scale dataset of ﬁne-grained cars. 2013. 6 [12] Alex Krizhevsky, Geoffrey Hinton, et al. Learning multiple layers of features from tiny images. 2009. 6 [13] Alex Krizhevsky, Ilya Sutskever, and Geoffrey E Hinton. Imagenet classiﬁcation with deep convolutional neural networks. In Advances in neural information processing systems, pages 1097–1105, 2012. 1 [14] Subhransu Maji, Esa Rahtu, Juho Kannala, Matthew Blaschko, and Andrea Vedaldi. Fine-grained visual classiﬁcation of aircraft. arXiv preprint arXiv:1306.5151, 2013. 6 [15] Ilija Radosavovic, Raj Prateek Kosaraju, Ross Girshick, Kaiming He, and Piotr Dolla´r. Designing network design spaces. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 10428– 10436, 2020. 1, 3, 5 [16] Mark Sandler, Andrew Howard, Menglong Zhu, Andrey Zhmoginov, and Liang-Chieh Chen. Mobilenetv2: Inverted residuals and linear bottlenecks. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 4510–4520, 2018. 1, 2, 3, 5 [17] Christian Szegedy, Wei Liu, Yangqing Jia, Pierre Sermanet, Scott Reed, Dragomir Anguelov, Dumitru Erhan, Vincent Vanhoucke, and Andrew Rabinovich. Going deeper with convolutions. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 1–9, 2015. 1 [18] Mingxing Tan, Bo Chen, Ruoming Pang, Vijay Vasudevan, Mark Sandler, Andrew Howard, and Quoc V Le. Mnasnet: Platform-aware neural architecture search for mobile. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 2820–2828, 2019. 1, 2, 3, 5 [19] Mingxing Tan and Quoc V Le. Efﬁcientnet: Rethinking model scaling for convolutional neural networks. arXiv preprint arXiv:1905.11946, 2019. 1, 2, 3, 4, 5, 6 [20] Hugo Touvron, Andrea Vedaldi, Matthijs Douze, and Herve´ Je´gou. Fixing the train-test resolution discrepancy: Fixefﬁcientnet. arXiv preprint arXiv:2003.08237, 2020. 2 [21] Matej Ulicny, Vladimir A. Krylov, and Rozenn Dahyot. Harmonic convolutional networks based on discrete cosine transform, 2020. 2 [22] Bichen Wu, Xiaoliang Dai, Peizhao Zhang, Yanghan Wang, Fei Sun, Yiming Wu, Yuandong Tian, Peter Vajda, Yangqing Jia, and Kurt Keutzer. Fbnet: Hardware-aware efﬁcient convnet design via differentiable neural architecture search. In
+
+Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 10734–10742, 2019. 1, 5 [23] Jiaxiang Wu, Cong Leng, Yuhang Wang, Qinghao Hu, and Jian Cheng. Quantized convolutional neural networks for mobile devices. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 4820– 4828, 2016. 2 [24] Qizhe Xie, Minh-Thang Luong, Eduard Hovy, and Quoc V Le. Self-training with noisy student improves imagenet classiﬁcation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 10687– 10698, 2020. 2 [25] Kai Xu, Minghai Qin, Fei Sun, Yuhao Wang, Yen-Kuang Chen, and Fengbo Ren. Learning in the frequency domain, 2020. 1, 2 [26] Sergey Zagoruyko and Nikos Komodakis. Wide residual networks. arXiv preprint arXiv:1605.07146, 2016. 4 [27] Xiangyu Zhang, Xinyu Zhou, Mengxiao Lin, and Jian Sun. Shufﬂenet: An extremely efﬁcient convolutional neural network for mobile devices, 2017. 2
+
+9
+

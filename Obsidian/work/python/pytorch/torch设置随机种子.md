@@ -1,0 +1,1 @@
+- 很可能在main的一开始进行设置，通过param-args读入![[Pasted image 20230318141051.png]]

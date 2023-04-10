@@ -1,0 +1,207 @@
+{
+  "main": {
+    "id": "2f9e797b95ac0797",
+    "type": "split",
+    "children": [
+      {
+        "id": "eb826b42826ade1b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8ecfe3702c1d6c15",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {}
+            }
+          },
+          {
+            "id": "f4ff5b79a6a3d97c",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {}
+            }
+          },
+          {
+            "id": "bdaad6975247cbca",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {}
+            }
+          }
+        ],
+        "currentTab": 2
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "a029a58765201af5",
+    "type": "split",
+    "children": [
+      {
+        "id": "dfe91a239d0db86e",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a3b6997c4afda228",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "f70ec364dde7d3b3",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "fa1cb3eb56edb2d0",
+            "type": "leaf",
+            "state": {
+              "type": "starred",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 312.5
+  },
+  "right": {
+    "id": "2654c90c6a4ba41a",
+    "type": "split",
+    "children": [
+      {
+        "id": "d37e78bc93172af3",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "982fbe81981ff15a",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": true,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "bff2eb5f39d56641",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "01c7ac92b5585edf",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              }
+            }
+          },
+          {
+            "id": "77739e1c9f358377",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false,
+      "canvas:Create new canvas": false
+    }
+  },
+  "active": "bdaad6975247cbca",
+  "lastOpenFiles": [
+    "Course/Projects/MIC实习/paper/Feature/Fourier Domain/Untitled.md",
+    "Course/Projects/MIC实习/paper/Feature Extractor/Understanding and Simplifying Perceptual Distances.md",
+    "Course/Projects/MIC实习/paper/Feature Extractor/Generic Perceptual Loss for Modeling Structured Output Dependencies.md",
+    "Course/Projects/MIC实习/paper/Feature Extractor/img/Pasted image 20230325152807.png",
+    "Course/Projects/MIC实习/paper/Feature Extractor/img/Pasted image 20230325152500.png",
+    "Course/Projects/MIC实习/paper/Feature Extractor/img/Pasted image 20230325152303.png",
+    "Course/Projects/MIC实习/paper/Feature Extractor/img/Pasted image 20230325151312.png",
+    "Course/Projects/MIC实习/paper/Feature Extractor/img/Pasted image 20230325142146.png",
+    "Course/Projects/MIC实习/paper/Feature/Fourier Domain/Deep Fourier-Based Exposure Correction Network with Spatial-Frequency Interaction.md",
+    "Course/Projects/MIC实习/paper/Feature/Fourier Domain/Fourier Features Let Networks Learn High Frequency Functions in Low Dimensional Domains.md",
+    "Course/Projects/MIC实习/paper/Feature/Fourier Domain/FDA：Fourier Domain Adaptation for Semantic Segmentation.md",
+    "Course/Projects/MIC实习/Math/RKHS（Reproducing Kernel Hilbert Space）.md",
+    "Course/Projects/MIC实习/paper/Feature Extractor/img/Pasted image 20230324221753.png",
+    "Course/Projects/MIC实习/paper/Feature Extractor/img/Pasted image 20230324220659.png",
+    "Course/Projects/MIC实习/paper/Feature Extractor/img/Pasted image 20230324214142.png",
+    "Course/Projects/MIC实习/paper/Feature Extractor/img/Pasted image 20230324164443.png",
+    "Course/Projects/MIC实习/paper/Feature Extractor/img",
+    "Course/Projects/MIC实习/paper/Feature Extractor",
+    "Course/Projects/MIC实习/paper/Distance Between Images/The Unreasonable Effectiveness of Deep Feature as a Perceptual Metric.md",
+    "Course/Projects/MIC实习/paper/Adversarial Learning/Wasserstein Generative Adversarial Networks.md",
+    "Course/Projects/MIC实习/paper/Feature/Spatial Domain/Unsupervised Domain Adaptation using Feature-Whitening and Consensus Loss.md",
+    "Course/Projects/MIC实习/paper/Universal Style Transfer via Feature Transforms.md",
+    "Course/Projects/MIC实习/paper/Adversarial Learning/Unsupervised Discovery of Interpretable Directions in the GAN Latent Space.md",
+    "Course/Projects/MIC实习/paper/Untitled.md",
+    "Course/Projects/MIC实习/paper/Distance Between Images/The Contextual Loss for Image Transformation with Non-Aligned Data.md",
+    "Course/Projects/MIC实习/paper/Distance Between Images/SWDs/Subspace Robust Wasserstein Distances.md",
+    "Course/Projects/MIC实习/paper/Feature/Fourier Domain/Spatial-Frequency Domain Information Integration for Pan-Sharpening.md",
+    "Course/Projects/MIC实习/paper/Distance Between Images/SWDs/SLOSH： Set LOcality Sensitive Hashing via Sliced Wasserstein Embeddings.md",
+    "Course/Projects/MIC实习/paper/Feature/Spatial Domain/Self-Supervised Representation Learning by Rotation Feature Decoupling.md",
+    "Course/Projects/MIC实习/paper/other/Revisiting Domain Generalized Stereo Matching Networks from a Feature Consistency Perspective.md",
+    "Course/Projects/MIC实习/paper/Feature/Fourier Domain/Rethinking FUN Frequency-Domain Utilization Networks.md",
+    "Course/Projects/MIC实习/paper/Distance Between Images/Projected Distribution Loss for Image Enhancement.md",
+    "Course/Projects/MIC实习/paper/other/Pooling by Sliced-Wasserstein Embedding.md",
+    "Course/Projects/MIC实习/paper/Distance Between Images/Perceptual Image Quality Assessment with Transformers.md",
+    "Course/Projects/MIC实习/paper/other/Mutual Information-driven Pan-sharpening.md",
+    "Course/Projects/MIC实习/paper/other/Memory-Augmented Deep Unfolding Network for Guided Image Super-resolution.md",
+    "Course/Projects/MIC实习/paper/other",
+    "Course/Projects/MIC实习/Math/Untitled.md",
+    "Course/Projects/MIC实习/paper/Distance Between Images/SWDs",
+    "Course/Projects/MIC实习/paper/Feature/Spatial Domain",
+    "Course/Projects/MIC实习/paper/Feature",
+    "Course/Projects/MIC实习/paper/Distance Between Images",
+    "Course/Projects/MIC实习/paper/Feature/Fourier Domain",
+    "Course/Projects/MIC实习/paper/Adversarial Learning",
+    "Course/Projects/MIC实习/paper/img/Pasted image 20230323104934.png",
+    "Course/Projects/MIC实习/实验记录/SR任务"
+  ]
+}

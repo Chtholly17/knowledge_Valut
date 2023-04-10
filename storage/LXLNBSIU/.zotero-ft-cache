@@ -1,0 +1,1030 @@
+SLOSH: Set LOcality Sensitive Hashing via Sliced-Wasserstein Embeddings
+
+Yuzhe Lu∗ Computer Science Department,
+Vanderbilt University, Nashville, TN, 37235
+yuzhe.lu@vanderbilt.edu
+Andrea Soltoggio School of Computer Science,
+Loughborough University, Leicestershire, UK
+a.soltoggio@lboro.ac.uk
+
+Xinran Liu∗ Computer Science Department,
+Vanderbilt University Nashville, TN, 37235
+xinran.liu@vanderbilt.edu
+Soheil Kolouri Computer Science Department,
+Vanderbilt University, Nashville, TN, 37235
+soheil.kolouri@vanderbilt.edu
+
+arXiv:2112.05872v2 [cs.LG] 8 Feb 2022
+
+Abstract
+Learning from set-structured data is an essential problem with many applications in machine learning and computer vision. This paper focuses on non-parametric and data-independent learning from set-structured data using approximate nearest neighbor (ANN) solutions, particularly locality-sensitive hashing. We consider the problem of set retrieval from an input set query. Such retrieval problem requires: 1) an efﬁcient mechanism to calculate the distances/dissimilarities between sets, and 2) an appropriate data structure for fast nearest neighbor search. To that end, we propose Sliced-Wasserstein set embedding as a computationally efﬁcient “set-2-vector” mechanism that enables downstream ANN, with theoretical guarantees. The set elements are treated as samples from an unknown underlying distribution, and the Sliced-Wasserstein distance is used to compare sets. We demonstrate the effectiveness of our algorithm, denoted as Set-LOcality Sensitive Hashing (SLOSH), on various set retrieval datasets and compare our proposed embedding with standard set embedding approaches, including Generalized Mean (GeM) embedding/pooling, Featurewise Sort Pooling (FSPool), and Covariance Pooling and show consistent improvement in retrieval results. The code for replicating our results is available here: https://github.com/mint-vu/SLOSH.
+1. Introduction
+The nearest neighbor search problem is at the heart of many nonparametric learning approaches in classiﬁcation,
+
+regression, and density estimation, with many applications in machine learning, computer vision, and other related ﬁelds [3, 6, 55]. The exhaustive search solution to the nearest neighbor problem for N given objects (e.g., images, vectors, etc.) requires N evaluation of (dis)similarities (or distances), which could be problematic when: 1) the number of objects, N , is large, or 2) (dis)similarity evaluation is expensive. Approximate Nearest Neighbor (ANN) [5] approaches have been proposed as an efﬁcient alternative for similarity search on massive datasets. ANN approaches leverage data structures like random projections, e.g., Locality-Sensitive Hashing (LSH) [17, 21], or tree-based structures, e.g., kdtrees [10, 63], to reduce the complexity of nearest neighbor search. Ideally, ANN approaches must address both these challenges, i.e., decreasing the number of similarity evaluations and reducing the computational complexity of similarity calculations while providing theoretical guarantees on ANN retrievals.
+Despite the great strides in developing ANN methods, the majority of the existing approaches are designed for objects living in Hilbert spaces. Recently, however, there has been an increasing interest in set-structured data with many applications in point cloud processing, graph learning, image/video recognition, and object detection, to name a few [36,62,70]. Even when the input data itself is not a set, in many applications, the complex input data (e.g., a natural image or a graph) is decomposed into a set of more abstract components (e.g., objects or node embeddings). Similarity search for large databases of set-structured data remains an active ﬁeld of research, with many real-world applications. In this paper, we focus on developing a data-independent
+
+ANN method for set-structured data. We leverage insights from computational optimal transport [13, 30, 48, 61] and propose a novel LSH algorithm, which relies on SlicedWasserstein Embeddings and enables efﬁcient set retrieval.
+Deﬁning (dis)similarities for set-structured data comes with unique challenges: i) the sets could have different cardinalities, and ii) the set elements do not necessarily have an inherent ordering. Hence, a similarity measure for setstructured data must handle varied input sizes and should be invariant to permutations, i.e., the (dis)similarity score should not change under any permutation of the input set elements. Generally, the existing approaches for deﬁning similarities between sets rely on the following two strategies. First, solving an assignment problem (via optimization) for ﬁnding corresponding elements between two sets and aggregate (dis)similarities between corresponding elements, e.g., using Hungarian algorithm, Wasserstein distances, Chamfer loss, etc. These approaches are at best quadratic and at worst cubic in the set cardinalities.
+The second family of approaches rely on embedding the sets into a vector space and leveraging common similarities in the embedded space. The set embedding could be explicit (e.g., deep set networks) [36, 70] or implicit (e.g., Kernel methods) [11, 19, 22, 32, 42, 50, 51, 69]. Also, the embedding process could be data-dependent (i.e., learning based) as in deep set learning approaches, which leverage a composition of permutation-equivariant backbones followed by a permutation-invariant global pooling mechanisms that deﬁne a parametric permutation-invariant set embedding into a Hilbert space [36,70,72]. Or, it can be data-independent as it is the case for global average/max/sum/covariance pooling, variations of Janossy pooling [43], and variations of Wasserstein embedding [27], among others. Recently, there has been a lot of interest in learning-based embeddings using deep neural networks and in particular transformer networks. However, data-independent embedding approaches (e.g., global poolings) have received less attention.
+Contributions. Our paper focuses on non-parametric learning from set-structured data using data-independent set embeddings. Precisely, we consider the problem where our training data is a set of sets, i.e., X = {Xi|Xi = {xin ∈ Rd}Nn=i−01}Ii=1, (e.g., set of point clouds), and for a query set X we would like to retrieve the K-Nearest Neighbors (KNN) from X . To solve this problem, we require a fast and reliable (dis)similarity measure between sets, and a computationally efﬁcient nearest neighbor search. We propose Sliced-Wasserstein Embedding as a computationally efﬁcient and powerful tool that provides a set-2-vector operator with computational complexity of O(LN (d + log(N )), with sequential processing, O(N (d + log(N )), with parallel processing, where L is of the same order as d. Treating sets as empirical distributions, Sliced-Wasserstein Embedding embedds sets in a vector space in which the Eu-
+L：也许是进⾏投影的次数？
+
+clidean distance between two embedded vectors is equal to the Sliced-Wasserstein distance between their corresponding empirical distributions. Such embedding enables the application of fast ANN approaches, like Locality Sensitive Hashing (LSH), to sets while providing collision probabilities with respect to the Sliced-Wasserstein distance. Finally, we provide extensive numerical results analyzing and comparing our approach with various data-independent embedding methods in the literature.
+2. Related Work
+Set embeddings (set-2-vector): Machine learning on set-structured data is challenging due to: 1) permutationinvariant nature of sets, and 2) having various cardinalities. Hence, any model (parametric or non-parametric) designed for analyzing set-structured data has to be permutation invariant, and allow for inputs of various sizes. Today, a common approach for learning from sets is to use a permutation equivariant parametric function, e.g., fully connected networks [70] or transformer networks [36], composed with a permutation invariant function, i.e., a global pooling, e.g., global average pooling, or pooling by multi-head attention [36]. One can view this process as embedding a set into a ﬁxed-dimensional representation through a parametric embedding that could be learned using the training data and an objective function (e.g., classiﬁcation).
+A major unanswered question is regarding nonparametric learning from set-structured data. In other words, what would be a good data-independent set embedding that one can use for generic applications, including KNearest Neighbor classiﬁcation/regression/density estimation? Given that a data-independent global pooling could be viewed as a set-2-vector process, we surveyed the existing set-2-vector mechanisms in the literature. In particular, global average/max/sum and covariance pooling [64] could be considered as the simplest such processes. Generalized Mean (GeM) [53] is another pooling mechanism commonly used in image retrieval applications, which captures higher statistical moments of the underlying distributions. Other notable approaches include VLAD [7, 23], CroW [25], and FSPool [72], among others.
+Locality Sensitive Hashing (LSH): A LSH function hashes two “similar” objects into the same bucket with “high” probability, while ensuring that “dissimilar” objects will end up in the same bucket with “low” probability. Originally presented in [21] and extended in [17], LSH uses random projections of high-dimensional data to hash samples into different buckets. The LSH algorithm forms the foundation of many ANN search methods, which provide theoretical guarantees and have been extensively studied since its conception [3, 4, 6, 33].
+Here, we are interested in nearest neighbor retrieval for sets. More precisely, given a training set of sets as training
+
+data (think of set of point clouds), and a test set (a point that the Euclidean distance between embedded sets is equal
+
+cloud representation of an object) we would like to retrieve to the SW-distance between their corresponding empirical
+
+the “nearest” sets in our training set in an efﬁcient manner. distributions. But ﬁrst, let us brieﬂy deﬁne the Wasserstein
+
+To that end, we extend LSH to enable its application to set and Sliced-Wasserstein distances.
+
+retrieval. While there has been a few recent work [26, 45]
+
+Let µi and µj be one-dimensional probability measures
+
+on the topic of LSH for set queries, our proposed approach deﬁned on R. Then the p-Wasserstein distance between
+
+signiﬁcantly differs from these work. In contrast to [26,45], these measures can be written as:
+
+we provide a Euclidean embedding for sets, which allows for a direct utilization of the LSH algorithm and provides collision probabilities as a function of the set metrics.
+
+Wp(µi, µj) =
+
+1
+(Fµ−i1(τ ) − Fµ−j1(τ ))pdτ
+
+1 p
+
+(1)
+
+0
+
+Wasserstein-based learning: Wasserstein distances are rooted in the optimal transportation problem [30, 48, 61], and they provide a robust mathematical framework for comparing probability distributions that respect the underlying geometry of the space. Wasserstein distances have recently received abundant interest from the Machine Learning and Computer Vision communities. These distances and their variations (e.g., Sliced-Wasserstein distances [13, 52] and subspace robust Wasserstein distances [47]) have been extensively studied in the context of deep generative modeling [8,20,31,38,60], domain adaptation [9,15,16,35], transfer learning [2], adversarial attacks [66, 67], and adversarial robustness [37, 58].
+More recently, Wasserstein distances and optimal transport have been used in the context of comparing setstructured data. The main idea behind these recent approaches is to treat sets (with possibly variable cardinalities) as empirical distributions and use transport-based distances for comparing/modeling these distributions. For instance, Togninalli et al. [59] propose to compare node embeddings of two graphs (treated as sets) via the Wasserstein distance. Later, Mialon et al. [40] and Kolouri et al. [27] concurrently propose Wasserstein embedding frameworks for extracting
+
+where Fµ−1 is the inverse of the cumulative distribution function (c.d.f) Fµ of µ, i.e., it is the quantile function. The
+
+one-dimensional p-Wasserstein distance for empirical dis-
+
+tributions with N and M samples can be computed with
+
+O(N log(N ) + M log(M )), which is in stark difference
+
+from the generally cubic order for (d>1)-dimensional distri-
+
+butions. The one-dimensional case motivates the concept of
+
+Sliced-Wasserstein distances [28,52]. For the rest of this pa-
+
+per we will consider only the case p = 2, and for brevity we
+
+refer to 2-Wasserstein and 2-Sliced-Wasserstein distances
+
+as Wasserstein and Sliced-Wasserstein distances.
+
+The main idea behind SW distances is to slice d-
+
+dimensional distributions into inﬁnite sets of their one-
+
+dimensional slices/marginals and then calculate the ex-
+
+pected Wasserstein distance between their slices. Let gθ : Rd → R be a parametric function with parameters θ ∈ Ωθ ⊆ Rdθ , satisfying the regularity conditions in both in-
+
+puts and parameters as presented in [28]. A common choice
+
+is gθ(x) = θT x where θ ∈ Sd−1 is a unit vector in Rd, and Sd−1 denotes the unit d-dimensional hypersphere. The slice
+of a probability measure, µ, with respect to gθ is the onedimensional probability measure gθ#µ, with the density,
+
+常规的投 影：线性 投影
+
+ﬁxed-dimensional representations from set-structured data. Here, we further extend this direction and propose SlicedWasserstein Embedding as a computationally efﬁcient ap-
+
+pθi (t) := δ(t − gθ(x))dµi(x) ∀t ∈ R.
+
+(2)
+
+X
+
+proach that allows us to perform data-independent non- The generalized Sliced-Wasserstein distance is deﬁned as
+
+parametric learning from set-structured data.
+pi(x): 表3.现Pr了elximnii的na分rie布s ，xni的密度（density）函数，mui：G表SW示2(dµii,sµtjr)in=utioΩnθ W22(gθ#µi, gθ#µj)dσ(θ)
+
+1 2
+, (3)
+投影结果在参数
+
+We denote an input set with Ni elements living in Rd by Xi = {xin ∈ Rd}Nn=i−01. We view sets as empirical probability measures, µi, deﬁned in X ⊆ Rd with probability
+
+where σ(θ) for gθ(x) = Wasserstein
+
+diθsiTstthxaenacunendiifsΩosrθmim=mplSeyadts−hu1er,eStohlinecegΩdeθ-nW,earanasdlsizeoernsdtce空 常 ⽅eSinlaicg间 采 法deaidisn上 ⽤-- 积 蒙分 特， 卡通 洛
+
+density
+
+dµi(x)
+
+=
+
+pi(x)dx,
+
+where
+
+pi(x)
+
+=
+
+1 Ni
+
+Ni n=1
+
+δ(x
+
+−
+
+tance. Equation (3) is the expected value of the Wasserstein
+
+xin), and δ(·) is the Dirac delta function. The main idea is distances between uniformly distributed slices (i.e., on Ωθ)
+
+then to deﬁne the distance between two sets, Xi and Xj, as of distributions µi and µj.
+
+a probability metric between their empirical distributions.
+
+3.2. Locality Sensitive Hashing
+
+3.1. Sliced-Wasserstein distances
+
+Locality Sensitive Hashing (LSH) [17, 21] strives for
+
+We use the Sliced-Wasserstein (SW) probability metric hashing near points in the high-dimensional input-space
+
+as a distance measure between the sets (viewed as empirical into the same hash bucket with a higher probability than
+
+probability distributions). Later we will see that this choice allows us to effectively embed sets into a vector space such
+
+distant ones, effectively solving the (R, c)-Near Neighbor problem. More precisely, let H := {h : Rd → U } denote a
+
+LSH的性质
+
+LSH function family with U denoting the hash values. The
+LSH function family H, is called (R, c, P1, P2)-sensitive if for any two points u, v ∈ Rd and ∀h ∈ H it satisﬁes the
+following conditions:
+
+• If u − v 2 ≤ R, then Pr[h(u) = h(v)] ≥ P1, and
+
+• If u − v 2 > cR, then Pr[h(u) = h(v)] ≤ P2
+
+Where for a proper LSH c > 1 and P1 > P2. The original LSH for Euclidean distance uses,
+
+aT u + b
+
+ha,b(u) =
+
+ω
+
+where · is the ﬂoor function, a ∈ Rd is a random vector generated from a p-stable distribution (e.g., Normal or Cauchy distributions) [17], and b is a real number chosen uniformly from [0, ω) such that ω is the width of the hash bucket. Let r = u − v p and fp(t) denote the probability density function of the absolute value of the p-stable distribution, then this family of hash functions leads to the following probability of collision:
+
+ω1 t
+
+t
+
+Pr[ha,b(u) = ha,b(v)] =
+
+0
+
+r fp( r )(1
+
+−
+
+)dt ω
+
+(4)
+
+To amplify the gap between P1 and P2 one can concatenate several such hash functions. Let G := {g : Rd → U k} denote the concatenation of k randomly selected hash func-
+tions, i.e., g(u) = (h1(u), ..., hk(u)). In practice, multiple such hash functions g1, . . . , gT are often used. For points, u and v, within R-distance from one another, the probability that they collide at least in one of gjs is: 1 − (1 − P1k)T .
+Another commonly used, and related, family of hash
+functions consist of random projections and thresholding, i.e., ha,b(u) = sgn(aT u + b) [14]. Using k such random projections (i.e., binary codes of length k) provides the fol-
+lowing collision probability:
+
+Pr[g(u) = g(v)] = [1 − cos−1(uT v) ]k π
+Since the conception of its idea [17, 21], many variants of LSH have been proposed. However, these approaches are not designed to handle set queries. Here, we extend LSH to set-structured data via Sliced-Wasserstein Embeddings.
+
+4. Problem Formulation and Method
+4.1. Sliced-Wasserstein Embedding
+The idea of Sliced-Wasserstein Embeddings (SWE) is rooted in Linear Optimal Transport [30,41,65] and was ﬁrst introduced in the context of pattern recognition from 2D probability density functions (e.g., images) [29] and more recently in [56]. Our work extends the framework to ddimensional distributions with the speciﬁc application of set
+
+retrieval in mind. Consider a set of probability measures {µi}Ii=1 with densities {pi}Ii=1, and recall that we use µi to represent the i’th set Xi = {xin}Nn=i−01. At a high level, SWE can be thought as a set-2-vector operator, φ, such that:
+
+generaliφz(eµdi) − φ(µj) 2 = GSW2(µi, µj).
+
+(5)
+
+For convenience, we use µθi := gθ#µi to denote the slice
+
+of measure µi with respect to gθ. Also, let µ0 denote a ref-
+
+erence measure, with µθ0 being its corresponding slice. The
+
+optimal transport coupling (i.e., Monge coupling) between
+
+µθi and µθ0 can be written as
+
+transport plan：minimize
+
+Tiθ = Fµ−θi1 ◦ Fµθ0 ,
+
+(6)
+
+and recall that Fµ−θi1 is the quantile function of µθi . Now, letting id denote the identity function, we deﬁne the so-called
+cumulative distribution transform (CDT) [46] of µθi as
+
+φθ(µi) := (Tiθ − id).
+
+(7)
+
+For a ﬁxed θ, we can show that φθ(µi) satisﬁes (see supplementary material):
+
+C1. The weighted 2-norm of the embedded slice, φθ(µi), satisﬁes:
+
+φθ(µi) µθ0,2 =
+
+1
+
+2
+
+φθ (µi (t))
+
+2 2
+
+dµθ0
+
+(t)
+
+R
+
+= W2(µθi , µθ0),
+
+As a corollary we have φθ(µ0) µθ0,2 = 0.
+C2. The weighted 2 distance between two embedded slices satisﬁes:
+
+φθ(µi) − φθ(µj ) µθ0,2 = W2(µθi , µθj ). (8)
+
+It follows from C1 and C2 that:
+
+GSW2(µi, µj ) =
+
+1
+
+Ωθ
+
+φθ(µi) − φθ(µj )
+
+2 µθ0
+
+,2
+
+dσ(θ)
+
+2
+
+(9)
+
+For probability measure µi, we then deﬁne the mapping to the embedding space via,
+
+φ(µi) := {φθ(µi) | θ ∈ Ωθ}.
+Finally, we can re-weight the embedding (according to dµθ0) such that the weighted 2 in 8 becomes the 2 distance as in 5. Next, we describe this reweighting and other implementation considerations in more details.
+
+Input Set,
+
+𝑋' =
+
+𝑥('
+
+∈
+
+ℝ#
+
+)! ($%
+
+Random set of 𝐿 vectors sampled from 𝕊#*%
+
+𝕊#*%
+
+𝕊#*%
+
+…
+
+𝕊#*%
+
+𝜃!
+
+𝜃"
+
+𝜃#
+
+Reference Set,
+
+𝑋! =
+
+𝑥"!
+
+∈ ℝ#
+
+& "$%
+
+1
+
+2 3
+
+𝑔!! (𝑋" ) 𝑔!!(𝑋#) 2 1 3
+
+𝑔!" (𝑋" ) 𝑔!" (𝑋# )
+
+12 3
+
+𝜋"!!
+Sort
+𝜋"!! 2 1 3
+
+𝜋"!"
+Sort
+𝜋"!"
+
+12 3
+
+𝑇'+"
+21 3
+𝑇'+#
+12 3
+
+… …
+
+𝜙 𝑋" ∈ ℝ$%
+𝜙% 𝐿𝑀
+𝜙+# 𝐿𝑀
+
+Figure 1. A graphical depiction of Sliced-Wasserstein Embedding (SWE) for a given reference set and a chosen number of slices, L. The input and reference sets are sliced via L random projections {gθl }Ll=1. The projections are then sorted and the Monge couplings between input and reference sets’ slices are calculated following Eq. (13). Finally, the embedding is obtained by weighting and concatenating
+φθl s. The Euclidean distance between two embedded sets is equal to their corresponding GSW2,L distance/dissimilarity measure, i.e.,
+φ(Xi) − φ(Xj ) 2 = GSW2,L(Xi, Xj ) ≈ GSW2(Xi, Xj ).
+Sliced Wasserstein Embedding
+
+4.2. Monte Carlo Integral Approximation
+
+4.3. SWE Algorithm
+
+The GSW distance in Eq. (3) relies on integration on Ωθ (e.g., Sd−1 for linear slices), which cannot be directly
+
+calculated. Following the common practice in the litera-
+
+ture [12, 31, 32, 39, 52], here, we approximate the integra-
+
+tion on θ via a Monte-Carlo (MC) sampling of Ωθ. Let
+
+ΘL = {θl ∼ σ(θ)}Ll=1 denote a set of L parameters sam-
+
+pled independently and uniformly from Ωθ. We assume an
+
+empirical reference measure,
+
+µ0
+
+=
+
+1 M
+
+M m=1
+
+δ(x
+
+−
+
+x0m)
+
+with M samples. The MC approximation is written as:
+
+2
+
+1L
+
+GSW2,L(µi, µj) = LM
+
+φθl (µi) − φθl (µj )
+
+2 2
+
+.
+
+(10)
+
+l=1
+
+Finally, our SWE embedding is calculated via:
+
+φ(µi) = [ φ√θ1 (µi) ; ...; φ√θL (µi) ] ∈ RLM×1,
+
+(11)
+
+LM
+
+LM
+
+which satisﬁes:
+
+φ(µi) − φ(µj) 2 = GSW2,L(µi, µj) ≈ GSW2(µi, µj).
+As for the approximation error, we rely on Theorem 6 in [44], which uses Ho¨lder’s inequality and the results on the moments of the Monte Carlo estimation error to obtain:
+
+E
+
+2
+|GSW2,L(µi, µj ) −
+
+GS
+
+W
+
+2 2
+
+(µ,
+
+ν
+
+)|
+
+≤
+
+var(W22(µθi , µθj )) L
+
+(12)
+
+The upper bo√und indicates that the approximation error decreases with L. The numerator, however, is implicitly dependent on the dimensionality of input space. Meaning that a larger number of slices, L, is needed for higher dimensions.
+
+Here we review the algorithmic steps to obtain SWE. We consider Xi = {xin}Nn=i−01 as the input set with Ni elements, and X0 = {x0m}M m=−01 denote the reference set of M samples where in general M = Ni. For a ﬁxed slicer gθ we calculate {gθ(xin)}Nn=i−01 and {gθ(x0m)}M m=−01 and sort them increasingly. Let πi and π0 denote the permutation indices (obtained from argsort). Also, let π0−1 denote the ordering
+that permutes the sorted set back to the original ordering.
+Then we numerically calculate the Monge coupling Tiθ via:
+
+Tiθ[m] = Fµ−θi1
+
+π0−1[m] + 1 M
+
+(13)
+
+where Fµθ0 (x0m)
+
+=
+
+π0−1 [m]+1 M
+
+,
+
+assuming
+
+that
+
+the
+
+indices
+
+start from 0. Here Fµ−θi1 is calculated via interpolation. In
+
+our experiments we used linear interpolation similar to [38].
+
+Note that the dimensionality of the Monge coupling is only a function of the reference cardinality, i.e., Tiθ ∈ RM . Consequently, we write:
+
+φθ(Xi)[m] = (Tiθ[m] − gθ(x0m))
+
+(14)
+
+and repeat this process for θ ∈ {θl ∼ σ(θ)}Ll=1, while we emphasize that this process can be parallelized. The ﬁ-
+
+nal embedding is achieved via weighting and concatenating
+
+φθl s as in Eq.
+
+(11), where the coefﬁcient
+
+√1 LM
+
+allows us to
+
+simplify the weighted Euclidean distance, · µ0,2, to Eu-
+
+clidean distance, · 2. Algorithm 1 summarizes the embed-
+
+ding process, and Figure 1 provides a graphical depiction of
+
+Algorithm 1 Sliced-Wasserstein Embedding
+procedure SWE(Xi = {xin}Nn=i−01, X0 = {x0m}M m=−01, L) Generate a set of L samples ΘL = {θl ∼ UΩθ }Ll=1 Calculate gΘL (X0) := {gθl (x0m)}m,l ∈ RM×L Calculate π0 = argsort(gΘL (X0)) and π0−1 (on m-
+axis) Calculate gΘL (Xi) := {gθl (xin)}n,l ∈ RNi×L Calculate πi = argsort(gΘL (Xi)) (on n-axis) for l = 1 to L do Calculate the Monge coupling Tiθl ∈ RM (Eq.
+(13))
+end for Calculate the embedding φ(Xi) ∈ RM×L (Eq. (11)) return φ(Xi) end procedure
+
+the process. Lastly, the SWE’s computational complexity for a set with cardinality |X| = N is O(LN (d + logN )), where we assumed the cardinality of the reference set is of the same order as N . Note that O(LN d) is the cost of slicing and O(LN log(N )) is the sorting and interpolation cost to calculate Eq. (13).
+
+4.4. SLOSH
+
+Our proposed Set LOcality Sensitive Hashing (SLOSH)
+
+leverages the Sliced-Wasserstein Embedding (SWE) to embed training sets, Xtrain = {Xi|Xi = {xin ∈ Rd}Nn=i−01},
+into a vector space where we can use Locality Sensitive
+
+Hashing (LSH) to perform ANN search. We treat each input
+
+set Xi
+
+as a probability measure µi(x)
+
+=
+
+1 Ni
+
+Ni n=1
+
+δ(x
+
+−
+
+xin). For a reference set X0 with cardinality |X0| = M
+
+and L slices, we embed the input set Xi into a (RLM )-
+
+dimensional vector space using Algorithm 1. With abuse
+
+of notation we use φ(µi) and φ(Xi) interchangeably.
+
+Given SWE, a family of (R, c, P1, P2)-sensitive LSH functions, H, will induce the following conditions,
+
+• If GSW2,L(Xi, Xj) ≤ R, then P r[h(φ(Xi)) = h(φ(Xj))] ≥ P1, and
+
+• If GSW2,L(Xi, Xj) > cR, then P r[h(φ(Xi)) = h(φ(Xj))] ≤ P2
+As mentioned in Section 2, for amplifying the gap between P1 and P2, one uses g(Xi) = [h1(φ(Xi)), ..., hk(φ(Xi))], which results in a code length, k, for each input set, Xi. Finally, if GSW2,L(Xi, Xj) ≤ R, by using T such codes, gt for t ∈ {1, ..., T }, of length k, we can ensure collision at least in one of gts with probability 1 − (1 − P1k)T .
+
+5. Experiments
+
+We evaluated our set locality sensitive hashing via Sliced-Wasserstein Embedding algorithm against using Generalized Mean (GeM) pooling [53], Global Covariance (Cov) pooling [64], and Featurewise Sort Pooling (FSPool) [71] on various set-structured datasets. We note that while FSPool was proposed as a data-dependent embedding, here we devise its data-independent variation for fair comparison. Interstingly, FSPool can be thought as a special case of our SWE embedding where L = d and ΘL is chosen as the identity matrix. To evaluate these methods, we tested all approaches on point cloud MNIST dataset (2D) [18, 34], ModelNet40 dataset (3D) [68], and the Oxford Buildings dataset [49] (i.e., Oxford 5k).
+
+5.1. Baselines
+Let Xi = {xin ∈ Rd}Nn=i−01 be the input set with Ni elements. We denote [Xi]k = {[xin]k}Nn=i−01 as the set of all elements along the k’th dimension, k ∈ {1, 2, ...d}. Below we provide a quick overview of the baseline approaches, which provide different set-2-vector mechanisms.
+Generalized-Mean Pooling (GeM) [53] was originally proposed as a generalization of global mean and global max pooling on Convolutional Neural Network (CNN) features to boost image retrieval performance. Given the input Xi, GeM calculates the (p-th)-moment of each feature, f (p) ∈ Rd, as:
+
+[f (p)]k =
+
+1
+
+1 Ni
+
+Ni
+([xin ]k )p
+n=1
+
+p
+
+(15)
+
+When pooling parameter p = 1, we end up with average
+
+pooling. While as p → ∞, we get max pooling. In prac-
+
+tice, we found that a concatenation of higher-order GeM features, i.e., φGeM (Xi) = [f (1); ...; f (p)] ∈ Rpd, leads to the best performance, where p is GeM’s hyper-parameter.
+
+Covariance Pooling [1, 64] presents another way to
+
+capture second-order statistics and provide more informa-
+
+tive representations. It was shown that this mechanism
+
+can be applied to CNN features as an alternative to global
+
+mean/max pooling to generate state-of-the-art results on fa-
+
+cial expression recognition tasks [1]. Given input set Xi, the unbiased covariance matrix is computed by:
+
+C
+
+=
+
+1 Ni − 1
+
+Ni
+(xin
+n=1
+
+− µi)(xin
+
+− µi)T ,
+
+(16)
+
+where
+
+µi
+
+=
+
+1 Ni
+
+Ni n=1
+
+xin.
+
+The
+
+output
+
+matrix
+
+can
+
+be
+
+further
+
+regularized by adding a multiple of the trace to diagonal en-
+
+tries of the covariance matrix to ensure symmetric positive
+
+deﬁniteness (SPD), Cλ = C + λtrace(C)I where λ is a
+
+regularization hyper-parameter and I is the identity matrix.
+
+Covariance pooling then uses φCov(Xi) = ﬂatten(Cλ).
+
+Table 1. Retrieval results of baselines and our approach on set retrieval on the three data sets.
+
+GeM-1 (GAP) GeM-2 GeM-4 Cov FSPool SLOSH (L < d) SLOSH (L = d) SLOSH (L > d)
+
+Point MNIST 2D
+
+Precision@k/Accuracy
+
+k=4
+
+k=8
+
+k=16
+
+0.10/0.11 0.10/0.10 0.10/0.10
+
+0.29/0.32 0.28/0.35 0.29/0.37
+
+0.39/0.45 0.39/0.47 0.38/0.49
+
+0.25/0.27 0.25/0.28 0.25/0.28
+
+0.75/0.80 0.74/0.81 0.73/0.81
+
+0.52/0.59 0.51/0.61 0.49/0.61
+
+0.67/0.73 0.64/0.74 0.62/0.73
+
+0.90/0.92 0.88/0.92 0.87/0.91
+
+ModelNet 40
+
+Precision@k/Accuracy
+
+k=4
+
+k=8
+
+k=16
+
+0.16/0.19 0.16/0.22 0.16/0.25
+
+0.29/0.34 0.26/0.34 0.23/0.33
+
+0.31/0.37 0.28/0.38 0.25/0.37
+
+0.37/0.42 0.35/0.44 0.32/0.44
+
+0.50/0.57 0.47/0.58 0.42/0.56
+
+0.22/0.25 0.20/0.27 0.19/0.27
+
+0.39/0.44 0.36/0.45 0.33/0.44
+
+0.55/0.61 0.51/0.60 0.46/0.57
+
+Oxford 5k
+
+Precision@k/Accuracy
+
+k=4
+
+k=8
+
+k=16
+
+0.29/0.35 0.25/0.31 0.22/0.29
+
+0.38/0.53 0.31/0.40 0.27/0.38
+
+0.35/0.41 0.33/0.51 0.29/0.42
+
+0.35/0.55 0.30/0.37 0.26/0.33
+
+0.47/0.53 0.39/0.6 0.32/0.49
+
+0.33/0.42 0.30/0.49 0.24/0.36
+
+0.43/0.58 0.39/0.60 0.34/0.55
+
+0.53/0.69 0.45/0.65 0.38/0.64
+
+Featurewise Sort Pooling (FSPool) [71] is a powerful technique for learning representations from set-structured data. In short, this approach is based on sorting features along all elements of a set, [Xi]k:
+f = [Sorted([Xi]1), ..., Sorted([Xi]d))] ∈ RNi×d (17)
+The ﬁxed-dimensional representation is then obtained via an interpolation along the Ni dimension of f . More precisely, a continuous linear operator W is learned and the inner product between this continuous operator and f is evaluated at M ﬁxed points (i.e., leading to weighted summation over d), resulting in a M -dimensional embedding.
+Given that we are interested in a data-independent set representation, we cannot rely on learning the continuous linear operator W . Instead, we perform interpolation along the Ni axis on M points and drop the inner product all together to obtain a (M × d)-dimensional data-independent set representation. The mentioned variation of FSPool is similar to the Sliced-Wasserstein Embedding when L = d and ΘL = Id×d, i.e., axis-aligned projections.
+5.2. Datasets
+Point Cloud MNIST 2D [18, 34] consists of 60,000 training samples and 10,000 testing samples. Each sample is a 2-dimensional point cloud derived from an image in the original MNIST dataset. The sets have various cardinalities in the range of |Xi| ∈ [34, 351].
+ModelNet40 [68] contains 3-dimensional point clouds converted from 12,311 CAD models in 40 common object categories. We used the ofﬁcial split with 9,843 samples for training and 2,468 samples for testing. We sample Ni points uniformly and randomly from the mesh faces of each object, where Ni = ni , ni ∼ N (512, 64). To avoid any orientation bias, we randomly rotate the point clouds by ρ ∈ [0, 45] degrees around the x-axis. Finally, we normalize each sample to ﬁt within the unit cube to avoid any scale bias and to enforce the methods to rely on shapes.
+The Oxford Buildings Dataset [49] has 5,062 images containing eleven different Oxford landmarks. Each land-
+
+Figure 2. Example sample retrievals.
+mark has ﬁve corresponding queries leading to 55 queries over which an object retrieval system can be evaluated. In our experiments, we use a pretrained VGG16 [57] on ImageNet1k [54] as a feature extractor, and use the features in the last convolutional layer as a set representation for an input image. We resize the images without cropping, which leads to varied input size images, and therefore gives set representations with varied cardinalities. We further perform a dimensionality reduction on these features to obtain sets of features in an (d = 8)-dimensional space.
+
+k=4
+
+k=8
+
+k=16
+
+k=4
+
+k=8
+
+k=16
+
+Point MNIST
+
+Point MNIST
+
+ModelNet40
+
+ModelNet40
+
+Oxford 5k
+
+Oxford 5k
+
+Figure 3. Sensitivity to hash code length.
+5.3. Results
+For all datasets, we ﬁrst calculate the set-2-vector embeddings for all baselines and SWE. Then, we apply Locality-Sensitive Hashing (LSH) to the embedded sets and report Precision@k and accuracy (based on majority voting) for all the approaches on the test sets. We use the FAISS library [24], developed by Facebook AI Research, for LSH. For all methods, we use a hash code length of 1024, and we report our results for k = 4, 8, and 16. For SLOSH, we consider three different settings for the number of slices, namely, L < d, L = d, and L > d. We repeat the experiments ﬁve times per method and report the mean Precision@k and accuracy in Table 1. In all experiments, the best hyper-parameters are selected for each approach based on cross validation. We see that SLOSH provides a consistent lead on all datasets, especially, when L > d. Figure 2 provide set retrieval examples on the three data sets. Next, we provide a sensitivity analysis of our approach.
+Sensitivity to code length. For all datasets, we study the sensitivity of the different embeddings to the hashing codelength. We vary the code length from 16 to 1024, and report the average of Precision@k over ﬁve runs. Figure 3 shows the outcome of this study. It can be seen that methods that encode higher statistical orders of the underlying distribution gain performance as a function of the hash code length. In addition, we see a strong performance gap between SWE and other set-2-vector approaches, which points at the more descriptive nature of our proposed method.
+Sensitivity to the number of slices. Next, we study the sensitivity of SLOSH to the choice of number of slices, L, for the three datasets. We measure the average Precision@k over ﬁve runs for various number of slices and for different
+
+Figure 4. Sensitivity to number of slices.
+
+k=4
+
+k=8
+
+k=16
+
+Point MNIST
+
+ModelNet40
+
+Oxford 5k
+
+Figure 5. Sensitivity to reference functions.
+code-lengths and report our results in Figure 4. As expected we see a performance increase with respect to increasing L.
+Sensitivity to the reference. Finally, we perform a study on the sensitivity to the choice of the reference set, X0. We measure the performance of SLOSH on the three datasets and for various code-lengths, when the reference set is: 1) calculated using K-Means on the elements of all sets, 2) a random set from the dataset, 3) sampled from a uniform distribution, and 4) sampled from the normal distribution. We see that SLOSH’s performance depends on the reference choice. However, we point out that our formulation implies that as L → ∞ the embedding becomes independent of the choice of the reference, and the observed sensitivity could be due to using ﬁnite L.
+
+6. Conclusion
+We described a novel data-independent approach for Approximate Nearest Neighbor (ANN) search on setstructured data, with applications in set retrieval. We treat set elements as samples from an underlying distribution, and embed sets into a vector space in which the Euclidean distance approximates the Sliced-Wasserstein (SW) distance between the input distributions. We show that for a set X with cardinality |X| = N , our framework requires O(LN (d + Log(N ))) (sequential processing) or O(N (d + log(N ))) (parallel processing) calculations to obtain the embedding. We then use Locality Sensitive Hashing (LSH) for fast retrieval of nearest sets in our proposed embedding. We demonstrate a signiﬁcant boost over other data-independent approaches including Generalized Mean (GeM) on three different set retrieval tasks, namely, Point Cloud MNIST, ModelNet40, and the Oxford Buildings datasets. Finally, our proposed method is readily extendable to data-dependent settings by allowing optimization on the slices and the reference set.
+7. Acknowledgements
+This research was supported by the Defense Advanced Research Projects Agency (DARPA) under Contract No. HR00112190132.
+References
+[1] Dinesh Acharya, Zhiwu Huang, Danda Pani Paudel, and Luc Van Gool. Covariance pooling for facial expression recognition. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition Workshops, pages 367–374, 2018. 6
+[2] David Alvarez Melis and Nicolo Fusi. Geometric dataset distances via optimal transport. Advances in Neural Information Processing Systems, 33, 2020. 3
+[3] Alexandr Andoni and Piotr Indyk. Near-optimal hashing algorithms for approximate nearest neighbor in high dimensions. In 2006 47th annual IEEE symposium on foundations of computer science (FOCS’06), pages 459–468. IEEE, 2006. 1, 2
+[4] Alexandr Andoni, Piotr Indyk, Huy L Nguyen, and Ilya Razenshteyn. Beyond locality-sensitive hashing. In Proceedings of the twenty-ﬁfth annual ACM-SIAM symposium on Discrete algorithms, pages 1018–1028. SIAM, 2014. 2
+[5] Alexandr Andoni, Piotr Indyk, and Ilya Razenshteyn. Approximate nearest neighbor search in high dimensions. In Proceedings of the International Congress of Mathematicians: Rio de Janeiro 2018, pages 3287–3318. World Scientiﬁc, 2018. 1
+[6] Alexandr Andoni and Ilya Razenshteyn. Optimal datadependent hashing for approximate near neighbors. In Proceedings of the forty-seventh annual ACM symposium on Theory of computing, pages 793–801, 2015. 1, 2
+
+[7] Relja Arandjelovic and Andrew Zisserman. All about vlad. In Proceedings of the IEEE conference on Computer Vision and Pattern Recognition, pages 1578–1585, 2013. 2
+[8] Martin Arjovsky, Soumith Chintala, and Le´on Bottou. Wasserstein generative adversarial networks. In International conference on machine learning, pages 214–223. PMLR, 2017. 3
+[9] Yogesh Balaji, Rama Chellappa, and Soheil Feizi. Normalized wasserstein for mixture distributions with applications in adversarial learning and domain adaptation. In Proceedings of the IEEE/CVF International Conference on Computer Vision, pages 6500–6508, 2019. 3
+[10] Jon Louis Bentley. Multidimensional binary search trees used for associative searching. Communications of the ACM, 18(9):509–517, 1975. 1
+[11] Oren Boiman, Eli Shechtman, and Michal Irani. In defense of nearest-neighbor based image classiﬁcation. In 2008 IEEE Conference on Computer Vision and Pattern Recognition, pages 1–8. IEEE, 2008. 2
+[12] Nicolas Bonneel, Julien Rabin, Gabriel Peyre´, and Hanspeter Pﬁster. Sliced and Radon Wasserstein barycenters of measures. Journal of Mathematical Imaging and Vision, 51(1):22–45, 2015. 5
+[13] Nicolas Bonnotte. Unidimensional and evolution methods for optimal transportation. PhD thesis, Universite´ Paris 11, France, 2013. 2, 3
+[14] Moses S Charikar. Similarity estimation techniques from rounding algorithms. In Proceedings of the thiry-fourth annual ACM symposium on Theory of computing, pages 380– 388, 2002. 4
+[15] Nicolas Courty, Re´mi Flamary, Devis Tuia, and Alain Rakotomamonjy. Optimal transport for domain adaptation. IEEE transactions on pattern analysis and machine intelligence, 39(9):1853–1865, 2016. 3
+[16] Bharath Bhushan Damodaran, Benjamin Kellenberger, Re´mi Flamary, Devis Tuia, and Nicolas Courty. Deepjdot: Deep joint distribution optimal transport for unsupervised domain adaptation. In Proceedings of the European Conference on Computer Vision (ECCV), pages 447–463, 2018. 3
+[17] Mayur Datar, Nicole Immorlica, Piotr Indyk, and Vahab S Mirrokni. Locality-sensitive hashing scheme based on pstable distributions. In Proceedings of the twentieth annual symposium on Computational geometry, pages 253– 262, 2004. 1, 2, 3, 4
+[18] Cristian Garcia. Point cloud mnist 2d, 2020. 6, 7
+[19] Arthur Gretton, Karsten Borgwardt, Malte Rasch, Bernhard Scho¨lkopf, and Alex Smola. A kernel method for the twosample-problem. Advances in neural information processing systems, 19:513–520, 2006. 2
+[20] Ishaan Gulrajani, Faruk Ahmed, Martin Arjovsky, Vincent Dumoulin, and Aaron C Courville. Improved training of Wasserstein GANs. In Advances in Neural Information Processing Systems, pages 5767–5777, 2017. 3
+[21] Piotr Indyk and Rajeev Motwani. Approximate nearest neighbors: towards removing the curse of dimensionality. In Proceedings of the thirtieth annual ACM symposium on Theory of computing, pages 604–613, 1998. 1, 2, 3, 4
+
+[22] Tony Jebara, Risi Kondor, and Andrew Howard. Probability product kernels. The Journal of Machine Learning Research, 5:819–844, 2004. 2
+[23] Herve´ Je´gou, Matthijs Douze, Cordelia Schmid, and Patrick Pe´rez. Aggregating local descriptors into a compact image representation. In 2010 IEEE computer society conference on computer vision and pattern recognition, pages 3304– 3311. IEEE, 2010. 2
+[24] Jeff Johnson, Matthijs Douze, and Herve´ Je´gou. Billionscale similarity search with gpus. arXiv preprint arXiv:1702.08734, 2017. 8
+[25] Yannis Kalantidis, Clayton Mellina, and Simon Osindero. Cross-dimensional weighting for aggregated deep convolutional features. In European conference on computer vision, pages 685–701. Springer, 2016. 2
+[26] Haim Kaplan and Jay Tenenbaum. Locality sensitive hashing for set-queries, motivated by group recommendations. In 17th Scandinavian Symposium and Workshops on Algorithm Theory (SWAT 2020). Schloss Dagstuhl-Leibniz-Zentrum fu¨r Informatik, 2020. 3
+[27] Soheil Kolouri, Navid Naderializadeh, Gustavo K. Rohde, and Heiko Hoffmann. Wasserstein embedding for graph learning. In International Conference on Learning Representations, 2021. 2, 3
+[28] Soheil Kolouri, Kimia Nadjahi, Umut Simsekli, Roland Badeau, and Gustavo Rohde. Generalized sliced wasserstein distances. In Advances in Neural Information Processing Systems, pages 261–272, 2019. 3
+[29] Soheil Kolouri, Se Rim Park, and Gustavo K. Rohde. The Radon cumulative distribution transform and its application to image classiﬁcation. Image Processing, IEEE Transactions on, 25(2):920–934, 2016. 4
+[30] Soheil Kolouri, Se Rim Park, Matthew Thorpe, Dejan Slepcev, and Gustavo K Rohde. Optimal mass transport: Signal processing and machine-learning applications. IEEE Signal Processing Magazine, 34(4):43–59, 2017. 2, 3, 4
+[31] Soheil Kolouri, Phillip E. Pope, Charles E. Martin, and Gustavo K. Rohde. Sliced Wasserstein auto-encoders. In International Conference on Learning Representations, 2019. 3, 5
+[32] Soheil Kolouri, Yang Zou, and Gustavo K Rohde. SlicedWasserstein kernels for probability distributions. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 4876–4884, 2016. 2, 5
+[33] Brian Kulis and Kristen Grauman. Kernelized localitysensitive hashing for scalable image search. In 2009 IEEE 12th international conference on computer vision, pages 2130–2137. IEEE, 2009. 2
+[34] Yann LeCun, Le´on Bottou, Yoshua Bengio, and Patrick Haffner. Gradient-based learning applied to document recognition. Proceedings of the IEEE, 86(11):2278–2324, 1998. 6, 7
+[35] Chen-Yu Lee, Tanmay Batra, Mohammad Haris Baig, and Daniel Ulbricht. Sliced wasserstein discrepancy for unsupervised domain adaptation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 10285–10295, 2019. 3
+
+[36] Juho Lee, Yoonho Lee, Jungtaek Kim, Adam Kosiorek, Seungjin Choi, and Yee Whye Teh. Set transformer: A framework for attention-based permutation-invariant neural networks. In International Conference on Machine Learning, pages 3744–3753. PMLR, 2019. 1, 2
+[37] Alexander Levine and Soheil Feizi. Wasserstein smoothing: Certiﬁed robustness against wasserstein adversarial attacks. In International Conference on Artiﬁcial Intelligence and Statistics, pages 3938–3947. PMLR, 2020. 3
+[38] Antoine Liutkus, Umut Simsekli, Szymon Majewski, Alain Durmus, and Fabian-Robert Sto¨ter. Sliced-wasserstein ﬂows: Nonparametric generative modeling via optimal transport and diffusions. In International Conference on Machine Learning, pages 4104–4113. PMLR, 2019. 3, 5
+[39] Antoine Liutkus, Umut S¸ ims¸ekli, Szymon Majewski, Alain Durmus, and Fabian-Robert Stoter. Sliced-Wasserstein ﬂows: Nonparametric generative modeling via optimal transport and diffusions. In International Conference on Machine Learning, 2019. 5
+[40] Gre´goire Mialon, Dexiong Chen, Alexandre d’Aspremont, and Julien Mairal. A trainable optimal transport embedding for feature aggregation and its relationship to attention. In International Conference on Learning Representations, 2021. 3
+[41] Caroline Moosmu¨ller and Alexander Cloninger. Linear optimal transport embedding: Provable fast wasserstein distance computation and classiﬁcation for nonlinear problems. arXiv preprint arXiv:2008.09165, 2020. 4
+[42] Krikamol Muandet, Kenji Fukumizu, Francesco Dinuzzo, and Bernhard Scho¨lkopf. Learning from distributions via support measure machines. In Proceedings of the 25th International Conference on Neural Information Processing Systems-Volume 1, pages 10–18, 2012. 2
+[43] Ryan L. Murphy, Balasubramaniam Srinivasan, Vinayak Rao, and Bruno Ribeiro. Janossy pooling: Learning deep permutation-invariant functions for variable-size inputs. In International Conference on Learning Representations, 2019. 2
+[44] Kimia Nadjahi, Alain Durmus, Le´na¨ıc Chizat, Soheil Kolouri, Shahin Shahrampour, and Umut S¸ ims¸ekli. Statistical and topological properties of sliced probability divergences. In Advances in Neural Information Processing Systems, 2020. 5
+[45] Parth Nagarkar and K Selc¸uk Candan. Pslsh: An index structure for efﬁcient execution of set queries in high-dimensional spaces. In Proceedings of the 27th ACM International Conference on Information and Knowledge Management, pages 477–486, 2018. 3
+[46] Se Rim Park, Soheil Kolouri, Shinjini Kundu, and Gustavo K Rohde. The cumulative distribution transform and linear pattern classiﬁcation. Applied and Computational Harmonic Analysis, 45(3):616–641, 2018. 4, 11
+[47] Franc¸ois-Pierre Paty and Marco Cuturi. Subspace robust wasserstein distances. In International Conference on Machine Learning, 2019. 3
+[48] Gabriel Peyre´ and Marco Cuturi. Computational optimal transport. arXiv preprint arXiv:1803.00567, 2018. 2, 3
+
+[49] James Philbin, Ondrej Chum, Michael Isard, Josef Sivic, and Andrew Zisserman. Object retrieval with large vocabularies and fast spatial matching. In 2007 IEEE conference on computer vision and pattern recognition, pages 1–8. IEEE, 2007. 6, 7
+[50] Barnaba´s Po´czos and Jeff Schneider. Nonparametric estimation of conditional information and divergences. In Artiﬁcial Intelligence and Statistics, pages 914–923. PMLR, 2012. 2
+[51] Barnaba´s Po´czos, Liang Xiong, and Jeff Schneider. Nonparametric divergence estimation with applications to machine learning on distributions. In Proceedings of the Twenty-Seventh Conference on Uncertainty in Artiﬁcial Intelligence, pages 599–608, 2011. 2
+[52] Julien Rabin, Gabriel Peyre´, Julie Delon, and Marc Bernot. Wasserstein barycenter and its application to texture mixing. In Scale Space and Variational Methods in Computer Vision, pages 435–446. Springer, 2012. 3, 5
+[53] Filip Radenovic´, Giorgos Tolias, and Ondˇrej Chum. Finetuning cnn image retrieval with no human annotation. IEEE transactions on pattern analysis and machine intelligence, 41(7):1655–1668, 2018. 2, 6
+[54] Olga Russakovsky, Jia Deng, Hao Su, Jonathan Krause, Sanjeev Satheesh, Sean Ma, Zhiheng Huang, Andrej Karpathy, Aditya Khosla, Michael Bernstein, Alexander C. Berg, and Li Fei-Fei. ImageNet Large Scale Visual Recognition Challenge. International Journal of Computer Vision (IJCV), 115(3):211–252, 2015. 7
+[55] Gregory Shakhnarovich, Trevor Darrell, and Piotr Indyk. Nearest-neighbor methods in learning and vision. IEEE Trans. Neural Networks, 19(2):377, 2008. 1
+[56] Mohammad Shifat-E-Rabbi, Xuwang Yin, Abu Hasnat Mohammad Rubaiyat, Shiying Li, Soheil Kolouri, Akram Aldroubi, Jonathan M Nichols, and Gustavo K Rohde. Radon cumulative distribution transform subspace modeling for image classiﬁcation. Journal of Mathematical Imaging and Vision, 63(9):1185–1203, 2021. 4
+[57] Karen Simonyan and Andrew Zisserman. Very deep convolutional networks for large-scale image recognition. arXiv preprint arXiv:1409.1556, 2014. 7
+[58] Aman Sinha, Hongseok Namkoong, and John Duchi. Certifying some distributional robustness with principled adversarial training. In International Conference on Learning Representations, 2018. 3
+[59] Matteo Togninalli, Elisabetta Ghisu, Felipe Llinares-Lo´pez, Bastian Rieck, and Karsten Borgwardt. Wasserstein weisfeiler-lehman graph kernels. Advances in Neural Information Processing Systems, 32:6439–6449, 2019. 3
+[60] Ilya Tolstikhin, Olivier Bousquet, Sylvain Gelly, and Bernhard Schoelkopf. Wasserstein auto-encoders. In International Conference on Learning Representations, 2018. 3
+[61] Ce´dric Villani. Optimal transport: old and new, volume 338. Springer Science & Business Media, 2008. 2, 3
+[62] Edward Wagstaff, Fabian Fuchs, Martin Engelcke, Ingmar Posner, and Michael A Osborne. On the limitations of representing functions on sets. In International Conference on Machine Learning, pages 6487–6494. PMLR, 2019. 1
+[63] Ingo Wald and Vlastimil Havran. On building fast kd-trees for ray tracing, and on doing that in o (n log n). In 2006 IEEE
+
+Symposium on Interactive Ray Tracing, pages 61–69. IEEE, 2006. 1 [64] Qilong Wang, Jiangtao Xie, Wangmeng Zuo, Lei Zhang, and Peihua Li. Deep cnns meet global covariance pooling: Better representation and generalization. IEEE transactions on pattern analysis and machine intelligence, 2020. 2, 6 [65] Wei Wang, Dejan Slepcˇev, Saurav Basu, John A Ozolek, and Gustavo K Rohde. A linear optimal transportation framework for quantifying and visualizing variations in sets of images. International journal of computer vision, 101(2):254– 269, 2013. 4 [66] Eric Wong, Frank Schmidt, and Zico Kolter. Wasserstein adversarial examples via projected sinkhorn iterations. In International Conference on Machine Learning, pages 6808– 6817. PMLR, 2019. 3 [67] Kaiwen Wu, Allen Wang, and Yaoliang Yu. Stronger and faster wasserstein adversarial attacks. In International Conference on Machine Learning, pages 10377–10387. PMLR, 2020. 3 [68] Zhirong Wu, Shuran Song, Aditya Khosla, Fisher Yu, Linguang Zhang, Xiaoou Tang, and Jianxiong Xiao. 3d shapenets: A deep representation for volumetric shapes. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 1912–1920, 2015. 6, 7 [69] Liang Xiong and Jeff Schneider. Learning from point sets with observational bias. In Proceedings of the Thirtieth Conference on Uncertainty in Artiﬁcial Intelligence, pages 898– 906, 2014. 2 [70] Manzil Zaheer, Satwik Kottur, Siamak Ravanbhakhsh, Barnaba´s Po´czos, Ruslan Salakhutdinov, and Alexander J Smola. Deep sets. In Proceedings of the 31st International Conference on Neural Information Processing Systems, pages 3394–3404, 2017. 1, 2 [71] Yan Zhang, Jonathon Hare, and Adam Pru¨gel-Bennett. Fspool: Learning set representations with featurewise sort pooling. arXiv preprint arXiv:1906.02795, 2019. 6, 7 [72] Yan Zhang, Jonathon Hare, and Adam Pru¨gel-Bennett. Fspool: Learning set representations with featurewise sort pooling. In International Conference on Learning Representations, 2020. 2
+8. Supplementary Materials
+8.1. Proofs
+Here we include the proof for the C1 and C2 conditions covered in Section 4. Recall that µi represents a probability measure, µθi represents gθ#µi, where gθ : Rd → R with some regularity constraints, and that we deﬁne the cumulative distribution transform (CDT) [46] of µθi as
+φθ(µi) := (Tiθ − id),
+where Tiθ is the Monge map/coupling, and id denotes the identity function. For a ﬁxed θ, here we prove that φθ(µi) satisﬁes the following conditions:
+
+Method Gem-p Cov. FSPool SLOSH
+
+Complexity O(N p2d) O(N d2)
+O(N dlogN )
+O(LN (d + logN ))
+
+Table 2. Computational complexities.
+
+C1. The weighted 2-norm of the embedded slice, φθ(µi), satisﬁes:
+
+φθ(µi) µθ0,2 =
+
+1 2
+φθ(µi(t)) 22dµθ0(t)
+R
+
+= W2(µθi , µθ0),
+
+Proof. We start by writing the squared distance:
+
+As a corollary of C1 and C2 we have:
+
+G
+
+S
+
+W
+
+2 2
+
+(µi,
+
+µj
+
+)
+
+=
+
+W22(µθi , µθj )dσ(θ) =
+
+Ωθ
+
+Ωθ
+
+φθ(µi) − φθ(µj)
+
+2 µθ0
+
+,2
+
+dσ
+
+(θ)
+
+8.2. Computational complexities
+
+For the sake of completeness, here we include the com-
+putational complexities of the baseline methods used in our
+paper. In Table 2, we provide the computational complexity of embedding a set X = {xn ∈ Rd}Nn=1 into a vector space.
+
+φθ (µi )
+
+2 µθ0 ,2
+
+=
+
+φθ (µi (t))
+
+2 2
+
+dµθ0
+
+(t)
+
+R
+
+=
+
+Tiθ(t) − t
+
+2 2
+
+dµθ0
+
+(t)
+
+R
+
+=
+
+R
+
+(Fµ−θi1 ◦ Fµθ0 )(t) − t
+
+2 2
+
+dµθ0
+
+(t)
+
+1
+
+=
+0
+
+Fµ−θi1(τ ) − Fµ−θ01(τ ) 22dτ
+
+= W22(µθi , µθ0)
+
+where we used the deﬁnition of the one-dimensional Monge
+map, Tiθ = Fµ−θi1 ◦ Fµθ0 , and the change of variable τ =
+Fµθ0 (t). The corollary, φθ(µ0) µθ0,2 = 0, is trivial as W22(µθ0, µθ0) = 0.
+
+C2. The weighted 2 distance satisﬁes:
+
+φθ(µi) − φθ(µj ) µθ0,2 = W2(µθi , µθj ).
+
+(18)
+
+Proof. Similar to the previous proof:
+
+φθ(µi) − φθ(µj)
+
+2 µθ0 ,2
+
+=
+
+φθ(µi(t)) − φθ(µj(t)) 22dµθ0(t)
+
+R
+
+= Tiθ(t) − Tjθ(t) 22dµθ0(t)
+R
+
+= R (Fµ−θi1 ◦ Fµθ0 )(t) − (Fµ−θj1 ◦ Fµθ0 )(t) 22dµθ0(t)
+
+1
+
+=
+0
+
+Fµ−θi1(τ ) − Fµ−θj1(τ )
+
+2 2
+
+dτ
+
+= W22(µθi , µθj )
+
+where again we used the deﬁnition of the one-dimensional Monge map, Tiθ = Fµ−θi1 ◦ Fµθ0 , and the change of variable τ = Fµθ0 (t).
+

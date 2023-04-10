@@ -1,0 +1,6 @@
+- Ajax: Asynchronous JavaScript And XML![[Pasted image 20230406175634.png]]
+	- 同步和异步：
+		- 同步![[Pasted image 20230406175748.png]]
+		- 异步：![[Pasted image 20230406175807.png]]
+- Axios：封装的Ajax，直接使用以下形式进行get和post请求的发送![[Pasted image 20230406180725.png]]
+- 在vue生命周期中的mounted函数中使用axios进行异步请求

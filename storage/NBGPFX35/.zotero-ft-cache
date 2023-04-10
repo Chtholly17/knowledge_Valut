@@ -1,0 +1,1018 @@
+arXiv:2111.14362v1 [eess.IV] 29 Nov 2021
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 1
+
+Unsupervised Image Denoising with Frequency Domain Knowledge
+
+Nahyun Kim* nhkim21@kaist.ac.kr
+Donggon Jang* jdg900@kaist.ac.kr
+Sunhyeok Lee sunhyeok.lee@kaist.ac.kr
+Bomi Kim by5747@kaist.ac.kr
+Dae-Shik Kim daeshik@kaist.ac.kr
+
+Korea Advanced Institute of Science and Technology (KAIST), Daejeon, Korea
+
+Abstract
+Supervised learning-based methods yield robust denoising results, yet they are inherently limited by the need for large-scale clean/noisy paired datasets. The use of unsupervised denoisers, on the other hand, necessitates a more detailed understanding of the underlying image statistics. In particular, it is well known that apparent differences between clean and noisy images are most prominent on high-frequency bands, justifying the use of low-pass ﬁlters as part of conventional image preprocessing steps. However, most learning-based denoising methods utilize only one-sided information from the spatial domain without considering frequency domain information. To address this limitation, in this study we propose a frequency-sensitive unsupervised denoising method. To this end, a generative adversarial network (GAN) is used as a base structure. Subsequently, we include spectral discriminator and frequency reconstruction loss to transfer frequency knowledge into the generator. Results using natural and synthetic datasets indicate that our unsupervised learning method augmented with frequency information achieves stateof-the-art denoising performance, suggesting that frequency domain information could be a viable factor in improving the overall performance of unsupervised learning-based methods.
+1 Introduction
+Based on clean and noisy image pairs, supervised learning-based image denoisers have shown impressive performance compared to prior-based approaches. A large number of high-quality image pairs play an important role in the performance of supervised learningbased methods. However, constructing large-scale paired datasets may be unavailable or
+© 2021. The copyright of this document resides with its authors. It may be distributed unchanged freely in print or electronic forms. * The authors contributed equally. Github: https://github.com/jdg900/UID-FDK
+
+2 N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+expensive in real-world situations. For this reason, image denoising methods that do not require clean and noisy image pairs have recently drawn attention.
+A noisy image x is usually modeled as the sum of clean background y and noise n: x = y + n. Subsequently, noise corrupts the benign pixels, which makes it hard to distinguish the pixels of noise and content in the spatial domain. However, in the frequency domain, noise and content can be easily identiﬁed. As shown in Figure 1 (a), we observe that the noise lies in the high-frequency bands and semantic information lies in the low-frequency bands. Furthermore, in Figure 1 (b), we note that apparent differences between clean and noisy images are most prominent on high-frequency bands. It may indicate that the frequency domain provides useful evidence for noise removal. However, the recent learning-based denoisers overlook the frequency domain information and use only one-sided information from the spatial domain.
+Motivated by these observations, we propose the unsupervised denoising method that reﬂects frequency domain information. Speciﬁcally, with a generative adversarial network as a base structure, we introduce the spectral discriminator and frequency reconstruction loss to transfer frequency knowledge to the generator. The spectral discriminator distinguishes the differences between denoised and clean images on high-frequency bands. By propagating this knowledge to the generator for noise removal, the generator considers the frequency domain and thus produces visually more plausible denoised images to fool the spectral discriminator. The frequency reconstruction loss, combined with the cycle consistency loss, improves the image quality and preserves the content of images while narrowing the gap between clean and denoised images in the frequency domain.
+The main contributions of our method are summarized as follows: 1) We propose the GAN-based unsupervised image denoising method that preserves semantic information and produces a high-quality noise-free image. 2) To the best of our knowledge, it is the ﬁrst approach to explore the potential of the frequency domain with Fourier transform in the ﬁeld of noise removal tasks. The proposed spectral discriminator and frequency reconstruction loss make the generator concentrate on the noise and produce satisfying results. Denoised images recovered by our method are close to clean reference images in both spatial and frequency domain. 3) The proposed method outperforms existing unsupervised image denoisers by a considerable margin. Moreover, our performance is even comparable with supervised learning-based approaches trained with paired datasets.
+2 Related Work
+2.1 Image Denoising
+Non-learning based image denoisers [2, 4, 10, 17, 26, 32, 40, 41, 42, 50] have tried to reconstruct clean images using pre-deﬁned priors which model the distribution of noise. Speciﬁcally, a widely used prior in image denoising is non-local self-similarity prior [4, 10, 17, 41]. Assuming that similar patches exist in a single image, the methods based on nonlocal self-similarity [4, 10] remove the noise using these patches.
+Recently, with the advent of deep neural networks, supervised learning-based image denoisers [27, 46, 47] show promising performance on a set of clean and noisy image pairs. However, it is challenging to construct clean and noisy image pairs in a real-world scenario. To address the above issues, denoisers that do not rely on clean and noisy image pairs have been proposed [8, 12, 24, 25, 35]. N2N [25] learns reconstruction using only noisy im-
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 3
+
+Spatial
+
+Clean
+
+Noisy
+
+Low-passed
+
+High-passed
+
+Power Spectrum
+
+280 260 240 220 200 180 160 140 120
+0
+
+Clean Images Noisy Images
+
+20 Spatia4l0Frequency 60
+
+80
+
+Spectral
+
+(a)
+
+(b)
+
+Figure 1: The spectrum analysis in the frequency domain. (a) Visualization of images in the spatial domain and corresponding spectrum maps in the frequency domain. (b) The statistics (mean and variance) after azimuthal integral over the power spectrum on clean and noisy images of CBSD68. We use AWGN with a noise level σ = 50 to yield noisy images.
+
+age pairs without ground-truth clean images. N2V [24] estimates a corrupted pixel from its neighboring pixels based on a blind-spot mechanism. GCBD [8] generates the noisy images while modeling the real-world noise distribution through the GAN [16] and trains the denoiser with pseudo clean and noisy image pairs. LIR [12] trains an image denoiser by disentangling invariant representations from noisy images with an unpaired dataset.
+2.2 Frequency Domain in CNNs
+In traditional image processing, analyzing images in the frequency domain is known to be effective by transforming the image from the spatial domain to the frequency domain. Inspired by this idea, several works attempt to utilize the information from the frequency domain in deep neural networks. Xu et al. [43] accelerate the training of neural networks utilizing the discrete cosine transform. Dzanic et al. [14] observe that discrepancy exists between the images generated by the GAN [16] and the real images through the analysis of high-frequency Fourier modes. In addition, attempts to utilize the frequency domain information in the various ﬁelds, including image forensics [13, 15, 48], image generation [5, 9, 20], and domain adaptation [44, 45] are gradually increasing. However, image denoising methods combining the frequency domain analysis with DNN remain much less explored.
+
+3 Method
+In this section, we ﬁrst introduce the spectral discriminator and frequency reconstruction loss that use information from the frequency domain. Then, we present an unsupervised framework for image denoising, integrating the proposed discriminator and loss with the GAN. The proposed framework is illustrated in Figure 2.
+3.1 Frequency Domain Constraints
+Spectral Discriminator The simple way for the generator to consider the frequency domain is that the discriminator transfers the frequency domain knowledge to the generator. To this end, we propose the spectral discriminator similar to that introduced by [9] to measure
+
+4 N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+
+𝐿𝑉𝐺𝐺
+
+VGG19
+
+𝐿𝐵𝐺
+
+𝐿𝑇𝑉
+
+Gn2c 𝑥𝑛
+𝐿𝐶𝐶 & 𝐿𝑅𝑒𝑐𝑜𝑛 Gc2n
+𝐺𝑐2n 𝐺𝑛2c 𝑥𝑛
+
+𝐺𝑛2c 𝑥𝑛
+
+: loss : trainable network
+𝑀𝑠ℎ𝑖𝑓𝑡 𝑥
+
+𝑦𝑐
+
+𝐴𝐼 𝑟
+
+: pre-trained network : non-network module
+
+The texture representation
+
+DC
+
+𝐿C𝑎𝑙𝑑𝑒𝑣𝑎𝑛
+
+𝑀𝑠ℎ𝑖𝑓𝑡
+
+DT
+
+𝐿𝑇𝑎𝑒𝑑𝑥𝑣𝑡𝑢𝑟𝑒 The spectral representation
+
+DS
+
+𝐿𝑆𝑎𝑝𝑑𝑒𝑣𝑐𝑡𝑟𝑎𝑙
+
+𝐴𝐼 𝑟
+
+Figure 2: An overview of the proposed framework. Given an unpaired clean yc and noisy image xn, the generator Gn2c for image denoising takes the noisy image xn as an input and learns the mapping for noise removal. Additional network Gc2n is used to impose the cycle consistency. Three discriminators DC, DT , and DS try to distinguish the denoised image Gn2c(xn) from real clean image xc in terms of both spatial domain and frequency domain. The whole framework is end-to-end trainable.
+
+spectral realness. We compute the discrete Fourier transform on 2D image data f (w, h) in size W × H to feed frequency representations to the discriminator.
+
+∑ ∑ F(k,l)
+
+=
+
+W −1 H−1
+
+f
+
+(w,
+
+h)e−2π i
+
+kw W
+
+e−2π i
+
+lh H
+
+(1)
+
+w=0 h=0
+
+for spectral coordinates k = 0, ...,W − 1 and l = 0, ..., H − 1. Recent studies [9, 13] show that the 1D representation of the Fourier power spectrum is
+sufﬁcient to highlight spectral differences. Following their works, we transform the result of Fourier transform to polar coordinate and compute azimuthal integration over θ .
+
+F(r, θ ) = F(k, l) : r =
+
+k2 + l2,
+
+l θ = arctan k ,
+
+1 2π
+
+AI(r) =
+
+|F(r, θ )|dθ
+
+2π 0
+
+(2)
+
+where AI(r) means the average intensity of the image signal about radial distance r.
+
+We propose the spectral discriminator that allows the generator to focus on noise using
+
+high-frequency spectral information. To learn the differences on high-frequency bands, we
+
+pass the 1D spectral vector into the high-pass ﬁlter Fhp and input it to the spectral discrimi-
+
+nator.
+
+vI = Fhp(AI(r)),
+
+Fhp(x) =
+
+x, 0,
+
+r > rτ , otherwise
+
+(3)
+
+where rτ is a threshold radius for high-pass ﬁltering and vI is a high-pass ﬁltered 1D spectral vector of an input I.
+Generally, the most distinct characteristics between clean and noisy images exist on highfrequency bands. Thus, if there is some remained noise on denoised images, the spectral discriminator easily distinguishes the difference between the clean and denoised images on high-frequency bands. By transferring this knowledge to the generator, the generator for noise removal learns to yield visually more plausible images to fool the spectral discriminator.
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 5
+
+Frequency Reconstruction Loss Cai et al. [5] demonstrate the existence of a gap between the real and generated image in the frequency domain, which leads to artifacts in the spatial domain. Motivated by this observation, we propose to use frequency reconstruction loss with cycle consistency loss to ameliorate the quality of denoised images while reducing the gap. We aim that the frequency reconstruction loss which is complementary to cycle consistency loss enables the generator to consider the frequency domain. Furthermore, we expect that it can serve as an assistant in generating high-quality denoised images. To compute the frequency reconstruction loss, we map an input xn and reconstructed image Gc2n(Gn2c(xn)) to the frequency domain using Fourier transform. Then, we calculate the frequency reconstruction loss by measuring the difference between the two results of the Fourier transform and taking a logarithm to normalize it. Finally, we minimize the following objective:
+
+1 W −1 H−1
+
+∑ ∑ LFreq = log(1 + W H
+
+k=0
+
+|Fxn (k, l) − FGc2n(Gn2c(xn))(k, l)|)
+l=0
+
+(4)
+
+3.2 Unsupervised Framework for Image Denoising
+
+Our goal is to learn a mapping from a noise domain XN to a clean domain YC given unpaired training images xn ∈ XN and yc ∈ YC. To learn this mapping, we use the CycleGAN-like framework consisting of two generators, Gn2c and Gc2n, and three discriminators, DC, DT , and DS. Given a noisy image xn, the generator Gn2c learns to generate a denoised image Gn2c(xn). While distinguishing the denoised image Gn2c(xn) from the real clean image yc, the discriminator DC makes the generator produce the denoised images closer to the real clean domain YC. To stablize training, we use the Least Squares GAN (LSGAN) loss [28] for adversarial loss. The LSGAN loss for Gn2c and DC is:
+
+LCadlevan = Eyc∼Pc [(DC(yc))2] + Exn∼Pn [(1 − DC(Gn2c(xn)))2]
+
+(5)
+
+where Pn and Pc are the data distributions of the domain XN and domain YC, respectively. As introduced in [37], we adopt the texture discriminator DT in order to guide the gen-
+erator to produce clean contour and preserve texture while removing the noise. Following the scheme of [37], a random color shift algorithm Mshi ft is applied to the denoised image Gn2c(xn). The texture loss for Gn2c and DT is:
+
+LaTdexvture = Eyc∼Pc [(DT (Mshi f t (yc)))2] + Exn∼Pn [(1 − DT (Mshi f t (Gn2c(xn))))2]
+
+(6)
+
+As discussed in Section 3.1, we use the spectral discriminator DS to guide the generator to generate more realistic images by reducing the gap between the clean and denoised image in the frequency domain. The spectral loss for Gn2c and DS is:
+
+LaSdpvectral = Eyc∼Pc [(DS(vyc ))2] + Exn∼Pn [(1 − DS(vGn2c(xn)))2]
+
+(7)
+
+where v denotes the high-pass ﬁltered 1D spectral vector in Eq. 3. CycleGAN [49] imposes the two-sided cycle consistency constraint to learn the one-
+to-one mappings between two domains. On the other hand, we use only one-sided cycle consistency to maintain the content between noisy and denoised images. By incorporating a network Gc2n, we let Gc2n(Gn2c(xn)) be identical to the noisy image xn. The cycle consistency loss is expressed as:
+
+LCC = ||xn − Gc2n(Gn2c(xn))||1
+
+(8)
+
+6 N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+
+where || · ||1 is the L1 norm. Furthermore, we add the reconstruction loss between the Gc2n(Gn2c(xn)) and xn to stabi-
+lize the training. We employ the negative SSIM loss [38] and combine it with the frequency reconstruction loss LFreq in Eq. 4. The reconstruction loss is expressed as:
+
+LRecon = LFreq(xn, Gc2n(Gn2c(xn))) + LSSIM(xn, Gc2n(Gn2c(xn)))
+
+(9)
+
+where LSSIM(a, b) denotes the negative SSIM loss, −SSIM(a, b). To impose the local smoothness and mitigate the artifacts in the restored image, we adopt
+the total variation loss [6]. The total variation loss is expressed as:
+
+∑ LTV = (|| wGn2c(xn)||2 + || h Gn2c(xn)||2)
+
+(10)
+
+w,h
+
+where || · ||2 denotes the L2 norm, w and h are the operations to compute the gradients in terms of horizontal and vertical directions, respectively.
+Inspired by [12, 37], we use the perceptual loss [21] to ensure that extracted features from the noisy and denoised image are semantically invariant. This allows the image to keep its semantics even after the noise has been removed. The perceptual loss is expressed as:
+
+LV GG = ||φl(xn) − φl(Gn2c(xn))||2
+
+(11)
+
+where φl(·) denotes the pre-trained VGG-19 [34] on ImageNet [11], l denotes lth layer from VGG-19, and we use the Conv5-4 layer of VGG-19 model in our experiments.
+
+Moreover, we employ the background loss to preserve background consistency between
+
+the noisy and denoised image. The background loss constrains the L1 norm between blurred
+
+results of the noisy and denoised image. As a blur operator, we adopt a guided ﬁlter [39] that
+
+smooths the image while preserving the sharpness such as edges and details. The background
+
+loss is expressed as:
+
+LBG = ||GF(xn) − GF(Gn2c(xn))||1
+
+(12)
+
+where GF(·) denotes the guided ﬁlter. Our full objective for the two generators and the three discriminators is expressed as:
+
+min
+Gn2c ,Gc2n
+
+max
+DC,DT ,DS
+
+LCadlevan
+
++
+
+LaTdexvture
+
++
+
+LaSdpvectral
+
++
+
+LCC +
+
+λV GGLV GG + λBGLBG + λTV LTV + λReconLRecon
+
+(13)
+
+We empirically deﬁne the weights in the full objective as: λVGG = 2, λBG = 2 , λTV = 0.2, and λRecon = 0.2.
+
+4 Experiment
+In this section, we provide the implementation details of the proposed method. Then, we present extensive experiments on synthetic and real-world noisy images. Lastly, we conduct an ablation study to show the effectiveness of the proposed method. For synthetic noise, we use Additive White Gaussian Noise (AWGN) to synthesize the noisy images. We adopt the CBSD68 [29] for evaluation. For real noise, we use the Low-Dose Computed Tomography dataset [31] and real photographs SIDD [1] to demonstrate the generalization capacity of the proposed method. We employ PSNR and SSIM [38] to evaluate the results.
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 7
+
+(a) Input
+
+(b) LPF
+
+(c) CBM3D
+
+(d) DnCNN
+
+(e) FFDNet (f) RedNet-30
+
+(g) N2N
+
+(h) DIP
+
+(i) N2V
+
+(j) LIR
+
+(k) Ours
+
+(l) GT
+
+Figure 3: Qualitative results of our method and other baselines on CBSD68 corrupted by AWGN with a noise level σ = 25.
+
+Methods
+Noise level σ = 15 σ = 25 σ = 50
+Noise level σ = 15 σ = 25 σ = 50
+
+Traditional LPF CBM3D [10]
+
+25.93 24.61 21.49
+0.7079 0.6102 0.4266
+
+33.55 30.91 27.47
+0.9619 0.9331 0.8722
+
+DnCNN [46]
+33.72 30.85 27.19
+0.9254 0.8724 0.7490
+
+Paired setting
+
+FFDNet [47] RedNet-30 [27]
+
+29.68 28.71 26.79
+0.8616 0.8254 0.7463
+
+PSNR (dB) 33.60 30.68 26.42 SSIM 0.9620 0.9308 0.8502
+
+N2N [25]
+33.92 31.31 28.10
+0.9301 0.8857 0.7973
+
+DIP [35]
+28.51 27.26 23.66
+0.8851 0.8613 0.7510
+
+Unpaired setting N2V [24] LIR [12]
+
+28.66 27.20 24.52
+0.9024 0.8684 0.7927
+
+30.44 29.08 25.69
+0.9414 0.9126 0.8435
+
+Ours
+32.21 29.37 26.03
+0.9502 0.9124 0.8375
+
+Table 1: The average PSNR and SSIM results of our method and other baselines on CBSD68 corrupted by AWGN with noise levels σ = {15, 25, 50}. Our results are marked in bold.
+
+4.1 Implementation Details
+We implement our method with Pytorch [33]. The generator and discriminator architectures are detailed in the supplementary material. We train our method up to 100 epochs on Nvidia TITAN RTX GPU and RTX A6000 in experiments. We adopt ADAM [23] for optimization. The initial learning rate is set to 0.0001, and we keep the same learning rate for the ﬁrst 70 epochs and linearly decay the rate to zero over the last 30 epochs. We set the batch size to 16 in all experiments. We randomly crop 128 × 128 patches for synthetic noise removal and use input patches of size 256 × 256 for real-world noise removal. We randomly ﬂip the images horizont√ally for data augmentation. For high-pass ﬁlter on spectral discriminator, rτ is set to H/2 2 where H is the height of an image and is a ﬂoor operator. Loss weights are described in Section 3.2. Our model is evaluated with three random seeds, and we report its average values for rigorous evaluation.
+4.2 Synthetic Noise Removal
+We train the model with DIV2K [29] that contains 800 images with 2K resolution. For the unpaired training, we randomly divide the dataset into two parts without intersection. To construct a noise set, we add the AWGN with noise levels σ = {15, 25, 50} to images in one part using the other part as a clean set. For a fair comparison, we use only the noise set and their corresponding ground-truth when training other supervised learning-based methods.
+
+8 N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+
+(a) LDCT (b) BM3D (c) RED-CNN (d) DIP
+
+(e) LIR
+
+(f) Ours
+
+(g) NDCT
+
+Figure 4: Qualitative results of our method and other baselines on Mayo Clinic Low Dose CT dataset. (a) Real low-dose. (b)-(f) Results of each methods. (g) Real normal-dose. As shown in the highlighted red box, the reconstructed image by our method has few noise and artifacts. The display window is [160, 240] HU.
+
+Methods PSNR (dB)
+SSIM
+
+Traditional BM3D [10]
+29.16 0.8514
+
+Paired setting RED-CNN [7]
+29.39 0.9078
+
+Unpaired setting DIP [35] LIR [12] Ours
+26.97 27.26 30.11 0.8267 0.8452 0.8728
+
+Table 2: The average PSNR and SSIM results of different methods on Mayo Clinic Low Dose CT dataset. Our results are marked in bold.
+
+We select unsupervised methods, i.e. DIP [35], N2N [25], N2V [24], and LIR [12], and supervised methods, i.e. DnCNN [46], FFDNet [47], and RedNet-30 [27], to compare the performance. Traditional Low-Pass Filtering (LPF) and BM3D [10] are also evaluated. As shown in Figure 3, the unsupervised methods tend to shift the color and leave apparent visual artifacts in the sky. Especially, LIR removes the noise but fails to preserve the texture. With frequency domain information, our method successfully eliminates noise and preserves the texture. The classical LPF using Fourier transform alleviates the noise, but our framework that reﬂects not only the frequency domain knowledge but also spatial domain knowledge shows superior results. As shown in Table 1, our model outperforms other unsupervised methods, i.e. DIP, N2V, and LIR, by at least +0.29 dB in PSNR. Although our model is trained on unpaired images, it achieves superior performance in the SSIM than DnCNN and FFDNet trained on paired datasets. We conjecture that the reason for better noise removal is the use of the extra domain information that other previous methods do not consider.
+4.3 Real-World Noise Removal
+In this section, we evaluate the generalization ability of the proposed method on real-world noise, i.e. Low-Dose Computed Tomography (CT) and real photographs. For the comparison of the Low-Dose CT, we adopt BM3D [10], DIP [35], RED-CNN [7], and LIR [12] as baselines. For the comparison of the real photographs, BM3D [10], DIP [35], RedNet-30 [27], and LIR [12] are selected as baselines.
+Denoising on Low-Dose CT Since Computed Tomography (CT) helps to diagnose abnormalities of organs, CT is widely used in medical analysis. Reducing the radiation dose in order to decrease health risks causes noise and artifacts in the reconstructed images. Like the real-world noise, the noise distributions of the reconstructed image are difﬁcult to model analytically. Therefore, we adopt a CT dataset authorized by Mayo Clinic [31] to evaluate the generalization ability of our method on real-world noise. Mayo Clinic dataset consists of paired normal-dose and lose-dose CT images for each patient. The Normal-Dose CT
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 9
+
+(a) Input (b) CBM3D (c) RedNet-30 (d) DIP
+
+(e) LIR
+
+(f) Ours
+
+(g) GT
+
+Figure 5: Qualitative results of our method and other baselines on SIDD.
+
+Methods PSNR (dB)
+SSIM
+
+Traditional
+CBM3D [10] 28.32 0.6784
+
+Paired setting
+RedNet-30 [27] 38.02 0.9619
+
+Unpaired setting
+DIP [35] LIR [12] Ours 24.68 33.79 34.30 0.5901 0.9466 0.9334
+
+Table 3: The average PSNR and SSIM results of different methods on SIDD. Our results are marked in bold.
+
+(NDCT) and the Low-Dose CT (LDCT) images correspond to clean and noisy images, respectively. For the training, we obtain 2,850 images in 512×512 resolution from 20 different patients. We construct 1,422 LDCT images from randomly selected 10 patients as a noise set and 1,428 NDCT images from the remaining patients as a clean set for unpaired training. For the test, we obtain 865 images from 5 different patients. As shown in Table 2, our method achieves the best and the second-best performance in PSNR and SSIM, respectively. Note that our model trained on the unpaired dataset outperforms the RED-CNN trained on the paired dataset in PSNR. It indicates that our method can be more practical in medical analysis where obtaining paired datasets is challenging. We also compare the qualitative results with other baselines. As shown in Figure 4, other methods tend to generate artifacts or lose details. On the other hand, our method shows a reasonable balance between noise removal and image quality. More qualitative results are provided in the supplementary material.
+Denoising on Real Photographs To demonstrate the effectiveness of our method on real noisy photographs, we evaluate our method on SIDD [1] which is obtained from smartphone cameras. Because the images of the SIDD comprise various noise levels and brightness, this dataset is the best appropriate to validate the generalization capacity of the denoisers. The SIDD includes 320 pairs of noisy images and corresponding clean images with 4K or 5K resolutions for the training. For the unpaired training, we divide the dataset into 160 clean and 160 noisy images without intersection. The other training settings are the same as implementation details. For evaluation, we use 1280 cropped patches of size 256 × 256 in the SIDD validation set. As show in Figure 5, other baselines tend to leave the noise or fail to preserve the color of images. In contrast, our method removes the intense noise while keeping the color compared to other baselines. We also report the quantitative results in Table 3. More qualitative results are provided in the supplementary material.
+
+4.4 Ablation Study
+We conduct an ablation study to demonstrate the validity of our key components: the texture discriminator DT , the spectral discriminator DS, and the frequency reconstruction loss LFreq. We employ an additional evaluation metric LFD [20] to measure the difference between denoised images and reference images in the frequency domain. The small LFD value indicates
+
+10N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+
+DS DT LFreq PSNR (dB) SSIM LFD
+
+ 
+
+25.59 0.8290 6.5955
+
+ 
+
+25.79 0.8304 6.5649
+
+ 
+
+25.82 0.8334 6.5874
+
+ 
+
+26.03 0.8375 6.5795
+
+Table 4: Ablation study. Quantitative results of our method with and without the texture discriminator DT , spectral discriminator DS, and frequency reconstruction loss LFreq on CBSD68 corrupted by AWGN with a noise level σ = 50. we report the PSNR, SSIM (higher is better) and LFD (lower is better). The best results are marked in bold.
+
+that the denoised images are close to the reference images. First, to verify the effectiveness of the DS, we only add the DS to the base structure. As shown in Table 4, when the DS is integrated, both PSNR and SSIM increase by 0.2 dB and 0.0014, respectively. It demonstrates that the spectral discriminator leads the generator to remove high-frequency related noise effectively by transferring the difference between noisy and clean images on the highfrequency bands. Also, we see that the spectral discriminator makes the denoised images close to clean domain images in the frequency domain, resulting in the decrease of LFD. Next, to verify the effectiveness of the DT , we integrate it with the DS. Distinguishing the texture representations helps restore clean contours and ﬁne details related to image quality, which improves the SSIM metric. A curious phenomenon is that the texture discriminator increases the LFD. We conjecture that the introduction of DT causes a bias to the spatial domain in maintaining the balance between the spatial and frequency domains, thus increasing the distance in the frequency domain. Adding the LFreq shows results validating our hypothesis that narrowing the gap in the frequency domain is crucial to generate the high-quality denoised image. In addition, through the decrease of LFD, the frequency reconstruction loss may help to maintain the balance between the spatial and frequency domain.
+
+5 Conclusion
+In this paper, we propose an unsupervised learning-based image denoiser that enables the image denoising without clean and noisy image pairs. To the best of our knowledge, it is the ﬁrst approach that aims to recover a noise-free image from a corrupted image using frequency domain information. To this end, we introduce the spectral discriminator and frequency reconstruction loss that can propagate the frequency knowledge to the generator. By reﬂecting the information from the frequency domain, our method successfully focuses on high-frequency components to remove noise. Experiments on synthetic and real noise removal show that our method outperforms other unsupervised learning-based denoisers and generates more visually pleasing images with fewer artifacts. We believe that considering the frequency domain can be advantageous in other low-level vision tasks as well.
+
+6 Acknowledgements
+This work was supported by the Engineering Research Center of Excellence (ERC) Program supported by National Research Foundation (NRF), Korean Ministry of Science & ICT (MSIT) (Grant No. NRF-2017R1A5A1014708).
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 11
+References
+[1] Abdelrahman Abdelhamed, Stephen Lin, and Michael S Brown. A high-quality denoising dataset for smartphone cameras. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 1692–1700, 2018.
+[2] Michal Aharon, Michael Elad, and Alfred Bruckstein. K-svd: An algorithm for designing overcomplete dictionaries for sparse representation. IEEE Transactions on signal processing, 54(11):4311–4322, 2006.
+[3] Namhyuk Ahn, Byungkon Kang, and Kyung-Ah Sohn. Fast, accurate, and lightweight super-resolution with cascading residual network. In Proceedings of the European Conference on Computer Vision (ECCV), pages 252–268, 2018.
+[4] Antoni Buades, Bartomeu Coll, and J-M Morel. A non-local algorithm for image denoising. In 2005 IEEE Computer Society Conference on Computer Vision and Pattern Recognition (CVPR’05), volume 2, pages 60–65. IEEE, 2005.
+[5] Mu Cai, Hong Zhang, Huijuan Huang, Qichuan Geng, and Gao Huang. Frequency domain image translation: More photo-realistic, better identity-preserving. arXiv preprint arXiv:2011.13611, 2020.
+[6] Antonin Chambolle. An algorithm for total variation minimization and applications. Journal of Mathematical imaging and vision, 20(1):89–97, 2004.
+[7] Hu Chen, Yi Zhang, Mannudeep K Kalra, Feng Lin, Yang Chen, Peixi Liao, Jiliu Zhou, and Ge Wang. Low-dose ct with a residual encoder-decoder convolutional neural network. IEEE transactions on medical imaging, 36(12):2524–2535, 2017.
+[8] Jingwen Chen, Jiawei Chen, Hongyang Chao, and Ming Yang. Image blind denoising with generative adversarial network based noise modeling. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 3155–3164, 2018.
+[9] Yuanqi Chen, Ge Li, Cece Jin, Shan Liu, and Thomas Li. Ssd-gan: Measuring the realness in the spatial and spectral domains. arXiv preprint arXiv:2012.05535, 2020.
+[10] Kostadin Dabov, Alessandro Foi, Vladimir Katkovnik, and Karen Egiazarian. Image denoising by sparse 3-d transform-domain collaborative ﬁltering. IEEE Transactions on image processing, 16(8):2080–2095, 2007.
+[11] Jia Deng, Wei Dong, Richard Socher, Li-Jia Li, Kai Li, and Li Fei-Fei. Imagenet: A large-scale hierarchical image database. In 2009 IEEE conference on computer vision and pattern recognition, pages 248–255. Ieee, 2009.
+[12] Wenchao Du, Hu Chen, and Hongyu Yang. Learning invariant representation for unsupervised image restoration. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 14483–14492, 2020.
+[13] Ricard Durall, Margret Keuper, and Janis Keuper. Watch your up-convolution: Cnn based generative deep neural networks are failing to reproduce spectral distributions. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 7890–7899, 2020.
+
+12N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+[14] Tarik Dzanic, Karan Shah, and Freddie Witherden. Fourier spectrum discrepancies in deep network generated images. arXiv preprint arXiv:1911.06465, 2019.
+[15] Joel Frank, Thorsten Eisenhofer, Lea Schönherr, Asja Fischer, Dorothea Kolossa, and Thorsten Holz. Leveraging frequency analysis for deep fake image recognition. In International Conference on Machine Learning, pages 3247–3258. PMLR, 2020.
+[16] Ian J Goodfellow, Jean Pouget-Abadie, Mehdi Mirza, Bing Xu, David Warde-Farley, Sherjil Ozair, Aaron Courville, and Yoshua Bengio. Generative adversarial networks. arXiv preprint arXiv:1406.2661, 2014.
+[17] Shuhang Gu, Lei Zhang, Wangmeng Zuo, and Xiangchu Feng. Weighted nuclear norm minimization with application to image denoising. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 2862–2869, 2014.
+[18] Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. Deep residual learning for image recognition. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 770–778, 2016.
+[19] Phillip Isola, Jun-Yan Zhu, Tinghui Zhou, and Alexei A Efros. Image-to-image translation with conditional adversarial networks. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 1125–1134, 2017.
+[20] Liming Jiang, Bo Dai, Wayne Wu, and Chen Change Loy. Focal frequency loss for generative models. arXiv preprint arXiv:2012.12821, 2020.
+[21] Justin Johnson, Alexandre Alahi, and Li Fei-Fei. Perceptual losses for real-time style transfer and super-resolution. In European conference on computer vision, pages 694– 711. Springer, 2016.
+[22] Yoonsik Kim, Jae Woong Soh, Gu Yong Park, and Nam Ik Cho. Transfer learning from synthetic to real-noise denoising with adaptive instance normalization. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 3482–3492, 2020.
+[23] Diederik P Kingma and Jimmy Ba. Adam: A method for stochastic optimization. arXiv preprint arXiv:1412.6980, 2014.
+[24] Alexander Krull, Tim-Oliver Buchholz, and Florian Jug. Noise2void-learning denoising from single noisy images. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 2129–2137, 2019.
+[25] Jaakko Lehtinen, Jacob Munkberg, Jon Hasselgren, Samuli Laine, Tero Karras, Miika Aittala, and Timo Aila. Noise2noise: Learning image restoration without clean data. arXiv preprint arXiv:1803.04189, 2018.
+[26] Julien Mairal, Francis Bach, Jean Ponce, Guillermo Sapiro, and Andrew Zisserman. Non-local sparse models for image restoration. In 2009 IEEE 12th international conference on computer vision, pages 2272–2279. IEEE, 2009.
+[27] Xiao-Jiao Mao, Chunhua Shen, and Yu-Bin Yang. Image restoration using very deep convolutional encoder-decoder networks with symmetric skip connections. arXiv preprint arXiv:1603.09056, 2016.
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 13
+[28] Xudong Mao, Qing Li, Haoran Xie, Raymond YK Lau, Zhen Wang, and Stephen Paul Smolley. Least squares generative adversarial networks. In Proceedings of the IEEE international conference on computer vision, pages 2794–2802, 2017.
+[29] David Martin, Charless Fowlkes, Doron Tal, and Jitendra Malik. A database of human segmented natural images and its application to evaluating segmentation algorithms and measuring ecological statistics. In Proceedings Eighth IEEE International Conference on Computer Vision. ICCV 2001, volume 2, pages 416–423. IEEE, 2001.
+[30] Takeru Miyato, Toshiki Kataoka, Masanori Koyama, and Yuichi Yoshida. Spectral normalization for generative adversarial networks. arXiv preprint arXiv:1802.05957, 2018.
+[31] Taylor R Moen, Baiyu Chen, David R Holmes III, Xinhui Duan, Zhicong Yu, Lifeng Yu, Shuai Leng, Joel G Fletcher, and Cynthia H McCollough. Low-dose ct image and projection dataset. Medical physics, 48(2):902–911, 2021.
+[32] Stanley Osher, Martin Burger, Donald Goldfarb, Jinjun Xu, and Wotao Yin. An iterative regularization method for total variation-based image restoration. Multiscale Modeling & Simulation, 4(2):460–489, 2005.
+[33] Adam Paszke, Sam Gross, Soumith Chintala, Gregory Chanan, Edward Yang, Zachary DeVito, Zeming Lin, Alban Desmaison, Luca Antiga, and Adam Lerer. Automatic differentiation in pytorch. In NIPS-W, 2017.
+[34] Karen Simonyan and Andrew Zisserman. Very deep convolutional networks for largescale image recognition. arXiv preprint arXiv:1409.1556, 2014.
+[35] Dmitry Ulyanov, Andrea Vedaldi, and Victor Lempitsky. Deep image prior. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 9446–9454, 2018.
+[36] Stefan Van der Walt, Johannes L Schönberger, Juan Nunez-Iglesias, François Boulogne, Joshua D Warner, Neil Yager, Emmanuelle Gouillart, and Tony Yu. scikitimage: image processing in python. PeerJ, 2:e453, 2014.
+[37] Xinrui Wang and Jinze Yu. Learning to cartoonize using white-box cartoon representations. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 8090–8099, 2020.
+[38] Zhou Wang, Alan C Bovik, Hamid R Sheikh, and Eero P Simoncelli. Image quality assessment: from error visibility to structural similarity. IEEE transactions on image processing, 13(4):600–612, 2004.
+[39] Huikai Wu, Shuai Zheng, Junge Zhang, and Kaiqi Huang. Fast end-to-end trainable guided ﬁlter. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 1838–1847, 2018.
+[40] Jinjun Xu and Stanley Osher. Iterative regularization and nonlinear inverse scale space applied to wavelet-based denoising. IEEE Transactions on Image Processing, 16(2): 534–544, 2007.
+
+14N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+[41] Jun Xu, Lei Zhang, David Zhang, and Xiangchu Feng. Multi-channel weighted nuclear norm minimization for real color image denoising. In Proceedings of the IEEE international conference on computer vision, pages 1096–1104, 2017.
+[42] Jun Xu, Lei Zhang, and David Zhang. A trilateral weighted sparse coding scheme for real-world image denoising. In Proceedings of the European conference on computer vision (ECCV), pages 20–36, 2018.
+[43] Kai Xu, Minghai Qin, Fei Sun, Yuhao Wang, Yen-Kuang Chen, and Fengbo Ren. Learning in the frequency domain. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 1740–1749, 2020.
+[44] Yanchao Yang and Stefano Soatto. Fda: Fourier domain adaptation for semantic segmentation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 4085–4095, 2020.
+[45] Yanchao Yang, Dong Lao, Ganesh Sundaramoorthi, and Stefano Soatto. Phase consistent ecological domain adaptation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 9011–9020, 2020.
+[46] Kai Zhang, Wangmeng Zuo, Yunjin Chen, Deyu Meng, and Lei Zhang. Beyond a gaussian denoiser: Residual learning of deep cnn for image denoising. IEEE transactions on image processing, 26(7):3142–3155, 2017.
+[47] Kai Zhang, Wangmeng Zuo, and Lei Zhang. Ffdnet: Toward a fast and ﬂexible solution for cnn-based image denoising. IEEE Transactions on Image Processing, 27(9):4608– 4622, 2018.
+[48] Xu Zhang, Svebor Karaman, and Shih-Fu Chang. Detecting and simulating artifacts in gan fake images. In 2019 IEEE International Workshop on Information Forensics and Security (WIFS), pages 1–6. IEEE, 2019.
+[49] Jun-Yan Zhu, Taesung Park, Phillip Isola, and Alexei A Efros. Unpaired image-toimage translation using cycle-consistent adversarial networks. In Proceedings of the IEEE international conference on computer vision, pages 2223–2232, 2017.
+[50] Daniel Zoran and Yair Weiss. From learning models of natural image patches to whole image restoration. In 2011 International Conference on Computer Vision, pages 479– 486. IEEE, 2011.
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 15
+A Supplementary Material
+In this supplementary material, we describe the architecture details and show the additional experiments as follows:
+• In Section B, we describe the architectures of two generators, i.e. Gn2c and Gc2n, and three discriminators, i.e. DC, DT , and DS, in our framework.
+• In Section C, we show the additional results on CBSD68 [29] corrupted by AWGN with a noise level σ = 25.
+• In Section D, we show the additional qualitative results on real-world noise, i.e. LowDose CT authorized by Mayo Clinic [31] and SIDD [1].
+• In Section E, we show the results of an additional ablation study to demonstrate the validity of the perceptual loss LVGG, the cycle consistency loss LCC, and the reconstruction loss LRecon.
+• In Section F, we show the results on several noise types, such as structured noise and Poisson noise, to evaluate the generalization ability of our method.
+B The Details of Architectures
+Generator Gn2c For the noise removal generator Gn2c, we adopt the network introduced by [3]. The main idea of this architecture is multiple cascading connections at global and local levels which help to propagate low-level information to later layers and remove noise. The details of Gn2c are illustrated in Figure 6 and 7.
+Generator Gc2n For the generator Gc2n, we adopt the U-Net based network that is similar to the architecture introduced by [22]. The role of this network is to translate images from the noise domain to the clean domain. The details of Gc2n are illustrated in Figure 8 and 9.
+Discriminators DC and DT For the discriminators DC and DT , we employ the 70 × 70 PatchGAN discriminator [19] which classiﬁes whether 70 × 70 image patches are real or fake. The details of DC and DT are illustrated in Figure 10.
+Discriminator DS For the spectral discriminator DS, we employ the single linear unit as the spectral discriminator. The DS takes a high-pass ﬁltered 1D spectral vector and aims to classify whether the spectral vector is real or fake.
+C Additional Results on AWGN
+We additionally visualize the results for CBSD68 images corrupted by AWGN with a noise level σ = 25 and show the PSNR and SSIM in Figure 11 and 12. In Figure 11, our method outperforms other methods trained with unpaired dataset by at least +3.44dB and +0.08 in terms of PSNR and SSIM, respectively. LIR and N2V spoil the color and lights, but our method preserves both the color and lights and successfully removes the noise. We also show the challenging example that has repetitive high-frequency patterns hard to distinguish
+
+16N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+
+C
+
+C
+
+C
+
+Residual Block
+
+1x1 Convolution
+
+ReLU
+
+C Concatenation
+
+Figure 6: The architecture of Cascading Block used as the basic component in the Gn2c. We use the Residual Block proposed by [18] and the ReLU.
+
+C
+
+C
+
+C
+
+W x H x 64
+
+W x H x 64 W x H x 64
+
+W x H x 64
+
+W x H x 64
+
+W x H x 64
+
+W x H x 3
+
+3x3 Convolution
+
+Cascading Block
+
+1x1 Convolution
+
+ReLU
+
+C Concatenation
+
+Figure 7: The architecture of generator Gn2c for noise removal. We use the convolution with kernel size=3, stride=1, and padding=1.
+
++
+
+3x3 Convolution
+
+Instance Normalization
+
+LeakyReLU + Element-Wise Summation
+
+Figure 8: The architecture of Instance Residual Block used as the basic component in the Gc2n. We use the convolution with kernel size=3, stride=1, and padding=1 and the LeakyReLU with a slope of 0.2.
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 17
+
++
+
++
+
++
+
+W x H x 32 3x3 Convolution
+
+𝑾 𝟐
+
+x
+
+𝑯 𝟐
+
+x
+
+64
+
+Global Average Pooling
+
+𝑾 𝟒
+
+x
+
+𝑯 𝟒
+
+x
+
+128
+
+Instance Residual Block
+
+𝑾 𝟐
+
+x
+
+𝑯 𝟐
+
+x
+
+64
+
+W x H x 32 W x H x 3
+
+Transpose Convolution + Element-Wise Summation
+
+Figure 9: The architecture of generator Gc2n. We use the convolution with kernel size=3, stride=1, and padding=1 and transposed convolution with kernel size=3, stride=2, padding=1, and output padding=1.
+
+Stride = 2
+
+Stride = 2
+
+Stride = 2
+
+Stride = 1
+
+Stride = 1
+
+𝑾 𝟐
+
+x
+
+𝑯 𝟐
+
+x
+
+64
+
+𝑾 𝟒
+
+x
+
+𝑯 𝟒
+
+x
+
+128
+
+4x4 Convolution
+
+𝑾 𝟖
+
+x
+
+𝑯 𝟖
+
+x
+
+256
+
+(𝑾
+𝟖
+
+−
+
+𝟏)
+
+x
+
+(𝑯
+𝟖
+
+−
+
+𝟏)
+
+x
+
+512
+
+(𝑾
+𝟖
+
+−
+
+𝟐)
+
+x
+
+(𝑯
+𝟖
+
+−
+
+𝟐)
+
+x
+
+1
+
+Spectral Normalization
+
+LeakyReLU
+
+Figure 10: The architecture of discriminators DC and DT . We use the convolution with kernel size=4 and padding=1. Followed by the convolution, we use the spectral normalization [30] and the LeakyReLU with a slope of 0.2.
+
+with noise in Figure 12. Our approach removes noise without artifact and also preserves the patterns of the zebra. Although our method is trained under unpaired settings, it shows comparable performance in PSNR and SSIM with the supervised models in Figure 12. Furthermore, compared to methods trained with unpaired dataset, our approach achieves the best performance in both PSNR and SSIM.
+
+D Additional Qualitative Results on Real-World Noise
+D.1 Low-Dose CT
+In this subsection, we show the additional qualitative results on Low-Dose CT dataset authorized by Mayo Clinic [31] in Figure 13. As shown in Figure 13, previous methods tend to lose details and generate blurred results. However, our method removes the noise, while preserving the details of organs. It shows that our method is also practical for medical image denoising.
+
+18N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+
+(a) Input (21.21/0.55)
+
+(b) LPF (21.43/0.60)
+
+(c) CBM3D (28.55/0.91)
+
+(d) DnCNN (28.64/0.92)
+
+(e) FFDNet (24.56/0.83)
+
+(f) RedNet-30 (27.46/0.91)
+
+(g) N2N (28.92/0.92)
+
+(h) DIP (22.90/0.74)
+
+(i) N2V (24.05/0.81)
+
+(j) LIR (19.48/0.82)
+
+(k) Ours (27.49/0.90)
+
+(l) GT (PSNR/SSIM)
+
+Figure 11: Qualitative results of our method and other baselines on CBSD68 corrupted by AWGN with a noise level σ = 25.
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 19
+
+(a) Input (20.27/0.44)
+
+(b) LPF (21.29/0.58)
+
+(c) CBM3D (29.99/0.85)
+
+(d) DnCNN (30.32/0.87)
+
+(e) FFDNet (26.29/0.81)
+
+(f) RedNet-30 (30.50/0.88)
+
+(g) N2N (30.71/0.88)
+
+(h) DIP (27.40/0.77)
+
+(i) N2V (26.73/0.75)
+
+(j) LIR (26.04/0.83)
+
+(k) Ours (28.35/0.83)
+
+(l) GT (PSNR/SSIM)
+
+Figure 12: Qualitative results of our method and other baselines on CBSD68 corrupted by AWGN with a noise level σ = 25.
+
+20N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+D.2 Real Photographs
+In this subsection, we visualize the additional qualitative results on SIDD [1] in Figure 14 and 15. As shown in Figure 14, previous methods tend to lose the texture and leave the noise. In contrast, our method removes the noise while preserving the texture compared to other baselines. In Figure 15, we observe that our method removes the intense noise while preserving the color of images compared to other baselines.
+
+E Additional Ablation Study
+
+We conduct an additional ablation study to demonstrate the validity of the perceptual loss LVGG, the cycle consistency loss LCC, and the reconstruction loss LRecon. First, to verify the effectiveness of the LVGG, we only add the LVGG. As shown in Table 5, when the LVGG is used, both PSNR and SSIM increase by 0.07dB and 0.0068. It demonstrates that the perceptual loss LVGG helps to improve the performance, preserving the semantics even after the noise has been removed. Next, to verify the contribution of LCC, we integrate it with the LVGG. We observe that the LCC which enables the one-to-one mapping between noisy and denoised images improves the PSNR and SSIM by 0.08dB and 0.004. Finally, when we integrate the LRecon with the LVGG and the LCC, both PSNR and SSIM increase by 0.15dB and 0.0063, thus showing the best results in PSNR and SSIM. Through this experiment, we validate that each of the losses contributes to the performance improvement.
+
+LV GG LCC LRecon PSNR (dB) SSIM
+
+
+
+
+
+
+
+25.67 0.8204
+
+
+
+
+
+25.74 0.8272
+
+ 
+
+25.88 0.8312
+
+ 
+
+26.03 0.8375
+
+Table 5: Ablation study. Quantitative results of our method with and without the perceptual loss LVGG, the cycle consistency loss LCC, and the reconstruction loss LRecon on CBSD68 corrupted by AWGN with a noise level σ = 50. We report the PSNR and SSIM (higher is better). The best results are marked in bold.
+
+F Evaluation on Several Noise Types
+F.1 Structured Noise
+In this subsection, we show the results on structured noise. To generate the structured noise, we sample the pixel-wise i.i.d white noise, and convolve it with a 2D Gaussian ﬁlter whose a kernel size is 21 × 21 and σ is 3 pixel. For the train and evaluation, we follow the same setting as the setting for synthetic noise removal in the main paper. As shown in Figure 16, our method is able to remove complex noise compared to BM3D [10] and DIP [35]. Furthermore, while LIR [12] spoil the lights, our method successfully preserves both the color and lights. The quantitative results are summarized in Table 6. Our method outperforms the traditional and unsupervised methods, achieving the second-best performance in terms of PSNR and SSIM.
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 21
+
+(a) LDCT
+
+(b) BM3D
+
+(c) RED-CNN
+
+(d) DIP
+
+(e) LIR
+
+(f) Ours
+
+(g) NDCT
+
+(h) LDCT
+
+(i) BM3D
+
+(j) RED-CNN
+
+(k) DIP
+
+(l) LIR
+
+(m) Ours
+
+(n) NDCT
+
+Figure 13: Qualitative results of our method and other baselines on Mayo Clinic Low Dose CT dataset. As shown in the highlighted red box, the reconstructed images by our method have few noise and preserve the details of organs. The display window is [160, 240] HU.
+
+Methods PSNR (dB)
+SSIM
+
+Traditional
+CBM3D [10] 20.62 0.5650
+
+Paired setting
+RedNet-30 [27] 28.51 0.9588
+
+Unpaired setting
+DIP [35] LIR [12] Ours 20.70 16.90 25.18 0.7239 0.3738 0.9026
+
+Table 6: The average PSNR and SSIM results of different methods on CBSD68 corrupted by structured noise. Our results are marked in bold.
+
+22N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+
+(a) Input
+
+(b) CBM3D
+
+(c) RedNet-30
+
+(d) DIP
+
+(e) LIR
+
+(f) Ours
+
+(g) GT
+
+(h) Input
+
+(i) CBM3D
+
+(j) RedNet-30
+
+(k) DIP
+
+(l) LIR
+
+(m) Ours
+
+(n) GT
+
+Figure 14: Qualitative results of our method and other baselines on real noisy data, SIDD.
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 23
+
+(a) Input
+
+(b) CBM3D
+
+(c) RedNet-30
+
+(d) DIP
+
+(e) LIR
+
+(f) Ours
+
+(g) GT
+
+(h) Input
+
+(i) CBM3D
+
+(j) RedNet-30
+
+(k) DIP
+
+(l) LIR
+
+(m) Ours
+
+(n) GT
+
+Figure 15: Qualitative results of our method and other baselines on real noisy data, SIDD.
+
+24N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+
+(a) Input
+
+(b) CBM3D
+
+(c) RedNet-30
+
+(d) DIP
+
+(e) LIR
+
+(f) Ours
+
+(g) GT
+
+Figure 16: Qualitative results of our method and other baselines on CBSD68 corrupted by structured noise.
+
+N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE 25
+F.2 Poisson Noise
+In the comparisons of Poisson noisy images, we use Kodak24 as the test dataset. The images are corrupted by independent Poisson noise from Scikit-image library [36]. We train the models following the settings in the main paper. The visualized results of Poisson noise removal are given in Figure 17 and 18. Our approach shows impressive noise removal results. While LIR and DIP fail to remove the Poisson noise, our method successfully eliminates the noise and preserves the colors. In Table 7, our method achieves the best performance in PSNR and the second-best performance in terms of SSIM even when it is trained under the unpaired dataset. It demonstrates that our method has robustness and generalization against various noise types. Note that we do not change any hyper-parameters when trained under several types of noise.
+
+(a) Input
+
+(b) CBM3D
+
+(c) RedNet-30
+
+(d) DIP
+
+(e) LIR
+
+(f) Ours
+
+(g) GT
+
+Figure 17: Qualitative results of our method and other baselines on Kodak24 corrupted by Poisson noise.
+
+Methods PSNR (dB)
+SSIM
+
+Traditional
+CBM3D [10] 32.36 0.8694
+
+Paired setting
+RedNet-30 [27] 29.59 0.9778
+
+Unpaired setting
+DIP [35] LIR [12] Ours 29.59 26.20 34.93 0.8774 0.7741 0.9691
+
+Table 7: The average PSNR and SSIM results of different methods on Kodak24 dataset corrupted by Poisson noise. Our results are marked in bold.
+
+26N. KIM, D. JANG ET AL: IMAGE DENOISING WITH FREQUENCY DOMAIN KNOWLEDGE
+
+(a) Input
+
+(b) CBM3D
+
+(c) RedNet-30
+
+(d) DIP
+
+(e) LIR
+
+(f) Ours
+
+(g) GT
+
+Figure 18: Qualitative results of our method and other baselines on Kodak24 corrupted by Poisson noise.
+

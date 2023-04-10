@@ -1,0 +1,1132 @@
+Generalized Sliced Wasserstein Distances
+
+arXiv:1902.00434v1 [cs.LG] 1 Feb 2019
+
+Soheil Kolouri 1 Kimia Nadjahi 2 Umut S¸ ims¸ekli 2 Roland Badeau 2 Gustavo K. Rohde 3
+
+Abstract
+The Wasserstein distance and its variations, e.g., the sliced-Wasserstein (SW) distance, have recently drawn attention from the machine learning community. The SW distance, speciﬁcally, was shown to have similar properties to the Wasserstein distance, while being much simpler to compute, and is therefore used in various applications including generative modeling and general supervised/unsupervised learning. In this paper, we ﬁrst clarify the mathematical connection between the SW distance and the Radon transform. We then utilize the generalized Radon transform to deﬁne a new family of distances for probability measures, which we call generalized slicedWasserstein (GSW) distances. We also show that, similar to the SW distance, the GSW distance can be extended to a maximum GSW (max-GSW) distance. We then provide the conditions under which GSW and max-GSW distances are indeed distances. Finally, we compare the numerical performance of the proposed distances on several generative modeling tasks, including SW ﬂows and SW auto-encoders.
+背景：OT理论，评估⼀ 个概率分布转换为另⼀ 1. Introduction 个概率分布的最⼩代 (TOhTe)Wthaesosreyrs(tVeiinlladniis,ta2n0c0e8)价 的haans， 相ditfs计 似orrom算 程ostsa两 度imn个eotprt分icimb布aeltwt之reaen间nsptworot
+probability measures. It has attracted abundant attention in data sciences and machine learning due to its convenient theoretical properties and applications on many domains (Solomon et al., 2014; Frogner et al., 2015; Montavon et al., 2016; Kolouri et al., 2017; Courty et al., 2017; Peyre´ & Cuturi, 2018; Schmitz et al., 2018), especially in implicit generative modeling such as OT-based generative adversarial networks (GANs) and variational auto-encoders (Arjovsky et al., 2017; Bousquet et al., 2017; Gulrajani et al., 2017; Tolstikhin et al., 2018).
+1HRL Laboratories, LLC., Malibu, CA, USA 2Te´le´com ParisTech, Paris, France 3University of Virginia Charlottesville, VA, USA. Correspondence to: Soheil Kolouri <skolouri@hrl.com>.
+Copyright 2019 by the author(s).
+
+While OT brings new perspectives and principled ways to formalize problems, the OT-based methods usually suffer from high computational complexity. The Wasserstein distance is often the computational bottleneck and it turns out that evaluating it between multi-dimensional measures is numerically intractable in general. This important computational burden is a major limiting factor in the application of OT distances to large-scale data analysis. Recently, several numerical methods have been proposed to speed-up the evaluation of the Wasserstein distance. For instance, entropic regularization techniques (Cuturi, 2013; Cuturi & Peyre´, 2015; Solomon et al., 2015) provide a fast approximation to the Wasserstein distance by regularizing the original OT problem with an entropy term. The linear OT approach, (Wang et al., 2013; Kolouri et al., 2016a) further simpliﬁes this computation for a given dataset by a linear approximation of pairwise distances with a functional deﬁned on distances to a reference measure. Other notable contributions towards computational methods for OT include multi-scale and sparse approximation approaches (Oberman & Ruan, 2015; Schmitzer, 2016), and Newton-based schemes for semi-discrete OT (Le´vy, 2015; Kitagawa et al., 2016).
+There are some special favorable cases where solving the OT problem is easy and reasonably cheap. In particular, the Wasserstein distance for one-dimensional probability densities has a closed-form formula that can be efﬁciently approximated. This nice property motivates the use of the slicedWasserstein distance (Bonneel et al., 2015), an alternative OT distance obtained by computing inﬁnitely many linear projections of the high-dimensional distribution to onedimensional distributions and then computing the average of the Wasserstein distance between these one-dimensional representations. While having similar theoretical properties (Bonnotte, 2013), the sliced-Wasserstein distance has significantly lower computational requirements than the classical Wasserstein distance. Therefore, it has recently attracted ample attention and successfully been applied to a variety of practical tasks (Bonneel et al., 2015; Kolouri et al., 2016b; Carriere et al., 2017; Karras et al., 2017; S¸ ims¸ekli et al., 2018; Deshpande et al., 2018; Kolouri et al., 2018; 2019).
+As we will detail in the next sections, the linear projection process used in the sliced-Wasserstein distance is closely related to the Radon transform, which is widely used in tomography (Radon, 1917; Helgason, 2011). In other words,
+
+Generalized Sliced Wasserstein Distances
+
+the sliced-Wasserstein distance is calculated via linear slicing of the probability distributions. However, the linear nature of these projections does not guarantee an efﬁcient evaluation of the sliced-Wasserstein distance: in very highdimensional settings, the data often lives in a thin manifold
+
+2.1. Wasserstein Distance
+
+疑问1：缺少相关数学基础 对Wasserstein distance的公
+
+The p-Wasserstein distance, p ∈ [1, ∞式)⽆, be法twe理en解µ and ν is
+
+deﬁned as the solution of the optimal mass transportation
+
+problem (Villani, 2008):
+
+and the number of randomly chosen linear projections required to capture the structure of the data distribution grows very quickly (S¸ ims¸ekli et al., 2018). Reducing the number
+
+1
+
+p
+
+Wp(µ, ν) = inf
+
+dp(x, y)dγ(x, y)
+
+(1)
+
+γ∈Γ(µ,ν) X×Y
+
+of required projections would thus result in a signiﬁcant performance improvement in sliced-Wasserstein computations.
+Contributions. In this paper, we address the aforementioned computational issues of the sliced-Wasserstein distance and for the ﬁrst time, we extend the linear slicing
+
+where dp(·, ·) is the cost function, and Γ(µ, ν) is the set of
+all transporta就tion是p分lan布s γ之∈ 间Γ(µ的, ν距) s离uch吗th？at:
+
+γ(A × Y ) = µ(A) γ(X × B) = ν(B)
+
+for any Borel subset A ⊆ X for any Borel subset B ⊆ Y
+
+.
+
+to non-linear slicing of probability measures. Our main contributions are summarized as follows:
+• Using the mathematics of the generalized Radon transform (Beylkin, 1984) we extend the deﬁnition of the sliced-Wasserstein distance to an entire class of distances,
+
+Due to Brenier’s theorem (Brenier, 1991), for absolutely continuous probability measures µ and ν (with respect to the Lebesgue measure), the p-Wasserstein distance can be equivalently obtained from
+
+which we call the generalized sliced-Wasserstein (GSW) distance. We prove that replacing the linear projections with polynomial projections will still yield a valid dis-
+
+1
+
+p
+
+Wp(µ, ν) =
+
+inf
+
+dp x, f (x) dµ(x)
+
+(2)
+
+f ∈M P (µ,ν) X
+
+tance metric and we then identify general conditions under which the GSW distance is a distance function. • We then show that, instead of using inﬁnitely many pro-
+
+where M P (µ, ν) = {f : X → Y | f#µ = ν} and f#µ represents the pushforward of measure µ, characterized as
+
+jections as required by the GSW distance, we can still deﬁne a valid distance metric by using a single projection, as long as the projection gives the maximal distance in
+
+df#µ(y) =
+
+dµ(x) for any Borel subset A ⊆ Y.
+
+A
+
+f −1(A)
+
+the projected space. We aptly call this distance the maxGSW distance. The max-GSW distance vastly reduces the computational cost induced by the projection operations; however, it comes with an additional cost since it requires optimization over the space of projectors. • Due to their inherent non-linearity, the GSW and maxGSW distances are expected to capture the complex structure of high-dimensional distributions by using much less projections, which will reduce the overall computational burden in a signiﬁcant amount. We verify this fact in our experiments, where we illustrate the superior performance of the proposed distances in both synthetic and real-data settings.
+2. Background
+We review in this section the preliminary concepts and formulations needed to develop our framework, namely the p-Wasserstein distance, the Radon transform, the sliced pWasserstein distance and the maximum sliced p-Wasserstein distance. In what follows, we denote by Pp(Ω) the set of Borel probability measures with ﬁnite p’th moment deﬁned
+
+Note that in most engineering and computer science applications, Ω is a compact subset of Rd and d(x, y) = |x − y| is the Euclidean distance. By abuse of notation, we will use Wp(µ, ν) and Wp(Iµ, Iν ) interchangeably.
+
+One-dimensional distributions: The case of one-
+
+dimensional continuous probability measures is speciﬁcally
+
+interesting as the p-Wasserstein distance has a closed-form
+
+solution. More precisely, for one-dimensional probability
+
+measures, there exists a unique monotonically increasing
+
+transport map that pushes one measure to another. Let
+
+Fµ(x) = µ((−∞, x]) =
+
+x −∞
+
+Iµ
+
+(τ
+
+)dτ
+
+be
+
+the
+
+cumulative
+
+distribution function (CDF) for Iµ and deﬁne Fν to be the
+
+CDF of Iν. The optimal transport map is then uniquely
+
+deﬁned as f (x) = Fν−1(Fµ(x)) and, consequently, the p-
+
+W⼀as维ser分stei布n d计ista算ncWe hDas：an经ana验lyt上ica可l fo以rm将giv两en个as 分foll布ow中s: 的
+
+sample进⾏
+
+1 p
+
+soWrtpin(µg,，ν)计=算平均 dp x, Fν−1(Fµ(x)) dµ(x)
+
+X
+
+1
+
+1
+
+p
+
+=
+
+dp Fµ−1(z), Fν−1(z) dz
+
+(3)
+
+0
+
+on a given metric space (Ω, d) and by µ ∈ Pp(X) and ν ∈ Pp(Y ) probability measures deﬁned on X, Y ⊆ Ω with corresponding probability density functions Iµ and Iν, i.e. dµ(x) = Iµ(x)dx and dν(y) = Iν(y)dy.
+
+where Eq. (3) results from the change of variable Fµ(x) = z. Note that for empirical distributions, Eq. (3) is calcu-
+lated by simply sorting the samples from the two distributions and calculating the average dp(·, ·) between the
+
+Generalized Sliced Wasserstein Distances
+
+sorted samples. This requires only O(M ) operations at in practice, acquiring an inﬁnite number of projections is
+
+best and O(M log M ) at worst, where M is the number of not feasible, therefore the integration in the ﬁltered back-
+
+samples drawn from each distribution (see Kolouri et al. projection formulation is replaced with a ﬁnite summation
+
+(2019) for more details). The closed-form solution of the p- over projections (i.e., a Monte-Carlo approximation).
+
+Wasserstein distance for one-dimensional distributions is an
+
+attractive property that gives rise to the sliced-Wasserstein 2.3. Sliced-Wasserstein and Maximum
+
+(SW) distance. Next, we review the Radon transform, which
+
+Sliced-Wasserstein Distances
+
+enables the deﬁnition of the SW distance. We also formulate an alternative OT distance called the maximum slicedWasserstein distance.
+
+The idea behind the sliced p-Wasserstein distance is to ﬁrst, obtain a family of one-dimensional representations for a higher-dimensional probability distribution through linear
+
+2.2. Radon Transform
+
+projections (via the Radon transform), and then, calculate the distance between two input distributions as a functional
+
+The standard Radon transform, denoted by R, maps a function I ∈ L1(Rd), where
+L1(Rd) = {I : Rd → R / |I(x)|dx < ∞},
+
+on the p-Wasserstein distance of their one-dimensional rep-
+resentations 此(i.e处., t理he论on上e-d可im以ens⽆ion限al 微ma分rgi，nal实di现stri上bu可- 以缩⼩ tIiνoniss)t.heTnhfeosr到plmicaae单ltdlcyhp独d-并eWﬁ的an计se像sde算ra素sst多:ei，n个d实ipst际aantcc上ehb之是et间w通eed过nisI将tµaa其nncd分e的为平多均个值
+
+Rd
+to the inﬁnite set of its integrals over the hyperplanes of Rd SWp(Iµ, Iν) =
+and is de将ﬁn⾼ed维as 平⾯上的有限点集投射到⼀个低维 的点上
+
+1 p
+Wpp RIµ(., θ), RIν (., θ) dθ
+Sd−1
+(7)
+
+为什么theta RI(t, θ) =
+
+I(x)δ(t − x, θ )dx,
+Rd
+
+(4)
+
+可以确定⼀ 个投影for (t, θ)
+
+∈
+
+R × Sd−1,
+
+where
+
+Sd−1
+
+⊂
+
+Rd
+
+stands
+
+for
+
+the
+
+d-dimensional unit sphere, δ(·) the one-dimensional Dirac
+
+This is indeed a distance function as it satisﬁes positivedeﬁniteness, symmetry and the triangle inequality (Bonnotte, 2013; Kolouri et al., 2016b).
+The computation of the SW distance requires an integration
+
+delta function, and ·, · the Euclidean inner-product. Note over the unit sphere in Rd. In practice, this integration is that R : L1(Rd) → L1(R × Sd−1). Each hyperplane can approximated by using a simple Monte Carlo scheme that
+
+be written as:
+
+draws samples {θl} from the uniform distribution on Sd−1
+
+H(t, θ) = {x ∈ RdG| ：x,⾼θ 维= 曲t},⾯向低维(5)的函a数nd ，rep可lac以es 表the示int⼀egr个al w超it平h a⾯ﬁnite-sample average: 1
+
+which alternatively can be interpreted as a level set of the function g ∈ Rd × Sd−1 → R deﬁned as g(x, θ) = x, θ .
+For a ﬁxed θ, the integrals over all hyperplanes orthogonal
+
+SWp(Iµ, Iν ) ≈
+
+1 L
+
+L
+
+Wpp RIµ(·, θl), RIν (·, θl)
+
+p
+
+l=1
+
+(8)
+
+to θ deﬁne a continuous function RI(·, θ) : R → R which
+
+is a projection (or a slice) of I.
+
+The sliced p-Wasserstein distance has important practical
+
+The Radon transform is a linear bijection (Natterer, 1986; Helgason, 2011) and its inverse R−1 is deﬁned as:
+
+implications: provided that RIµ(·, θl) and RIν(·, θl) can be computed for any sample θl, then the SW distance is obtained by solving several one-dimensional optimal trans-
+
+I(x) = R−1 RI(t, θ)
+
+port problems, which have closed-form solutions. It is especially useful when one only has access to samples of a
+
+=
+
+(RI( x, θ , θ) ∗ η( x, θ )dθ (6) high-dimensional PDF I and kernel density estimation is
+
+Sd−1
+
+required to estimate I: one-dimensional kernel density esti-
+
+where η(·) is a one-dimensional high-pass ﬁlter with corresponding Fourier transform F η(ω) = c|ω|d−1, which appears due to the Fourier slice theorem (Helgason, 2011), and ‘∗’ is the convolution operator. The above deﬁnition of the inverse Radon transform is also known as the ﬁltered back-projection method, which is extensively used in image reconstruction in the biomedical imaging community. Intuitively each one-dimensional projection (or slice) RI(·, θ)
+
+mation of PDF slices is a much simpler task compared to the
+
+direct estimation of I from its samples. The downside is that
+
+as the dimensionality grows, one requires a larger number
+
+of projections to accurately estimate I from RI(·, θ). In
+
+short, if a reasonably smooth two-dimensional distribution
+
+can be approximated using L projections, then O(Ld−1)
+
+projections are required to approximate a similarly smooth
+
+d-dimensional distribution for d ≥ 2.
+
+grow fast
+
+is ﬁrst ﬁltered via a high-pass ﬁlter and then smeared back into Rd along H(·, θ) to approximate I. The summation of
+all smeared approximations then reconstructs I. Note that
+
+To further clarify this, let Iµ = N (0, Id) and Iν = N (x0, Id), x0 ∈ Rd, be two multivariate Gaussian den-
+sities with the identity matrix as the covariance ma-
+
+G：表示⼀个超平⾯，将⾼维分布投射到这个超平 ⾯上，所产⽣的⼀维分布⽤于计算SWD，⼀个随 Generalized Sliced Wasserstein D机分ist投布anc影在es 实上际⾯上会就产是⽣⼀不个同随的机投的影超结平果⾯，同样的⾼维
+
+trix. Their projected representations are one-dimensional
+
+Gaussian distributions of the form RIµ(·, θ) =线N性(0投, 1)影：
+and RIµ(·, θ) = N ( θ, x0 , 1). It is therefore clear
+
+that W2(RIµ(·, θ), RIν(·, θ)) achieves its maximum value
+
+when θ =
+
+x0 x0
+
+2
+
+and
+
+is
+
+zero
+
+for
+
+θ’s
+
+that
+
+are
+
+orthogonal
+
+to
+
+x0.
+
+On the other hand, we know that vectors that are randomly
+
+picked from the unit sphere are more likely to be nearly
+
+orthogonal in high-dimension. More rigorously, the follow-
+
+ing inequality holds: P r(| θ,
+
+x0 x0 2
+
+|<
+
+) > 1 − e(−d 2),
+
+which implies that for a high dimension d, the majority of
+
+sampled θ’s would be nearly orthogonal to x0 and therefore, W2(RIµ(·, θ), RIν(·, θ)) ≈ 0 with high probability.
+
+*(), &') +(!, &') "#(!, &')
+
+To remedy this issue, one can avoid uniform sampling of the unit sphere, and pick samples θ’s that contain discriminant information between Iµ and Iν instead. This idea was for instance used in Deshpande et al. (2018), where the authors ﬁrst calculate a linear discriminant subspace and then measure the empirical SW distance by setting the θ’s to be the discriminant components of the subspace.
+A similarly ﬂavored but less heuristic approach is to use the maximum sliced p-Wasserstein (max-SW) distance, which is an alternative OT metric deﬁned as:
+max-SWp(Iµ, Iν ) = max Wp RIµ(·, θ), RIν (·, θ)
+θ∈Sd−1
+(9)
+Given that Wp is a distance, it is easy to show that maxSWp is also a distance: we will prove in Section 3.2 that the metric axioms hold for the maximum generalized slicedWasserstein distance, which contains the max-SW distance as a special case.
+3. Generalized Sliced-Wasserstein Distances
+We propose in this paper to extend the deﬁnition of the sliced-Wasserstein distance to formulate a new optimal transport metric, which we call the generalized slicedWasserstein (GSW) distance. The GSW distance is obtained using the same procedure as for the SW distance, except that here, the one-dimensional representations are acquired through nonlinear projections. In this section, we ﬁrst review the generalized Radon transform, which is used to project the high-dimensional distributions, and we then formally deﬁne the class of GSW distances. We also extend the concept of max-SW distance to the class of maximum generalized sliced-Wasserstein (max-GSW) distances.
+具体⼯作：generalized Radon transform
+3.1. Generalized Radon Transform
+The generalized Radon transform (GRT) extends the original idea of the classical Radon transform introduced by Radon (1917) from integration over hyperplanes of Rd to integration over hypersurfaces, i.e. (d − 1)-dimensional manifolds (Beylkin, 1984; Denisyuk, 1994; Ehrenpreis,
+
+!
+#())
+
+!
+
+!
+
+"# !, & : Slices with respect to different * !, & + !, & = ) * ), & = ! }
+
+Input distribution
+
+对图中分布的Radon转化结果可视化 （可视化为⼀维曲线）
+
+Figure 1. Visualizing the slicing process for classical and generalized Radon transforms for the Half Moons distribution. The slices GI(t, θ) follow Equation (10).
+
+2003; Gel’fand et al., 1969; Kuchment, 2006; Homan &
+
+Zhou, 2017). The GRT has various applications, includ-
+
+ing Thermoacoustic Tomography, where the hypersurfaces
+
+are spheres, and Electrical Impedance Tomography, which
+
+requires integration over hyperbolic surfaces. 在以下四种条件下
+
+To formally deﬁne the GRT, we ﬁned on X × (Rn\{0}) with X
+
+introduce a ⊂ Rd. We
+
+sfauynG的ctth是i函aotn⼀g数gi个ds ea-定义投影
+
+deﬁning function when it satisﬁes the four conditions below:
+
+H1. g is a real-valued C∞ function on X × (Rn\{0})
+
+H2. g(x, θ) is homogeneous of degree one in θ, i.e.,
+
+∀λ ∈ R, g(x, λθ) = λg(x, θ)
+
+H3. g is non-degenerate in the sense that
+
+∀(x, θ) ∈ X × Rn\{0},
+
+∂g (x, θ) = 0
+∂x
+
+H4. The mixed Hessian of g is strictly positive, i.e.
+
+∂2g
+
+det
+
+∂xi∂θj i,j > 0
+
+Then, the GRT of I ∈ L1(Rd) is the integration of I over hypersurfaces characterized by the level sets of g, which are characterized by Ht,θ = {x ∈ X | g(x, θ) = t}.
+Let g be a deﬁning function. The generalized Radon transform of I, denoted by GI, is then formally deﬁned as:
+
+GI(t, θ) = I(x)δ(t − g(x, θ))dx
+
+(10)
+
+Rd
+
+Generalized Sliced Wasserstein Distances
+
+Note that the standard Radon transform is a special case of the GRT with g(x, θ) = x, θ . Figure 1 illustrates the slicing process for standard and generalized Radon transforms for the Half Moons dataset as input.
+
+3.2. Generalized Sliced-Wasserstein and Maximum Generalized Sliced-Wasserstein Distances
+
+Following the deﬁnition of the SW distance in Equation (7), we deﬁne the generalized sliced p-Wasserstein distance using the generalized Radon transform as:
+
+GSWp(Iµ, Iν ) =
+
+1
+p
+Wpp GIµ(·, θ), GIν (·, θ) dθ
+Ωθ
+(11)
+
+where Ωθ is a compact set of feasible parameters for g(·, θ) (e.g., Ωθ = Sd−1 for g(·, θ) = ·, θ ).
+
+where inequality (13) follows from the application of the Minkowski inequality in Lp(Ωθ). We conclude that GSWp
+satisﬁes the triangle inequality.
+
+Let θ∗ = arg maxθ∈Ωθ Wp(GIµ1 (·, θ), GIµ3 (·, θ)); then,
+
+max-GSWp(Iµ1 , Iµ3 )
+
+=
+
+max
+θ∈Ωθ
+
+Wp(GIµ1 (·, θ), GIµ3 (·, θ))
+
+= Wp(GIµ1 (·, θ∗), GIµ3 (·, θ∗))
+
+≤ Wp(GIµ1 (·, θ∗), GIµ2 (·, θ∗))
+
++ Wp(GIµ2 (·, θ∗), GIµ3 (·, θ∗))
+
+≤
+
+max
+θ∈Ωθ
+
+Wp (G I µ1
+
+(·,
+
+θ),
+
+G I µ2
+
+(·,
+
+θ))
+
++
+
+max
+θ∈Ωθ
+
+Wp
+
+(G
+
+Iµ2
+
+(·,
+
+θ),
+
+G
+
+Iµ3
+
+(·,
+
+θ))
+
+≤ max-GSWp(Iµ1 , Iµ2 ) + max-GSWp(Iµ2 , Iµ3 )
+
+The GSW distance can also suffer from the projection complexity issue described in Section 2.3; that is why we formulate the maximum generalized sliced p-Wasserstein distance, which generalizes the max-SW distance as deﬁned in (9):
+
+So max-GSWp also satisﬁes the triangle inequality.
+Since Wp(µ, µ) = 0 for any µ, we have GSWp(Iµ, Iν) = 0 and max-GSWp(Iµ, Iν ) = 0. Now, GSWp(Iµ, Iν ) = 0 or max-GSWp(Iµ, Iν) = 0 is equivalent to GIµ(·, θ) =
+
+max-GSWp(Iµ, Iν) = max Wp GIµ(·, θ), GIν(·, θ) (12) GIν(·, θ) for almost all θ ∈ Ωθ. Therefore, GSW and max-
+
+θ∈Ωθ
+
+GSW are distances if and only if GIµ(·, θ) = GIν(·, θ)
+
+Proposition 1. The generalized slic所ed有p-投Wa影sse结rst果ein中di距s- 离i最mp⼤lie者s µ = ν, i.e. the GRT is injective.
+
+tance and the maximum generalized sliced p-Wasserstein Remark 1. If the chosen generalized Radon transform
+
+distance are, indeed, distances over Pp(Ω) if and only if the is not injective, then we can only say that the GSW and
+
+generalized Radon transform is injective.
+需要保证Radon transform的单射性 Pquroenocf.esTohfe此空thneo时间nfa-M中nctegAt的haXatit距v-tiGhtye离SWaWnads与sseyrmGstmeSineWtdryi可satarne以cdei表riesc示at mc测oentrs量iec-
+
+max-GSW distances are pseudo-metrics: they still satisfy non-negativity, symmetry, the triangle inequality, and GSWp(Iµ, Iµ) = 0 and max-GSWp(Iµ, Iµ) = 0.
+
+(Villani, 2008): see supplementary material.
+
+3.3. Injectivity of the Generalized Radon Transform
+
+We prove the triangle inequality for GSWp and max-GSWp. We have shown that the injectivity of the GRT is crucial for
+
+Let µ1, µ2 and µ3 in Pp(Ω). Since the Wasserstein distance the GSW and max-GSW distances to be, indeed, distances
+
+satisﬁes the triangle inequality, we have, for all θ ∈ Ωθ,
+
+between probability measures. Here, we enumerate some of
+
+Wp(GIµ1 (·, θ), GIµ3 (·, θ)) ≤ Wp(GIµ1 (·, θ), GIµ2 (·, θ)) + Wp(GIµ2 (·, θ), GIµ3 (·, θ))
+
+the known deﬁning functions that lead to injective GRTs.
+The investigation of the sufﬁcient and necessary conditions for showing the injectivity of GRTs is a long-standing
+
+Therefore, we can write:
+
+topic (Beylkin, 1984; Homan & Zhou, 2017; Uhlmann, 2003; Ehrenpreis, 2003). The circular deﬁning function,
+
+GSWp(Iµ1 , Iµ3 ) =
+
+1 p
+
+g(x, θ) = x − r ∗ θ 2 with r ∈ R+ and Ωθ = Sd−1 was
+
+Wpp(GIµ1 (·, θ), GIµ3 (·, θ))dθ shown to provide an injective GRT (Kuchment, 2006). More
+
+Ωθ
+
+interestingly, homogeneous polynomials with an odd degree
+
+≤
+
+Wp(GIµ1 (·, θ), GIµ2 (·, θ))
+
+Ωθ
+
+1
++ Wp(GIµ2 (·, θ), GIµ3 (·, θ)) pdθ p
+
+also yield an injective GRT (Rouviere, 2015), i.e.
+
+想法：是
+
+否可以优
+
+g(x, θ) =
+
+θαxα,
+
+化g函
+
+|α|=m
+
+数，如何
+
+≤
+
+Wpp(GIµ1 (·, θ), GIµ2 (·, θ))dθ
+Ωθ
+
+1 p
+1
+
+确定⼀w个here 好的g，(α1, . .
+
+we use . , αdα ) ∈
+
+the multi-index Ndα , |α| =
+
+notation
+dα
+i=1
+
+α αi,
+
+= and
+
+能最⼤x程α =
+
+dα i=1
+
+xαi i
+
+.
+
+Here, the summation iterates over
+
++
+
+Wpp(GIµ2 (·, θ), GIµ3 (·, θ))dθ
+Ωθ
+
+p
+
+(度 出13)上 ⼈表 类ad现 的lelnpootesssibthlee
+
+multi-indices α, such that degree of the polynomial
+
+|α| = m, where m and θα ∈ R. The
+
+关注
+
+Generalized Sliced Wasserstein Distances
+
+Algorithm 1 GSW Distance
+
+Moreover, for high-dimensional problems, estimating Iµ
+
+input {xi ∼ Iµ}Ni=1, {yi ∼ Iν }Ni=1, order p, number of slices L, deﬁning function g
+
+in Rd requires a large number of samples. However, the projections of Iµ, GI(·, θ), are one-dimensional and it may
+
+Initialize d = 0 for l = 1 to L do
+Sample θl from
+
+g：⼀个超平⾯，⼀个 Ωθpurnoifjoercmtlioy n
+
+not be critical to have a large number of samples to estimate these one-dimensional densities.
+
+Compute xˆi = g(xi, θl) and yˆi = g(yi, θl) for each i 4.2. Numerical Implementation of GSW Distances
+
+Sort xˆi and yˆj in ascending order s.t. xˆi[n] ≤ xˆi[n+1]
+
+and yˆj[n] ≤ yˆj[n+1]
+
+对sample排序
+
+d
+
+=
+
+d
+
++
+
+1 L
+
+N n=1
+
+|xˆi[n]
+
+−
+
+yˆi[n]|p
+
+Let {xi}Ni=1 and {yj}Nj=1 be samples respectively drawn from Iµ and Iν, and let g(·, θ) be a deﬁning function. Fol-
+lowing the work of Kolouri et al. (2019), the Wasserstein
+
+end for 1
+
+计算平均的⼀维 distance between one-dimensional distributions GIµ(·, θ)
+
+output d p ≈ GSWp(Iµ, Iν )
+
+distance
+
+and GIν(·, θ) can be calculated from sorting their samples
+
+and calculating the Lp distance between the sorted samples.
+
+Algorithm 2 Max-GSW Distance
+
+In other words, the GSW distance between Iµ and Iν can
+
+input {xi ∼ Iµ}Ni=1, {yj ∼ Iν }Nj=1, order p, deﬁning function g(x, θ)
+Randomly initialize θ ∈ Ωθ while θ has not converged do
+
+be approximated from their samples as follows:
+
+GSWp(Iµ, Iν ) ≈
+
+1L L
+
+N
+
+1
+
+|g(xi[n], θl)−g(yj[n], θl)|p p
+
+l=1 n=1
+
+Compute xˆi = g(xi, θl) and yˆi = g(yi, θl) for each i
+
+Sort xˆi and yˆj in ascending order s.t. xˆi[n] ≤ xˆi[n+1]
+
+and yˆj[n] ≤ yˆj[n+1]
+
+θ
+
+=
+
+P
+
+roj(ADAM (∇θ(
+
+1 N
+
+N n=1
+
+|xˆi[n]
+
+− yˆj[n] |p ),
+
+θ))
+
+Ωθ
+
+end while
+
+where i[m] and j[n] are the indices of sorted {g(xi, θ)}Ni=1 and {g(yj, θ)}Nj=1. The procedure to approximate the GSW distance is summarized in Algorithm 1.
+4.3. Numerical Implementation of max-GSW Distances
+
+Sort xˆi and yˆi in ascending order
+
+To compute the max-GSW distance, we perform an EM-like
+
+d
+
+=
+
+1 N
+
+N n=1
+
+|xˆi[n]
+
+−
+
+yˆi[n]|p梯度下降⽅法，求出最佳o的ptimization
+
+scheme:
+
+(a)
+
+for
+
+a
+
+ﬁxed
+
+θ,
+
+g(xi,
+
+θ)
+
+and
+
+g(yi,
+
+θ)
+
+output
+
+1
+dp
+
+≈ max-GSWp(Iµ,pIrνo)jection（由theta唯⼀确are sorted to compute Wp, (b) θ is updated with:
+
+定）
+parameter set for homogeneous polynomials is then set
+
+θ = P roj
+Ωθ
+
+ADAM
+
+1 ∇θ( N
+
+N
+
+|g(xi[n], θ)−g(yj[n], θ)|p), θ
+
+n=1
+
+to Ωθ = Sdα−1. We can observe that choosing m = 1 where ADAM refers to the ADAM optimizer (Kingma &
+
+reduces to the linear case x, θ , since the set of the multi-indices with |α| = 1 becomes {(α1, . . . , αd); αi =
+
+Ba, 2014) and P roj(·) is the operator projecting θ onto Ωθ.
+Ωθ
+
+1 for a single i ∈ 1, d , and αj = 0, ∀j = i} and
+
+For instance, when θ ∈ Sn−1, P roj(θ) =
+
+θ θ
+
+.
+
+contains d elements.
+
+Ωθ
+
+Remark 2. Here, we ﬁnd the optimal θ by optimizing the ac-
+
+4. Numerical Implementation
+
+tual Wp, as opposed to the heuristic approaches proposed in Deshpande et al. (2018) and Kolouri et al. (2019), where the
+
+In this section, we brieﬂy review the numerical methods pseudo-optimal slice is found via perceptrons or penalized
+
+used to compute the GSW and max-GSW distances.
+
+linear discriminant analysis (Wang et al., 2011).
+
+4.1. Generalized Radon Transforms of Empirical PDFs
+In most machine learning applications, we do not have access to the distribution Iµ but to a set of samples {xi}Ni=1 drawn from Iµ, for which the empirical density is:
+1N Iµ(x) ≈ N δ(x − xi)
+i=1
+The GRT of the empirical density is then given by:
+1N GIµ(t, θ) ≈ N δ t − g(xi, θ)
+i=1
+
+Finally, once convergence is reached, the max-GSW distance is approximated with:
+
+max-GSWp(Iµ, Iν ) ≈
+
+1 N
+
+N
+
+|g(xi[n], θ∗)−g(yj[n], θ∗)|p
+
+1 p
+
+n=1
+
+The whole procedure is summarized in Algorithm 2.
+
+5. Experiments
+5.1. Generalized Sliced-Wasserstein Flows
+Our ﬁrst experiment demonstrates the effects of the choice of the GSW distance in its purest form by considering the
+
+实验⼀：找到GSW中与v
+
+对数越⼩，说明使⽤对应投影计算的GSW，梯度下
+
+最接近的u（梯度下
+
+Generalized Sliced Wasserstein降Dis后tan可ces以得到和⽬标信号更接近的结果
+
+降），u被初始化为正态
+
+followin分g p布roblem: minµ GSWp(µ, ν), where ν is a tar-
+
+get distribution and µ is the source distribution, which is
+
+initialized to be the normal distribution. The optimization is
+
+then solved iteratively via
+
+∂tµt = −∇GSWp(µt, ν), µ0 = N (0, 1)
+
+We used 5 well-known distributions as the target, namely
+
+the 25-Gaussians, 8-Gaussians, Swiss Roll, Half Moons
+
+and Circle distributions. We compare linear (i.e., SW dis-
+
+选⽤不 tance), circular, homogeneous polynomial of degree 3 and
+
+同的 homogeneous polynomial of degree 5 as deﬁning functions.
+
+deﬁne We used the exact same optimization scheme for all meth-
+
+function ods, with L = 10 random projections, and measured the
+
+相同的 迭代优 化器， 迭代相 同的次 数
+
+2-Wasserstein distance between µt and ν at each iteration of the optimization (via solving a linear programming at each step). We repeated each experiment 100 times and reported the mean and standard deviation of the 2-Wasserstein distance for all ﬁve target datasets in Figure 2. While the choice of the deﬁning function g(·, θ) is data-dependent, one can see that the homogeneous polynomial of degree 3
+
+is among the top two performers for all datasets.
+
+For clarity purposes, we chose to not report the max-GSWp results for the same experiment in Figure 2. These results are included in the supplementary material.
+
+5.2. Generative Modeling via Auto-Encoders
+
+在latent space 中使 encode d data 的分布 接近某 种特定 的分 布？
+
+We now demonstrate the application of the GSW and maxGSW distances in generative modeling. We speciﬁcally use the recently proposed Sliced-Wasserstein Auto-Encoder (SWAE) (Kolouri et al., 2019) framework, which penalizes the distribution of the encoded data in the latent space of the auto-encoder to follow a prior samplable distribution, pZ . More precisely, let {xn ∼ pX }Nn=1 be i.i.d. samples from pX , φ(x, γφ) : X → Z and ψ(z, γψ) : Z → X be the parametric encoder and decoder (e.g., CNNs) with parameters γφ and γψ, respectively. Then SWAE’s objective function (Kolouri et al., 2019) is deﬁned as:
+
+min
+γφ ,γψ
+
+Ex
+
+[c(x,
+
+ψ
+
+(φ(x,
+
+γφ
+
+),
+
+γψ
+
+))]
+
++
+
+λS
+
+W
+
+(pφ(x,γφ
+
+)
+
+,
+
+pZ
+
+)
+
+(14)
+
+where λ is the regularizer coefﬁcient for matching the en-
+
+coded distribution to pZ. Here, we substitute the SW dis-
+
+tance in Equation (14) with GSW and max-GSW distances.
+
+Speciﬁcally, we encode the MNIST dataset (LeCun et al.,
+
+1998) into the encoder’s latent space and enforce the dis-
+
+tribution of the embedded data to follow a speciﬁc prior
+
+distribution, e.g. the Swiss Roll distribution as shown in Fig-
+
+ure 3, while we simultaneously enforce the encoded features
+
+to be decodable to the original input images.
+
+We ran the optimization in Equation (14) with GSW distances, which we denote as GSWAE, with linear, circular, and homogeneous polynomial of degree 3. At each iteration,
+
+Figure 2. Log 2-Wasserstein distance between the source and target distributions as a function of the number of iterations for 5 classical target distributions.
+we measured the 2-Wasserstein distance between the embedded distribution and the prior distribution, W2(pφ(x,γφ), pZ ), and also between the input distribution and the distribution of the reconstructed samples, W2(pψ(φ(x,γφ),γψ), pX ). Each experiment was repeated 50 times and the average 2Wasserstein distances are reported in Figure 4. The middle row in Figure 4 shows samples from pZ and φ(x, γφ) for x ∼ pX , and the last row shows decoded random samples, ψ(z, γψ) for z ∼ pZ . Similar to the previous experiment, we see that the GSWAE with a polynomial deﬁning function, captures the nonlinear geometry of the input samples better.
+We also compare the performance of GSWAE and Max-
+
+从CNN结果中的采样和z（⽬标分布）中采
+
+SWAE的作⽤：使embedded
+
+样的相似度，说明拟合特定分布的能⼒更强
+
+的data服从某种分布
+
+Generalized Sliced Wasserstein Distances
+
+Figure 3. The SWAE architecture. The embedded data in the latent space is enforced to follow a prior samplable distribution pZ .
+GSWAE with those of SWAE and WAE-GAN (Tolstikhin et al., 2018). In particular, we use the improved WassersteinGAN (Gulrajani et al., 2017), which is among the stateof-the-art adversarial training methods, in the embedding space of the Wasserstein auto-encoder (Tolstikhin et al., 2018). The adversary was chosen to be a multi-layer perceptron. Similar to the previous experiments, we measured the 2-Wasserstein distance between the input and output distributions as well as the latent and prior distributions. Each experiment was repeated 10 times, and the average 2-Wasserstein distances are reported in Figure 5. It can be seen that, while WAE-GAN provides a better matching of distributions in the latent space, the results of max-GSWAE distances are on par with the WAE-GAN. In addition, by comparing the distance between input and output distributions of the auto-encoder, it seems that max-GSWAE provides a better objective function to train such networks.
+
+x中的采样 和decoder 输出的 feature采样 的相似度， 越⼩说明 Encode与 Decode过 程损失的信 息最少
+Figure 4. 2-Wasserstein distance between pZ and pφ(x,γφ) and between pX and pψ(φ(x,γφ),γψ) at different batch iterations for SWAE and GSWAE with circular and polynomial of degree 3 deﬁning functions.
+
+6. Conclusion
+We introduced a new family of optimal transport metrics for probability measures that generalizes the sliced-Wasserstein distance: while the latter is based on linear slicing of distributions, we propose to perform nonlinear slicing. We provided theoretical conditions that yield the generalized sliced-Wasserstein distance to be, indeed, a distance function, and we empirically demonstrated the superior performance of the GSW and max-GSW distances over the classical sliced-Wasserstein distance in various generative modeling applications. As future work, we plan to study the existing connection between adversarial training and max-GSW distances by showing the deﬁning function for GRTs can be approximated with neural networks.
+
+7. Acknowledgement
+This work was partially supported by the United States Air Force and DARPA under Contract No. FA8750-18-C-0103. Any opinions, ﬁndings and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reﬂect the views of the United States Air Force and DARPA.
+
+Figure 5. The 2-Wasserstein distance between pZ and pφ(x,γφ) and between pX and pψ(φ(x,γφ),γψ) at different batch iterations for SWAE and WAE-GAN compared to GSWAE and Max-GSWAE
+with circular and polynomial of degree 3 deﬁning functions.
+
+Generalized Sliced Wasserstein Distances
+
+References
+Arjovsky, M., Chintala, S., and Bottou, L. Wasserstein GAN. arXiv preprint arXiv:1701.07875, 2017.
+Beylkin, G. The inversion problem and applications of the generalized Radon transform. Communications on pure and applied mathematics, 37(5):579–599, 1984.
+Bonneel, N., Rabin, J., Peyre´, G., and Pﬁster, H. Sliced and Radon Wasserstein barycenters of measures. Journal of Mathematical Imaging and Vision, 51(1):22–45, 2015.
+Bonnotte, N. Unidimensional and evolution methods for optimal transportation. PhD thesis, Universite´ Paris 11, France, 2013.
+Bousquet, O., Gelly, S., Tolstikhin, I., Simon-Gabriel, C.-J., and Schoelkopf, B. From optimal transport to generative modeling: the VEGAN cookbook. arXiv preprint arXiv:1705.07642, 2017.
+Brenier, Y. Polar factorization and monotone rearrangement of vector-valued functions. Communications on pure and applied mathematics, 44(4):375–417, 1991.
+Carriere, M., Cuturi, M., and Oudot, S. Sliced Wasserstein kernel for persistence diagrams. In ICML 2017-Thirtyfourth International Conference on Machine Learning, pp. 1–10, 2017.
+Courty, N., Flamary, R., Tuia, D., and Rakotomamonjy, A. Optimal transport for domain adaptation. IEEE transactions on pattern analysis and machine intelligence, 39(9): 1853–1865, 2017.
+Cuturi, M. Sinkhorn distances: Lightspeed computation of optimal transport. In Advances in Neural Information Processing Systems, pp. 2292–2300, 2013.
+Cuturi, M. and Peyre´, G. A smoothed dual approach for variational Wasserstein problems. SIAM Journal on Imaging Sciences, December 2015. URL https://hal. archives-ouvertes.fr/hal-01188954.
+Denisyuk, A. Inversion of the generalized Radon transform. Translations of the American Mathematical SocietySeries 2, 162:19–32, 1994.
+Deshpande, I., Zhang, Z., and Schwing, A. Generative modeling using the sliced Wasserstein distance. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pp. 3483–3491, 2018.
+Ehrenpreis, L. The universality of the Radon transform. Oxford University Press on Demand, 2003.
+
+Frogner, C., Zhang, C., Mobahi, H., Araya, M., and Poggio, T. A. Learning with a Wasserstein loss. In Advances in Neural Information Processing Systems, pp. 2053–2061, 2015.
+Gel’fand, I. M., Graev, M. I., and Shapiro, Z. Y. Differential forms and integral geometry. Functional Analysis and its Applications, 3(2):101–114, 1969.
+Gulrajani, I., Ahmed, F., Arjovsky, M., Dumoulin, V., and Courville, A. C. Improved training of Wasserstein GANs. In Advances in Neural Information Processing Systems, pp. 5767–5777, 2017.
+Helgason, S. The Radon transform on Rn. In Integral Geometry and Radon Transforms, pp. 1–62. Springer, 2011.
+Homan, A. and Zhou, H. Injectivity and stability for a generic class of generalized Radon transforms. The Journal of Geometric Analysis, 27(2):1515–1529, 2017.
+Karras, T., Aila, T., Laine, S., and Lehtinen, J. Progressive growing of GANs for improved quality, stability, and variation. arXiv preprint arXiv:1710.10196, 2017.
+Kingma, D. P. and Ba, J. Adam: A method for stochastic optimization. arXiv preprint arXiv:1412.6980, 2014.
+Kitagawa, J., Me´rigot, Q., and Thibert, B. Convergence of a Newton algorithm for semi-discrete optimal transport. arXiv preprint arXiv:1603.05579, 2016.
+Kolouri, S., Tosun, A. B., Ozolek, J. A., and Rohde, G. K. A continuous linear optimal transport approach for pattern analysis in image datasets. Pattern recognition, 51:453– 462, 2016a.
+Kolouri, S., Zou, Y., and Rohde, G. K. Sliced-Wasserstein kernels for probability distributions. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pp. 4876–4884, 2016b.
+Kolouri, S., Park, S. R., Thorpe, M., Slepcev, D., and Rohde, G. K. Optimal mass transport: Signal processing and machine-learning applications. IEEE Signal Processing Magazine, 34(4):43–59, 2017.
+Kolouri, S., Rohde, G. K., and Hoffmann, H. Sliced Wasserstein distance for learning gaussian mixture models. In The IEEE Conference on Computer Vision and Pattern Recognition (CVPR), June 2018.
+Kolouri, S., Pope, P. E., Martin, C. E., and Rohde, G. K. Sliced Wasserstein auto-encoders. In International Conference on Learning Representations, 2019. URL https://openreview.net/forum? id=H1xaJn05FQ.
+
+Generalized Sliced Wasserstein Distances
+
+Kuchment, P. Generalized transforms of Radon type and their applications. In Proceedings of Symposia in Applied Mathematics, volume 63, pp. 67, 2006.
+LeCun, Y., Bottou, L., Bengio, Y., and Haffner, P. Gradientbased learning applied to document recognition. Proceedings of the IEEE, 86(11):2278–2324, 1998.
+Le´vy, B. A numerical algorithm for L2 semi-discrete optimal transport in 3D. ESAIM Math. Model. Numer. Anal., 49(6):1693–1715, 2015. ISSN 0764-583X. doi: 10.1051/m2an/2015055. URL http://dx.doi. org/10.1051/m2an/2015055.
+Montavon, G., Mu¨ller, K.-R., and Cuturi, M. Wasserstein training of restricted Boltzmann machines. In Advances in Neural Information Processing Systems, pp. 3718–3726, 2016.
+Natterer, F. The mathematics of computerized tomography, volume 32. SIAM, 1986.
+Oberman, A. M. and Ruan, Y. An efﬁcient linear programming method for optimal transportation. arXiv preprint arXiv:1509.03668, 2015.
+Paszke, A., Gross, S., Chintala, S., Chanan, G., Yang, E., DeVito, Z., Lin, Z., Desmaison, A., Antiga, L., and Lerer, A. Automatic differentiation in pytorch. In NIPS-W, 2017.
+Peyre´, G. and Cuturi, M. Computational optimal transport. arXiv preprint arXiv:1803.00567, 2018.
+
+Solomon, J., Rustamov, R., Guibas, L., and Butscher, A. Wasserstein propagation for semi-supervised learning. In International Conference on Machine Learning, pp. 306– 314, 2014.
+Solomon, J., De Goes, F., Peyre´, G., Cuturi, M., Butscher, A., Nguyen, A., Du, T., and Guibas, L. Convolutional Wasserstein distances: Efﬁcient optimal transportation on geometric domains. ACM Transactions on Graphics (TOG), 34(4):66, 2015.
+Tolstikhin, I., Bousquet, O., Gelly, S., and Schoelkopf, B. Wasserstein auto-encoders. In International Conference on Learning Representations, 2018. URL https:// openreview.net/forum?id=HkL7n1-0b.
+Uhlmann, G. Inside out: inverse problems and applications, volume 47. Cambridge University Press, 2003.
+Villani, C. Optimal transport: old and new, volume 338. Springer Science & Business Media, 2008.
+Wang, W., Mo, Y., Ozolek, J. A., and Rohde, G. K. Penalized Fisher discriminant analysis and its application to image-based morphometry. Pattern recognition letters, 32(15):2128–2135, 2011.
+Wang, W., Slepcˇev, D., Basu, S., Ozolek, J. A., and Rohde, G. K. A linear optimal transportation framework for quantifying and visualizing variations in sets of images. International journal of computer vision, 101(2):254– 269, 2013.
+
+Radon, J. Uber die bestimmug von funktionen durch ihre integralwerte laengs geweisser mannigfaltigkeiten. Berichte Saechsishe Acad. Wissenschaft. Math. Phys., Klass, 69: 262, 1917.
+
+Rouviere, F. Nonlinear Radon and Fourier Trans-
+
+forms.
+
+https://math.unice.fr/˜frou/
+
+recherche/Nonlinear%20RadonW.pdf, 2015.
+
+Schmitz, M. A., Heitz, M., Bonneel, N., Ngole, F., Coeurjolly, D., Cuturi, M., Peyre´, G., and Starck, J.-L. Wasserstein dictionary learning: Optimal transport-based unsupervised nonlinear dictionary learning. SIAM Journal on Imaging Sciences, 11(1):643–678, 2018.
+
+Schmitzer, B. A sparse multiscale algorithm for dense optimal transport. Journal of Mathematical Imaging and Vision, 56(2):238–259, Oct 2016. ISSN 15737683. doi: 10.1007/s10851-016-0653-9. URL https: //doi.org/10.1007/s10851-016-0653-9.
+
+S¸ ims¸ekli, U., Liutkus, A., Majewski, S., and Durmus, A. Sliced-Wasserstein ﬂows: Nonparametric generative modeling via optimal transport and diffusions. arXiv preprint arXiv:1806.08141, 2018.
+
+Generalized Sliced Wasserstein Distances
+
+8. Supplementary material
+9. Non-negativity and Symmetry of the GSW and max-GSW Distances
+We prove that the GSW and max-GSW distances satisfy non-negativity and symmetry, using the fact that the pWasserstein distance is known to be a proper distance function (Villani, 2008). Let µ and ν be in Pp(Ω).
+
+9.1. Non-negativity
+We use the non-negativity of the p-Wasserstein distance, i.e. Wp(µ, ν) ≥ 0 for any µ, ν in Pp(Ω), to show that the GSW and max-GSW distances are non-negative as well:
+
+GSWp(Iµ, Iν ) = ≥
+
+1 p
+Wpp GIµ(., θ), GIν (., θ) dθ
+Ωθ
+1 p
+(0)pdθ = 0
+Ωθ
+
+max-GSWp(Iµ, Iν ) = max Wp GIµ(·, θ), GIν (·, θ)
+θ∈Ωθ
+= Wp GIµ(·, θ∗), GIν (·, θ∗) ≥0
+
+Figure 6. Log 2-Wasserstein distance between the source and target distributions as a function of the number of iterations for 5 classical target distributions using GSW and max-GSW distances.
+
+where θ∗ = arg maxθ∈Ωθ Wp(GIµ(·, θ), GIν (·, θ)).
+9.2. Symmetry
+Since the p-Wasserstein distance is symmetric, we have Wp(µ, ν) = Wp(ν, µ). In particular, we can write for all θ ∈ Ωθ:
+
+Wp(GIµ(·, θ), GIν (·, θ)) = Wp(GIν (·, θ), GIµ(·, θ)) (15)
+and,
+
+max Wp(GIµ(·, θ), GIν (·, θ)) = max Wp(GIν (·, θ), GIµ(·, θ))
+
+θ∈Ωθ
+
+θ∈Ωθ
+
+(16)
+
+The symmetry of the GSW and max-GSW distances follows from Equations (15) and (16) respectively.
+10. Additional Experimental Results
+We include the results of maximum generalized slicedWasserstein ﬂows on the ﬁve datasets used in the main paper, to accompany Figure 4 of our main paper: see Figure 6. It can be seen that the max-GSW distances, in the majority of cases, improve the performance of GSW. Here it should be noted that GSW distances are calculated based on 10 random projections, while max-GSW distances use only one projection by deﬁnition.
+
+11. Implementation Details
+The PyTorch (Paszke et al., 2017) implementation of our paper will be available here1. Here we clarify some of the implementation details used in our paper. First, the ‘critic iteration’ for the adversarial training, and the projection maximization for the max-GSW distances, were set to be equal to 50. For all optimizations, we used ADAM (Kingma & Ba, 2014) optimizer with learning rate lr = 0.001 and PyTorch’s default momentum parameters.
+We used 3 × 3 convolutional ﬁlters in both encoder and
+1https://github.com/.../GSW/
+
+Generalized Sliced Wasserstein Distances
+decoder architectures. Encoder architecture:
+x ∈ R28×28 → Conv16 → LeakyReLU0.2 → Conv16 → LeakyReLU0.2 → AvgP ool2 → Conv32 → LeakyReLU0.2 → Conv32 → LeakyReLU0.2 → AvgP ool2 → Conv64 → LeakyReLU0.2 → Conv64 → LeakyReLU0.2 → AvgP ool2 → F latten → F C128 → LeakyReLU0.2 → F C2
+Decoder architecture:
+z ∈ R2 → F C128 → LeakyReLU0.2 → F C1024 → LeakyReLU0.2 → Reshape(4 × 4 × 64) → U psample2 → Conv64 → LeakyReLU0.2 → Conv64 → LeakyReLU0.2 → U psample2 → Conv32 → LeakyReLU0.2 → Conv32 → LeakyReLU0.2 → U psample2 → Conv16 → LeakyReLU0.2 → Conv1
+The WGAN in WAE-GAN uses an adversary network. Adversary’s architecture:
+z ∈ R2 → F C500 → ReLU → F C500 → ReLU → F C500 → ReLU → F C1 → ReLU
+

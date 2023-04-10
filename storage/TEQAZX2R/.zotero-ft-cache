@@ -1,0 +1,984 @@
+GANSpace: Discovering Interpretable GAN Controls
+
+arXiv:2004.02546v3 [cs.CV] 14 Dec 2020
+
+Erik Härkönen1,2
+
+Aaron Hertzmann2
+
+Jaakko Lehtinen1,3
+
+1Aalto University 2Adobe Research 3NVIDIA
+
+Abstract
+
+Sylvain Paris2
+
+This paper describes a simple technique to analyze Generative Adversarial Networks (GANs) and create interpretable controls for image synthesis, such as change of viewpoint, aging, lighting, and time of day. We identify important latent directions based on Principal Component Analysis (PCA) applied either in latent space or feature space. Then, we show that a large number of interpretable controls can be deﬁned by layer-wise perturbation along the principal directions. Moreover, we show that BigGAN can be controlled with layer-wise inputs in a StyleGAN-like manner. We show results on different GANs trained on various datasets, and demonstrate good qualitative matches to edit directions found through earlier supervised approaches.
+
+1 Introduction
+Generative Adversarial Networks (GANs) [8], like BigGAN [5] and StyleGAN [10, 11], are powerful image synthesis models that can generate a wide variety of high-quality images, and have already been adopted by digital artists [2]. Unfortunately, such models provide little direct control over image content, other than selecting image classes or adjusting StyleGAN’s style vectors. Current attempts to add user control over the output focus on supervised learning of latent directions [9, 7, 26, 20, 16], GAN training with labeled images [12, 23, 22]. However, this requires expensive manual supervision for each new control to be learned. A few methods provide useful control over spatial layout of the generated image [14, 27, 4, 3], provided a user is willing to paint label or edge maps.
+This paper shows how to identify new interpretable control directions for existing GANs, without requiring post hoc supervision or expensive optimization: rather than setting out to ﬁnd a representation for particular concepts (“show me your representation for smile”), our exploratory approach makes it easy to browse through the concepts that the GAN has learned. We build on two main discoveries. First, we show that important directions in GAN latent spaces can be found by applying Principal Component Analysis (PCA) in latent space for StyleGAN, and feature space for BigGAN. Second, we show how BigGAN can be modiﬁed to allow StyleGAN-like layer-wise style mixing and control, without retraining. Using these ideas, we show that layer-wise decomposition of PCA edit directions leads to many interpretable controls. Identifying useful control directions then involves an optional one-time user labeling effort.
+These mechanisms are algorithmically extremely simple, but lead to surprisingly powerful controls. They allow control over image attributes that vary from straightforward high-level properties such as object pose and shape, to many more-nuanced properties like lighting, facial attributes, and landscape attributes (Figure 1). These directions, moreover, provide understanding about how the GAN operates, by visualizing its “EiGANspace.” We show results with BigGAN512-deep and many different StyleGAN and StyleGAN2 models, and demonstrate many novel types of image controls.
+One approach is to attempt to train new GANs to be disentangled, e.g., [17]. However, training general models like BigGAN requires enormous computational resources beyond the reach of nearly all potential researchers and users. Hence, we expect that research to interpret and extend the capabilities of existing GANs will become increasingly important.
+34th Conference on Neural Information Processing Systems (NeurIPS 2020), Vancouver, Canada.
+
+StyleGAN2 Cars
+
+Initial image
+
+E(v22, 9-10)
+change color
+
+E(v41, 9-10)
+add grass
+
+E(v0, 0-4)
+rotate
+
+E(v16, 3-5)
+change type
+
+StyleGAN2 FFHQ
+
+Initial image
+
+E(v20, 6)
+add wrinkles
+
+E(v57, 7-8)
+hair color
+
+E(v23, 3-5)
+expression
+
+E(v27, 8-17)
+overexpose
+
+BigGAN512-deep Irish setter
+
+Initial image
+
+E(u3, all)
+rotate
+
+E(u12, all)
+zoom out
+
+E(u15, 1-5)
+
+E(u61, 4-7)
+
+show horizon
+
+change scenery
+
+Figure 1: Sequences of image edits performed using control discovered with our method, applied to three different GANs. The white insets specify the edits using notation explained in Section 2.3.
+
+2 Discovering GAN Controls
+
+This section describes our new techniques for augmenting existing GANs with new control variables. Our techniques are, algorithmically, very simple. This simplicity is an advantage: for very little effort, these methods enable a range of powerful tools for analysis and control of GANs, that have previously not been demonstrated, or else required expensive supervision. In this paper, we work exclusively with pretrained GANs.
+
+2.1 Background
+
+G看作GAN的⽣成器？
+
+We begin with a brief review of GAN representations [8]. The most basic GAN comprises a
+probability distribution p(z), from which a latent vector z is sampled, and a neural network G(z) that
+produces an output image I: z ∼ p(z), I = G(z). The network can be further decomposed into a
+series of L intermediate layers G1...GL. The ﬁrst layer takes the latent vector as input and produces a feature tensor y1 = G1(z) consisting of set of feature maps. The remaining layers each produce features as a function of the previous layer’s output: yi = Gˆi(z) ≡ Gi (yi−1). The output of the last layer I = GL(yL−1) is an RGB image. In the BigGAN model [5], the intermediate layers also take the latent vector as input:
+
+yi = Gi(yi−1, z)
+
+(1)
+
+which are called Skip-z inputs. BigGAN also uses a class vector as input. In each of our experiments,
+the class vector is held ﬁxed, so we omit it from this discussion for clarity. In a StyleGAN model [10, 11], the ﬁrst layer takes a constant input y0. Instead, the output is controlled by a non-linear function of z as input to intermediate layers:
+
+yi = Gi(yi−1, w) with w = M (z)
+
+(2)
+
+where M is an 8-layer multilayer perceptron. In basic usage, the vectors w controlling the synthesis at each layer are all equal; the authors demonstrate that allowing each layer to have its own wi enables powerful “style mixing,” the combination of features of various abstraction levels across generated images.
+
+2
+
+zj
+
+v
+
+yj
+
+zj
+
+x
+
+u
+
+Latent space
+
+Activation space
+
+Latent space
+
+Figure 2: 2D Illustration of identifying a principal activation direction for BigGAN. Random latent
+vectors zj are sampled, and converted to activations yj. The PCA direction v is computed from the samples, and PCA coordinates xj computed, shown here by color-coding. Finally, back in the latent space, the direction u is computed by regression from zj to xj.
+
+2.2 Principal Components and Principal Feature Directions
+
+How can we ﬁnd useful directions in z space? The isotropic prior distribution p(z) does not indicate which directions are useful. On the other hand, the distribution of outputs in the high-dimensional pixel space is extremely complex, and difﬁcult to reason about. Our main observation is, simply, that the principal components of feature tensors on the early layers of GANs represent important factors of variation. We ﬁrst describe how the principal components are computed, and then study the properties of the basis they form.
+
+StyleGAN. Our procedure is simplest for StyleGAN [10, 11]. Our goal is to identify the principal axes
+of p(w). To do so, we sample N random vectors z1:N , and compute the corresponding wi = M (zi) values. We then compute PCA of these w1:N values. This gives a basis V for W. Given a new image deﬁned by w, we can edit it by varying PCA coordinates x before feeding to the synthesis network:
+
+w = w + Vx
+
+(3)
+
+where each entry xk of x is a separate control parameter. The entries xk are initially zero until modiﬁed by a user.
+
+BigGAN. For BigGAN [5], the procedure is more complex, because the z distribution is not learned,
+and there is no w latent that parameterizes the output image. We instead perform PCA at an
+intermediate network layer i, and then transfer these directions back to the z latent space, as follows.
+We ﬁrst sample N random latent vectors z1:N ; these are processed through the model to produce N feature tensors y1:N at the ith layer, where yj = Gˆi(zj). We then compute PCA from the N feature tensors, which produces a low-rank basis matrix V, and the data mean µ. The PCA coordinates xj of each feature tensor are then computed by projection: xj = VT (yj − µ).
+
+We then transfer this basis to latent space by linear regression, as follows. We start with an individual basis vector vk (i.e., a column of V), and the corresponding PCA coordinates xk1:N , where xkj is the scalar k-th coordinate of xj. We solve for the corresponding latent basis vector uk as:
+
+uk = arg min
+
+ukxkj − zj 2
+
+(4)
+
+j
+
+to identify a latent direction corresponding to this principal component (Figure 2). Equivalently, the whole basis is computed simultaneously with U = arg min j Uxj − zj 2, using a standard least-squares solver, without any additional orthogonality constraints. Each column of U then aligns
+to the variation along the corresponding column of V. We call the columns uk principal directions. We use a new set of N random latent vectors for the regression. Editing images proceeds similarly to
+the StyleGAN case, with the xk coordinates specifying offsets along the columns uk of the principal direction matrix: z = z + Ux.
+
+We compute PCA at the ﬁrst linear layer of BigGAN512-deep, which is the ﬁrst layer with a nonisotropic distribution. We found that this gave more useful controls than later layers. Likewise, for StyleGAN, we found that PCA in W gave better results than applying PCA on feature tensors and then transferring to latent space w.
+
+Examples of the ﬁrst few principal components are shown in Figure 3(top) for StyleGAN2 trained on FFHQ; see also the beginning of the accompanying video. While they capture important concepts,
+
+3
+
+some of them entangle several separate concepts. Similar visualizations are shown for other models (in Section 1 of the Supplemental Material, abbreviated SM §1 later).
+
+E(v0, all) gender
+
+E(v2, all) rotate, age, gender,
+bkg
+
+E(v1, all) rotate+gender
+
+−2σ
+
+−1.33σ
+
+−0.67σ
+
+0σ
+
+0.67σ
+
+1.33σ
+
+2σ
+
+−2σ
+
+−1.33σ
+
+−0.67σ
+
+0σ
+
+0.67σ
+
+1.33σ
+
+2σ
+
+−2σ
+
+−1.33σ
+
+−0.67σ
+
+0σ
+
+0.67σ
+
+1.33σ
+
+2σ
+
+E(v1, 0-2) mostly rotate
+
+−2σ
+
+−1.33σ
+
+−0.67σ
+
+0σ
+
+0.67σ
+
+1.33σ
+
+2σ
+
+E(v10, 7-8) hair color
+
+−2σ
+
+−1.33σ
+
+−0.67σ
+
+0σ
+
+0.67σ
+
+1.33σ
+
+2σ
+
+Figure 3: Rows 1-3 illustrate the three largest principal components in the intermediate W latent space
+
+of StyleGAN2. They span the major variations expected of portrait photographs—such as gender
+
+and head rotation—with a few effects typically entangled together. The red square corresponds to
+
+location of the original image on each principal axis. Rows 4-5 demonstrate the effect of constraining
+
+the variation to a subset of the layers. For example, restricting the 2nd component to only layers 0-2,
+
+denoted E(v1, 0-2), leaves a relatively pure head rotation that changes gender expression and identity less (compare to 2nd row). Similarly, selective application of the principal components allows control
+
+of features such as hair color, aspects of hairstyle, and lighting. See SM §1 for a larger sampling.
+
+2.3 Layer-wise Edits
+Given the directions found with PCA, we now show that these can be decomposed into interpretable edits by applying them only to certain layers.
+StyleGAN. StyleGAN provides layerwise control via the wi intermediate latent vectors. Given an image with latent vector w, layerwise edits entail modifying only the w inputs to a range of layers, leaving the other layers’ inputs unchanged. We use notation E(vi, j-k) to denote edit directions; for example, E(v1, 0-3) means moving along component v1 at the ﬁrst four layers only. E(v2, all) means moving along component v2 globally: in the latent space and to all layer inputs. Edits in the Z latent space are denoted E(ui, j-k).
+This is illustrated in the last rows of Figure 3. For example, component v1, which controls head rotation and gender in an entangled manner, controls a purer rotation when only applied to the ﬁrst three layers in E(v1, 0-2); similarly, the age and hairstyle changes associated with component v4 can be removed to yield a cleaner change of lighting by restricting the effect to later layers in E(v4, 5-17). It is generally easy to discover surprisingly targeted changes from the later principal components. Examples include E(v10, 7-8) that controls hair color, as well as E(v11, 0-4) that controls the height of the hair above the forehead. More examples across several models are shown in Figure 7; see also the accompanying video. As shown in Figure 1, multiple edits applied simultaneously across multiple principal directions and internal layer ranges compose well.
+4
+
+BigGAN. BigGAN does not have a built-in layerwise control mechanism. However, we ﬁnd that BigGAN can be modiﬁed to produce behavior similar to StyleGAN, by varying the intermediate Skip-z inputs zi separately from the latent z: yi = G(yi−1, zi). Here the latent inputs zi are allowed to vary individually between layers in a direct analogy to the style mixing of StyleGAN. By default, all inputs are determined by an initial sampled or estimated z, but then edits may be performed to the inputs to different layers independently. Despite the fact that BigGAN is trained without style mixing regularization, we ﬁnd that it still models images in a form of style/content hierarchy. Figure 6 shows the effect of transferring intermediate latent vectors from one image to another. Like StyleGAN, transferring at lower layers (closer to the output) yields lower-level style edits. See SM §2 for more examples of BigGAN style mixing. Since the Skip-z connections were not trained for style resampling, we ﬁnd them to be subjectively “more entangled” than the StyleGAN style vectors. However, they are still useful for layerwise editing, as shown in Figures 7 and SM §1: we discover components that control, for instance, lushness of foliage, illumination and time of day, and cloudiness, when applied to a select range of layers.
+Interface. We have created a simple user interface that enables interactive exploration of the principal directions via simple slider controls. Layer-wise application is enabled by specifying a start and end layer for which the edits are to be applied. The GUI also enables the user to name the discovered directions, as well as load and save sets of directions. The exploration process is demonstrated in the video, and the runnable Python code is attached as supplemental material.
+3 Findings and Results
+We describe a number of discoveries from our PCA analysis, some of which we believe are rather surprising. We also show baseline comparisons. We show edits discovered on state-of-the-art pretrained GANs, including BigGAN512-deep, StyleGAN (Bedrooms, Landscapes, WikiArt training sets), and StyleGAN2 (FFHQ, Cars, Cats, Church, Horse training sets). Details of the computation and the pretrained model sources are found in SM §3. This analysis reveals properties underlying the StyleGAN and BigGAN models.
+3.1 GAN and PCA Properties
+Across all trained models we have explored, large-scale changes to geometric conﬁguration and viewpoint are limited to the ﬁrst 20 principal components (v0-v20); successive components leave layout unchanged, and instead control object appearance/background and details. As an example, Figure 3 shows edit directions for the top 3 PCA components in a StyleGAN2 model trained on the FFHQ face dataset [10]. We observe that the ﬁrst few components control large-scale variations, including apparent gender expression and head rotation. For example, component v0 is a relatively disentangled gender control; component v1 mixes head rotation and gender, and so on. See SM §1 for a visualization of the ﬁrst 20 principal components.
+PCA also reveals that StyleGANv2’s latent distribution p(w) has a relatively simple structure: the principal coordinates are nearly-independent variables with non-Gaussian unimodal distributions. We also ﬁnd that the ﬁrst 100 principal components are sufﬁcient to describe overall image appearance; the remaining 412 dimensions control subtle though perceptible changes in appearance; see SM §4 and SM §5 for details and examples.
+We ﬁnd that BigGAN components appear to be class-independent, e.g., PCA components for one class were identical to PCA components for another class in the cases we tested. SM §6 shows examples of PCA components computed at the ﬁrst linear layer of BigGAN512-deep for the husky class. We ﬁnd that the global motion components have the same effect in different classes (e.g., component 6 is zoom for all classes tested), but later components may have differing interpretations across classes. For instance, a direction that makes the image more blue might mean winter for some classes, but just nighttime for others.
+3.2 Model entanglements and disallowed combinations
+We observe a number of properties of GAN principal components that seem to be inherited from GANs’ training sets. In some cases, these properties may be desirable, and some may be limitations
+5
+
+(a) Fix ﬁrst 8 PCA coord., randomize remaining 504 (b) Randomize ﬁrst 8 PCA coord., ﬁx remaining 504
+
+(Pose and camera ﬁxed, appearance changes)
+
+(Appearance ﬁxed, pose changes)
+
+(c) Fix 8 random basis coord., randomize the others (d) Randomize 8 random basis coord., ﬁx remaining 504
+
+(Almost everything changes)
+
+(Almost nothing changes)
+
+Figure 4: Illustration of the signiﬁcance of the principal components as compared to random directions in the intermediate latent space W of StyleGAN2. Fixing and randomizing the early principal components shows a separation between pose and style (a, b). In contrast, ﬁxing and randomizing randomly-chosen directions does not yield a similar meaningful decomposition (c, d).
+
+of our approach. Some of these may also be seen as undesirable biases of the trained GAN. Our analysis provides one way to identify these properties and biases that would otherwise be hard to ﬁnd.
+For StyleGAN2 trained on the FFHQ face dataset, geometric changes are limited to rotations in the ﬁrst 3 components. No translations are discovered, due to the carefully aligned training set.
+Even with our layer-wise edits, we observe some entanglements between distinct concepts. For example, adjusting a car to be more “sporty” causes a more “open road” background, whereas a more “family” car appears in woods or city streets. This plausibly reﬂects typical backgrounds in marketing photographs of cars. Rotating a dog often causes its mouth to open, perhaps a product of correlations in portraits of dogs. For the “gender” edit, one extreme “male” side seems to place the subject in front of a microphone; whereas the “female” side is a more frontal portrait. See SM §7 for examples.
+We also observe “disallowed combinations,” attributes that the model will not apply to certain faces. The “Wrinkles” edit will age and add wrinkles to adult faces, but has no signiﬁcant effect on a child’s face. Makeup and Lipstick edits add/remove makeup to female-presenting faces, but have little or no effect on male faces. When combining the two edits for “masculine" and “adult," all combinations work, except for when trying to make a “masculine child." See SM §7 for Figures.
+3.3 Comparisons
+No previously published work addresses the problem we consider, namely, unsupervised identiﬁcation of interpretable directions in an existing GAN. In order to demonstrate the beneﬁts of our approach, we show qualitative comparisons to random directions and supervised methods.
+Random directions. We ﬁrst compare the PCA directions to randomly-selected directions in W. Note that there are no intrinsically-preferred directions in this space, i.e., since z is isotropic, the canonical directions in z are equivalent to random directions. As discussed in the previous section,
+6
+
+[9] Ours
+
+(a) BigGAN-512 Zoom E(u6, all)
+
+(b) BigGAN-512 Translate E(u0, all)
+
+(c) StyleGAN1 FFHQ Pose E(v9, 0-6)
+
+(d) StyleGAN1 FFHQ Smile E(v44, 3)
+
+(e) StyleGAN1 CelebaHQ Glasses E(v5, 0) (f) StyleGAN1 CelebaHQ Gender E(v1, 0-1)
+
+[20] Ours
+
+[20] Ours
+
+Figure 5: Comparison of edit directions found through PCA to those found in previous work using supervised methods [9, 20]. Some are visually very close (a, c). Others achieve a variant of the same effect (d, e, f), sometimes with more entanglement (d), and sometimes less (b). In some cases, both produce highly entangled effects (a, f). We also observe a few cases where strong effects introduce inconsistencies (e) in our outputs. Still, the results are remarkably close given that our approach does not specify target transformations or use supervised learning. The corresponding edits were found manually using our interactive exploration software.
+PCA provides a useful ordering of directions, separating the pose and the most signiﬁcant appearance into the ﬁrst components. As illustrated in SM §8, each random direction includes some mixture of pose and appearance, with no separation among them.
+We further illustrate this point by randomizing different subsets of principal coordinates versus random coordinates. Figure 4 contains four quadrants, each of which shows random perturbations about a latent vector that is shared for the entire ﬁgure. In Figure 4a, the ﬁrst eight principal coordinates x0...7 are ﬁxed and the remaining 504 coordinates x8...512 are randomized. This yields images where the cat pose and camera angle are held roughly constant, but the appearance of the cat and the background vary. Conversely, ﬁxing the last 504 coordinates and randomizing the ﬁrst eight (Figure 4b) yields images where the color and appearance are held roughly constant, but the camera and orientation vary. The bottom row shows the results of the same process applied to random directions; illustrating that any given 8 directions have no distinctive effect on the output. SM §8 contains more examples.
+Supervised methods Previous methods for ﬁnding interpretable directions in GAN latent spaces require outside supervision, such as labeled training images or pretrained classiﬁers, whereas our approach aims to automatically identify variations intrinsic to the model without supervision.
+In Figure 5, we compare some of our BigGAN zoom and translation edits to comparable edits found by supervised methods [9], and our StyleGAN face attribute edits to a supervised method [20]. In our results, we observe a tendency for slightly more entanglement (for example, loss of microphone and hair in Figure 5d); moreover, variations of similar effects can often be obtained using multiple components. More examples from different latent vectors are shown in SM §8. However, we emphasize that (a) our method obtained these results without any supervision, and (b) we have been able to identify many edits that have not previously been demonstrated; supervising each of
+7
+
+Applied from
+Layer 4
+onward
+
+z1
+
+z2
+
+z3
+
+z4
+
+z1
+
+z2
+
+z3
+
+z4
+
+Layer 1
+
+Layer 8
+
+Figure 6: Style variation in BigGAN. Changing the latent vector in BigGAN in the middle of the network alters the style of the generated image. The images on the top row are generated from a base latent (not shown) by substituting z1 . . . z4 in its place from layer 1 onwards (resp. from layer 4 and 8 onwards on the following rows). Early changes affect the entire image, while later changes produce more local and subtle variations. Notably, comparing the dog and church images on the last row reveals the latents have class-agnostic effects on color and texture.
+
+BigGAN512-deep E(u54, 6-14) add clouds
+
+StyleGAN2 Cars E(v18, 7-8) reﬂections
+
+StyleGAN2 Cats E(v27, 2-4) ﬂufﬁness
+
+BigGAN512-deep E(u62, 3-14) season
+
+StyleGAN2 FFHQ E(v0, 8) makeup
+
+StyleGAN2 Horse E(v3, 3-4) rider
+
+StyleGAN WikiArt E(v9, 8-14) stroke style
+
+StyleGAN WikiArt E(v7, 0-1) rotation
+
+Figure 7: A selection of interpretable edits discovered by selective application of latent edits across the layers of several pretrained GAN models. The reader is encouraged to zoom in on an electronic device. A larger selection is available in SM §1.
+these would be very costly, and, moreover, it would be hard to know in advance which edits are even possible with these GANs.
+4 Discussion
+This paper demonstrates simple but powerful ways to create images with existing GANs. Rather than training a new model for each task, we take existing general-purpose image representations and discover techniques for controlling them. This work suggests considerable future opportunity to analyze these image representations and discover richer control techniques in these spaces, for example, using other unsupervised methods besides PCA. Our early experiments with performing PCA on other arrangements of the feature maps were promising. A number of our observations suggest improvements to GAN architectures and training, perhaps similar to [6]. It would be interesting to compare PCA directions to those learned by concurrent work in disentanglement, e.g., [13]. Our approach also suggests ideas for supervised training of edits, such as using our representation to narrow the search space. Several methods developed concurrently to our own explore similar or related ideas [24, 15, 25, 21, 1], and comparing or combining approaches may prove useful as well.
+8
+
+Broader Impact
+As our method is an image synthesis tool, it shares with other image synthesis tools the same potential beneﬁts (e.g., [2]) and dangers that have been discussed extensively elsewhere, e.g., see [19] for one such discussion.
+Our method does not perform any training on images; it takes an existing GAN as input. As discussed in Section 3.2, our method inherits the biases of the input GAN, e.g., limited ability to place makeup on male-presenting faces. Conversely, this method provides a tool for discovering biases that would otherwise be hard to identify.
+Acknowledgments and Disclosure of Funding
+We thank Miika Aittala for insightful discussions and Tuomas Kynkäänniemi for help in preparing the comparison to Jahanian et al. [9]. Thanks to Joel Simon for providing the Artbreeder Landscape model. This work was created using computational resources provided by the Aalto Science-IT project.
+References
+[1] R. Abdal, P. Zhu, N. Mitra, and P. Wonka. Styleﬂow: Attribute-conditioned exploration of stylegan-generated images using conditional continuous normalizing ﬂows. arXiV:2008.02401, 2020.
+[2] J. Bailey. The tools of generative art, from Flash to neural networks. Art in America, Jan. 2020. [3] D. Bau, H. Strobelt, W. Peebles, J. Wulff, B. Zhou, J. Zhu, and A. Torralba. Semantic photo
+manipulation with a generative image prior. ACM Transactions on Graphics (Proceedings of ACM SIGGRAPH), 38(4), 2019. [4] D. Bau, J.-Y. Zhu, H. Strobelt, B. Zhou, J. B. Tenenbaum, W. T. Freeman, and A. Torralba. Gan dissection: Visualizing and understanding generative adversarial networks. In Proc. ICLR, 2019. [5] A. Brock, J. Donahue, and K. Simonyan. Large scale GAN training for high ﬁdelity natural image synthesis. In Proc. ICLR, 2019. [6] M. Denil, B. Shakibi, L. Dinh, M. Ranzato, and N. de Freitas. Predicting parameters in deep learning. In Proc. NIPS, 2013. [7] L. Goetschalckx, A. Andonian, A. Oliva, and P. Isola. Ganalyze: Toward visual deﬁnitions of cognitive image properties. In Proc. ICCV, 2019. [8] I. J. Goodfellow, J. Pouget-Abadie, M. Mirza, B. Xu, D. Warde-Farley, S. Ozair, A. Courville, and Y. Bengio. Generative Adversarial Nets. In Proc. NIPS, 2014. [9] A. Jahanian, L. Chai, and P. Isola. On the "steerability" of generative adversarial networks. In Proc. ICLR, 2020. [10] T. Karras, S. Laine, and T. Aila. A style-based generator architecture for generative adversarial networks. In Proc. CVPR, 2019. [11] T. Karras, S. Laine, M. Aittala, J. Hellsten, J. Lehtinen, and T. Aila. Analyzing and improving the image quality of StyleGAN. In Proc. CVPR, 2020. [12] T. D. Kulkarni, W. Whitney, P. Kohli, and J. B. Tenenbaum. Deep convolutional inverse graphics network. In Proc. NIPS, 2015. [13] W. Nie, T. Karras, A. Garg, S. Debnath, A. Patney, A. B. Patel, and A. Anandkumar. Semisupervised stylegan for disentanglement learning. In Proc. International Conference on Machine Learning (ICML), 2020. [14] T. Park, M.-Y. Liu, T.-C. Wang, and J.-Y. Zhu. Semantic image synthesis with spatially-adaptive normalization. In Proc. CVPR, 2019. [15] W. Peebles, J. Peebles, J.-Y. Zhu, A. A. Efros, and A. Torralba. The hessian penalty: A weak prior for unsupervised disentanglement. In Proc. ECCV, 2020.
+9
+
+[16] A. Plumerault, H. L. Borgne, and C. Hudelot. Controlling generative models with continuous factors of variations. In Proc. ICLR, 2020.
+[17] A. Ramesh, Y. Choi, and Y. LeCun. A spectral regularizer for unsupervised disentanglement. In Proc. ICML, 2019.
+[18] D. Ross, J. Lim, R. Lin, and M. Yang. Incremental learning for robust visual tracking. Int. J. Comp. Vis, 77(1–3), 2008.
+[19] J. Rothman. In the age of a.i., is seeing still believing? The New Yorker, Nov. 2018. [20] Y. Shen, J. Gu, X. Tang, and B. Zhou. Interpreting the latent space of gans for semantic face
+editing. arXiv:1907.10786, 2019. [21] Y. Shen and B. Zhou. Closed-form factorization of latent semantics in gans. arXiv:2007.06600,
+2020. [22] K. K. Singh, U. Ojha, and Y. J. Lee. Finegan: Unsupervised hierarchical disentanglement for
+ﬁne-grained object generation and discovery. In Proc. CVPR, 2019. [23] L. Tran, X. Yin, and X. Liu. Disentangled representation learning gan for pose-invariant face
+recognition. In Proc. CVPR, 2017. [24] A. Voynov and A. Babenko. Unsupervised discovery of interpretable directions in the gan latent
+space. In Proc. ICML, 2020. [25] J. Wolff and A. Torralba. Improving inversion and generation diversity in stylegan using a
+gaussianized latent space. arXiv:2009.06529, 2020. [26] C. Yang, Y. Shen, and B. Zhou. Semantic hierarchy emerges in the deep generative representa-
+tions for scene synthesis. arXiv:1911.09267, 2019. [27] J.-Y. Zhu, P. Krähenbühl, E. Shechtman, and A. A. Efros. Generative visual manipulation on
+the natural image manifold. In Proc. ECCV, 2016.
+10
+
+Supplementary Material
+1 Examples of Principal Components and Layerwise Edits
+Figure S1 shows an assortment of interpretable edits discovered with our method for many different models. We visualize the ﬁrst 20 Principal Components for several models:StyleGAN2 FFHQ (Figure S2a), StyleGAN2 Cars (Figure S4a), StyleGAN2 Cats (Figure S3a), and BigGAN512-deep Husky (Figure S5a). The images are centered at the mean of each component, which causes slight differences within the center columns.
+2 BigGAN style mixing
+Figure S6 shows a more detailed example of mixing style and content at different layers in BigGAN [5].
+3 Model and Computation Details
+We use incremental PCA [18] for efﬁcient computation, and use N = 106 samples. On a relatively high-end desktop PC, computation takes around 1.5 hours on BigGAN512-deep and 2 minutes on StyleGAN and StyleGAN2. Our StyleGAN model weights were obtained from https://github.com/justinpinkney/ awesome-pretrained-stylegan, except for Landscapes, which was provided by artbreeder. com. Our StyleGAN2 models were those provided by the authors online [11]. The sliders in our GUI operate in units of standard deviations, and we ﬁnd that later components work for wider ranges of values than earlier ones. The ﬁrst ten or so principal components, such as head rotation (E(v1, 0-2)) and lightness/background (E(v8, 5)), operate well in the range [−2...2], beyond which the image becomes unrealistic. In contrast, face roundness (E(v37, 0-4)) can work well in the range [−20...20], when using 0.7 as the truncation parameter. For truncation, we use interpolation to the mean as in StyleGAN [10]. The variation in slider ranges described above suggests that truncation by restricting w to lie within 2 standard deviations of the mean would be a very conservative limitation on the expressivity of the interface, since it can produce interesting images outside this range. A video showcasing our exploration UI is available at https://youtu.be/jdTICDa_eAI. The code of our method is hosted online: https://github.com/harskish/ganspace.
+4 How many components are needed?
+We ﬁrst investigate how many dimensions of the latent space are important to image synthesis. Figure S7 shows the variance captured in each dimension of the PCA for the FFHQ model. The ﬁrst 100 dimensions capture 85% of the varaince; the ﬁrst 200 dimensions capture 92.5%, and the ﬁrst 400 dimensions capture 98.5%. What does this correspond to visually? Figure S8 shows images randomly sampled, and then projected to a reduced set of PCA components. That is, we sample w ∼ p(w), and then replace it with w ← VK VKT (w − µ) + µ, where VK are the columns for the ﬁrst K principal components. Observe that nearly all overall face details are captured by the ﬁrst 100 components; the remaining 412 components make small adjustments to shape and tone.
+5 What is p(w)?
+Inspecting the marginal distributions of the principal coordinates gives insight as to the shape of p(w), the distribution over latents . In principle, the learned distribution could have any shape, within the range of what can be parameterized by an 8-layer fully-connected network M (z). For example, it
+1
+
+could be highly multimodal, with different modes for different clusters of training image. One could imagine, for example, different clusters for discrete properties like eyeglasses/no-eyeglasses, or the non-uniform distribution of other attributes in the training data.
+In fact, we ﬁnd that this is not the case: for all of the StyleGANv2 models, PCA analysis reveals that p(w) has a rather simple form. Through this analysis, we can describe the shape of p(w) very thoroughly. The conclusions we describe here could be used in the future to reduce the dimensionality of StyleGAN models, either during training or as a post-process.
+
+Sampling. To perform this analysis, we sample N = 106 new samples wi ∼ p(w), and then project them with our estimated PCA basis:
+
+xi = VT (wi − µ)
+
+(S1)
+
+where V is a full-rank PCA matrix (512 × 512) for our StyleGAN2 models. We then analyze the
+
+empirical distribution of these x samples.
+
+The experiments described here are for the FFHQ face model, but we have observed similar phenomena for other models.
+
+Independence. PCA projection decorrelates variables, but does not guarantee independence; it may not even be possible to obtain linear independent components for the distribution.
+Let xi and xj be two entries of the x variable. We can assess their independence by computing Mutual Information (MI) between these variables. We compute MI numerically, using a 1000 × 1000-bin histogram of the joint distribution p(x(j), x(k)). The MI of this distribution is denoted Ijk. Note that the MI of a variable with itself is equal to the entropy of that variable Hj = Ijj, and both quantities are measured in bits. We ﬁnd that the entropies lie in the range Hj ∈ [6.9, 8.7] bits. In contrast, the MIs lie in the range Ijk ∈ [0, 0.3] bits.
+This indicates that, empirically, the principal components are very nearly independent, and we can understand the distribution by studying the individual components separately.
+
+Individual distributions. What do the individual distributions p(xj) look like? Figure S9 shows example histograms of these variables. As visible in the plots, the histograms are remarkably unimodal, without heavy tails. Visually they all appear Gaussian, though plotting them in the log domain reveals some asymmetries.
+
+Complete distribution. This analysis suggests that the sampler for w could be replaced with the
+
+following model:
+
+xj ∼ p(xj)
+
+(S2)
+
+y = Vx + µ
+
+(S3)
+
+where the one-dimensional distributions p(xj) are in some suitable form to capture the unimodal distributions described above. This is a multivariate distribution slightly distorted from a Gaussian.
+
+This representation would have substantially fewer parameters than the M (z) representation in StyleGAN.
+
+6 BigGAN Principal Directions are Class-agnostic
+Figure S10 shows examples of transferring edits between BigGAN classes, illustrating our observation that PCA components seem to be the same across different BigGAN classes.
+
+7 Entanglements and Disallowed Combinations
+Most of our edits work across different starting images in a predictable way. For example, the head rotation edit accurately rotates any head in our tests. However, as discussed in Section 3.2 of the paper, some edits show behavior that may reveal built-in priors or biases learned by the GAN. These are illustrated in Figures S11 ("baldness"), S12 ("makeup"), S13 ("white hair"), and S14 ("wrinkles"): in each case, different results occur when the same edit is applied to difference starting images. Figure S15 shows an example of combining edits, where one combination is not allowed by the model.
+
+2
+
+8 Comparisons
+Figures S16, S17, and S18 show comparisons of edits discovered with our method to those discovered by the supervised methods [20] and [9]. Sets of 20 normally distributed random directions {ˆr0 . . . ˆr19} in Z are shown for StyleGAN2 FFHQ (Figure S2a), StyleGAN2 Cars (Figure S4b), StyleGAN2 Cats (Figure S3b), and BigGAN512-deep Husky (Figure S5b). The directions are scaled in order to make the effects more visible. Figures S19, S20, S21, and S22 visualize the signiﬁcance of the PCA basis as compared to a random basis in latent space.
+3
+
+Figure S1: A selection of interpretable edits discovered by selective application of latent edits across the layers of several pretrained GAN models. The reader is encouraged to zoom in on an electronic device.
+4
+
+StyleGAN WikiArt E(v35, 2-3) eye spacing
+
+StyleGAN WikiArt E(v59, 9-14) skin tone
+
+StyleGAN WikiArt E(v7, 0-1) rotation
+
+StyleGAN2 FFHQ E(v43, 6-7) smile-disgust
+
+StyleGAN Bedrooms StyleGAN Landscapes
+
+E(v31, 0-5)
+
+E(v0, 1-16)
+
+bed shape
+
+verticality
+
+StyleGAN2 Church E(v15, 8)
+sun direction
+
+StyleGAN2 Church E(v20, 7-8) clouds
+
+StyleGAN2 Horse E(v11, 5-6) color
+
+StyleGAN2 Cats E(v45, 5-7) eyes open
+
+BigGAN512-deep E(u37, 6-14) day-night
+
+BigGAN512-deep E(u64, 6-9) add grass
+
+StyleGAN2 Cars E(v44, 0-8) car model
+
+StyleGAN2 Cars E(v50, 8) season
+
+StyleGAN WikiArt E(v31, 8-14) sharpness
+
+StyleGAN WikiArt E(v36, 4-6) mouth shape
+
+StyleGAN WikiArt E(v9, 8-14) stroke style
+
+StyleGAN2 FFHQ E(v0, 8) makeup
+
+StyleGAN Bedrooms StyleGAN Landscapes
+
+E(v5, 0-2)
+
+E(v1, 9-17)
+
+orientation
+
+evening
+
+StyleGAN2 Church E(v8, 12-13) vibrant
+
+StyleGAN2 Church E(v8, 7-8) direct sun
+
+StyleGAN2 Horse E(v3, 3-4) rider
+
+StyleGAN2 Cats E(v27, 2-4) ﬂufﬁness
+
+BigGAN512-deep E(u62, 3-14) season
+
+BigGAN512-deep E(u54, 6-14) add clouds
+
+StyleGAN2 Cars E(v18, 7-8) reﬂections
+
+StyleGAN2 Cars E(v15, 0-3) focal length
+
+(a) Principal components v0 − v19, ±2σ (b) Normally distributed directions in Z, ±10rˆi Figure S2: A visualization of the ﬁrst 20 principal components of StyleGAN2 FFHQ (a), and of 20 isotropic Gaussian directions in Z (b). The random directions are scaled to emphasize their effect.
+5
+
+(a) Principal components v0 − v19, ±2σ (b) Normally distributed directions in Z, ±10rˆi Figure S3: A visualization of the ﬁrst 20 principal components of StyleGAN2 Cats (a), and of 20 isotropic Gaussian directions in Z (b). The random directions are scaled to emphasize their effect.
+6
+
+(a) Principal components v0 − v19, ±2σ (b) Normally distributed directions in Z, ±10rˆi Figure S4: A visualization of the ﬁrst 20 principal components of StyleGAN2 Cars (a), and of 20 isotropic Gaussian directions in Z (b). The random directions are scaled to emphasize their effect.
+7
+
+(a) Principal components u0 − u19, ±2σ (b) Normally distributed directions in Z, ±6rˆi
+Figure S5: A visualization of the ﬁrst 20 principal components of BigGAN512-deep husky (a), and of 20 isotropic Gaussian directions in Z (b). The random directions are scaled to emphasize their effect.
+8
+
+Figure S6: Even though not explicitly trained to do so, BigGAN displays similar style-mixing characteristics to StyleGAN. Here, the latent vector of the content image is swapped for that of the style image starting at different layers.
+
+Variance
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+00
+
+100
+
+200
+
+300
+
+400
+
+500
+
+Component #
+
+Figure S7: Variance of the principal components for StyleGANv2 FFHQ.
+
+9
+
+0
+
+1
+
+5
+
+10
+
+20
+
+100
+
+512
+
+Figure S8: Randomly sampled images, projected onto reduced numbers of PCA dimensions: 0, 1, 5, 10, 20, 100, 512 (full dimensional).
+
+10
+
+Frequency
+
+Marginal distribution for p(x ) 0.40
+
+0.35
+
+0.30
+
+0.25
+
+0.20
+
+0.15
+
+0.10
+
+0.05
+
+0.00 6
+
+4
+
+2
+
+0
+
+2
+
+4
+
+6
+
+x
+
+Log marginal for p(x )
+
+10 1
+
+10 2
+
+10 3
+
+10 4
+
+10 5
+
+6
+
+4
+
+2
+
+x0
+
+2
+
+4
+
+6
+
+Frequency
+
+Frequency
+
+Marginal distribution for p(x ) 0.40
+
+0.35
+
+0.30
+
+0.25
+
+0.20
+
+0.15
+
+0.10
+
+0.05
+
+0.00 6
+
+4
+
+2
+
+0
+
+2
+
+4
+
+6
+
+x
+
+Log marginal for p(x )
+
+10 1
+
+10 2
+
+10 3
+
+10 4
+
+10 5
+
+6
+
+4
+
+2
+
+x0
+
+2
+
+4
+
+6
+
+Frequency
+
+Frequency
+
+Marginal distribution for p(x ) 0.40
+
+0.35
+
+0.30
+
+0.25
+
+0.20
+
+0.15
+
+0.10
+
+0.05
+
+0.00 6
+
+4
+
+2
+
+0
+
+2
+
+4
+
+6
+
+x
+
+Log marginal for p(x )
+
+10 1
+
+10 2
+
+10 3
+
+10 4
+
+10 5
+
+6
+
+4
+
+2
+
+x0
+
+2
+
+4
+
+6
+
+Frequency
+
+Frequency
+
+Marginal distribution for p(x )
+
+0.40
+
+0.35
+
+0.30
+
+0.25
+
+0.20
+
+0.15
+
+0.10
+
+0.05
+
+0.00 6
+
+4
+
+2
+
+0
+
+2
+
+4
+
+6
+
+x
+
+Log marginal for p(x )
+
+10 1
+
+10 2
+
+10 3
+
+10 4
+
+10 5
+
+6
+
+4
+
+2
+
+x0
+
+2
+
+4
+
+6
+
+Frequency
+
+Figure S9: Top: Marginal distributions for x(0), x(18), x(20), x(50). Bottom: log domain for these distributions
+
+Base
+
+E(u0, all) E(u6, all)
+
+Base
+
+E(u54, 7-9) E(u33, 7-9)
+
+Lighthouse
+
+Husky
+
+Barn
+
+Castle
+
+Figure S10: The latent space directions we discover often generalize between BigGAN classes. Left three columns: Component 0 corresponds to translation and component 6 to zoom. The edit is applied globally to all layers. Right three columns: Some later components, when applied to a subset of the layers, control speciﬁc textural aspects such as clouds or nighttime illumination of a central object. The components shown where all computed from the husky class.
+
+Figure S11: An example of edit direction dependence on input face: StyleGAN FFHQ direction that we labeled as “baldness” (E(v21, 2-4)).
+11
+
+Figure S12: An example of edit direction dependence on input face: StyleGAN FFHQ direction that we labeled as “makeup” (E(v0, 8)).
+Figure S13: An example of edit direction dependence on input face: StyleGAN FFHQ direction that we labeled as “white hair” (E(v57, 7-9)).
+12
+
+Figure S14: An example of edit direction dependence on input face: StyleGAN FFHQ direction that we labeled as “wrinkles” (E(v20, 6)).
+13
+
+Figure S15: Combining edits. Starting with the center image, the horizontal axis corresponds to adding or removing elements of x0, in the range ∆x0 ∈ [−3, 3]. The horizontal axis is adding/removing elements of x18. Note that the horizontal axis roughly corresponds to "masculinity" and the vertical to "age." The components operate independently, except that the model does not produce a "masculine little boy" in the upper-left.
+14
+
+[9] Ours
+
+(a) Zoom E(u6, all)
+
+(b) Translate E(u0, all)
+
+(a) FFHQ Blueness E(u2, 17)
+
+(b) FFHQ Greenness E(u1, 17)
+
+(a) Rotate E(u0, 0)
+
+(b) ShiftY E(u7, 1)
+
+[9] Ours
+
+[9] Ours [9] Ours
+
+Figure S16: Comparisons against [9] for BigGAN512-deep, StyleGAN FFHQ, and StyleGAN Cars. 15
+
+[20] Ours [20] Ours
+
+(c) FFHQ Pose E(v9, 0-6)
+
+(d) FFHQ Gender E(v0, 2-5)
+
+(e) FFHQ Smile E(v44, 3)
+
+(f) FFHQ Glasses E(v12, 0-1)
+
+[20] Ours [20] Ours
+
+Figure S17: Edits found with our method compared to those found by [20] for the StyleGAN FFHQ model.
+16
+
+[20] Ours [20] Ours
+
+(g) CelebaHQ Pose E(v7, 0-6)
+
+(h) CelebaHQ Gender E(v1, 0-1)
+
+(i) CelebaHQ Smile E(v14, 3)
+
+(j) CelebaHQ Glasses E(v5, 0)
+
+[20] Ours [20] Ours
+
+Figure S18: Edits found with our method compared to those found by [20] for the StyleGAN CelebaHQ model
+StyleGAN2 car
+
+(a) Fix ﬁrst 5 PCA coord., randomize rest
+
+(b) Randomize ﬁrst 5 PCA coord., ﬁx rest
+
+(c) Fix 5 random basis coord., randomize rest
+
+(d) Randomize 5 random basis coord., ﬁx rest
+
+Figure S19: The PCA basis displays a content-style separation not present in random bases.
+
+17
+
+BigGAN256-deep duck
+
+(a) Fix ﬁrst 10 PCA coord., randomize rest
+
+(b) Randomize ﬁrst 10 PCA coord., ﬁx rest
+
+(c) Fix 10 random basis coord., randomize rest
+
+(d) Randomize 10 random basis coord., ﬁx rest
+
+Figure S20: The PCA basis displays a content-style separation not present in random bases.
+
+StyleGAN bedrooms
+
+(a) Fix ﬁrst 10 PCA coord., randomize rest
+
+(b) Randomize ﬁrst 10 PCA coord., ﬁx rest
+
+(c) Fix 10 random basis coord., randomize rest
+
+(d) Randomize 10 random basis coord., ﬁx rest
+
+Figure S21: The PCA basis displays a content-style separation not present in random bases.
+
+18
+
+StyleGAN ffhq
+
+(a) Fix ﬁrst 10 PCA coord., randomize rest
+
+(b) Randomize ﬁrst 10 PCA coord., ﬁx rest
+
+(c) Fix 10 random basis coord., randomize rest
+
+(d) Randomize 10 random basis coord., ﬁx rest
+
+Figure S22: The ﬁrst few principal components often encode style changes in addition to geometry in spatially aligned datasets, as seen in the change of identity in the top right quadrant.
+
+19
+

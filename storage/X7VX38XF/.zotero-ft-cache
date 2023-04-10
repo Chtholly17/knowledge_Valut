@@ -1,0 +1,372 @@
+Splicing ViT Features for Semantic Appearance Transfer
+
+Narek Tumanyan∗ Omer Bar-Tal∗ Shai Bagon
+Weizmann Institute of Science *Indicates equal contribution. Project webpage: https://splice-vit.github.io
+
+Tali Dekel
+
+Appearance
+
+Structure
+
+Output
+
+Appearance
+
+Structure
+
+Output
+
+Appearance
+
+Structure
+
+Output
+
+Appearance
+
+Structure
+
+Output
+
+Figure 1. Given two input images—a source structure image and a target appearance image–our method generates a new image in which the structure of the source image is preserved, while the visual appearance of the target image is transferred in a semantically aware manner. That is, objects in the structure image are “painted” with the visual appearance of semantically related objects in the appearance image. Our method leverages a self-supervised, pre-trained ViT model as an external semantic prior. This allows us to train our generator only on a single input image pair, without any additional information (e.g., segmentation/correspondences), and without adversarial training. Thus, our framework can work across a variety of objects and scenes, and can generate high quality results in high resolution (e.g., HD).
+
+Abstract
+We present a method for semantically transferring the visual appearance of one natural image to another. Specifically, our goal is to generate an image in which objects in a source structure image are “painted” with the visual appearance of their semantically related objects in a target appearance image. Our method works by training a generator given only a single structure/appearance image pair as input. To integrate semantic information into our framework—a pivotal component in tackling this task—our key idea is to leverage a pre-trained and ﬁxed Vision Transformer (ViT) model which serves as an external semantic prior. Speciﬁcally, we derive novel representations of structure and appearance extracted from deep ViT features, untwisting them from the learned self-attention modules. We then establish an objective function that splices the desired structure and appearance representations, interweaving them together in the space of ViT features. Our framework, which we term “Splice”, does not involve adversarial training, nor does it require any additional input information such as semantic segmentation or correspondences, and can generate high resolution results, e.g., work in HD. We demonstrate high quality results on a variety of in-thewild image pairs, under signiﬁcant variations in the number of objects, their pose and appearance.
+
+1. Introduction
+“Rope splicing is the forming of a semi-permanent joint between two ropes by partly untwisting and then interweaving their strands.” [2]
+What is required to transfer the visual appearance between two semantically related images? Consider for example the task of transferring the visual appearance of a spotted cow in a ﬂower ﬁeld to an image of a red cow in a grass ﬁeld (Fig. 1). Conceptually, we have to associate regions in both images that are semantically related, and transfer the visual appearance between these matching regions. Additionally, the target appearance has to be transferred in a realistic manner, while preserving the structure of the source image – the red cow should be realistically ”painted” with black and white spots, and the green grass should be covered with yellowish colors. To achieve it under noticeable pose, appearance and shape differences between the two images, semantic information is imperative.
+Indeed, with the rise of deep learning and the ability to learn high-level visual representations from data, new vision tasks and methods under the umbrella of “visual appearance transfer” have emerged. For example, the imageto-image translation trend aims at translating a source image from one domain to another target domain. To achieve that, most methods use generative adversarial networks (GANs),
+
+10748
+
+given image collections from both domains. Our goal is different – rather than generating some image in a target domain, we generate an image that depicts the visual appearance of a particular target image, while preserving the structure of the source image. Furthermore, our method is trained using only a single image pair as input, which allows us to deal with scenes and objects for which an image collection from each domain is not handy (e.g., spotted cows and red cows image collections).
+With only a pair of images available as input, how can we source semantic information? We draw inspiration from Neural Style Transfer (NST) that represents content and an artistic style in the space of deep features encoded by a pre-trained classiﬁcation CNN model (e.g., VGG). While NST methods have shown a remarkable ability to globally transfer artistic styles, their content/style representations are not suitable for region-based, semantic appearance transfer across objects in two natural images [12]. Here, we propose novel deep representations of appearance and structure that are extracted from DINO-ViT – a Vision Transformer model that has been pre-trained in a self-supervised manner [4]. Representing structure and appearance in the space of ViT features allows us to inject powerful semantic information into our method and establish a novel objective function that is used to train a generator using only the single input image pair.
+DINO-ViT has been shown to learn powerful and meaningful visual representations, demonstrating impressive results on several downstream tasks including image retrieval, object segmentation, and copy detection [4, 1]. However, the intermediate representations that it learns have not yet been fully explored. We thus ﬁrst strive to gain a better understanding of the information encoded in ViT features across layers. We do so by adopting “feature inversion” visualization techniques previously used in the context of CNN features. Our study provides a couple of key observations: (i) the global token (a.k.a [CLS] token) provides a powerful representation of visual appearance, which captures not only texture information but more global information such as object parts, and (ii) the original image can be reconstructed from the deepest features, yet they provide powerful semantic information at high spatial granularity.
+Equipped with the above observations, we derive novel representations of structure and visual appearance extracted from deep ViT features – untwisting them from the learned self-attention modules. Speciﬁcally, we represent visual appearance via the global [CLS] token, and represent structure via the self-similarity of keys, all extracted from the last layer. We then train a generator on a single input pair of structure/appearance images, to produce an image that splices the desired visual appearance and structure in the space of ViT features. Our framework does not require any additional information such as semantic segmentation and does not involve adversarial training. Furthermore, our model can be trained on high resolution images, producing high quality results in HD. We demonstrate a variety of semantic appearance transfer results across diverse natural
+
+image pairs, containing signiﬁcant variations in the number of objects, pose and appearance.
+2. Related Work
+The problem we tackle here is semantic visual appearance transfer between two in-the-wild, natural images, without user guidance. To the best of our knowledge, there is no existing method addressing speciﬁcally this challenge. We review the most related trends and methods.
+Domain Transfer & Image-to-Image Translation. The goal of these methods is to learn a mapping between source and target domains. This is typically done by training a GAN on a collection of images from the two domains, either paired [11] or unpaired [36, 18, 14, 34, 23]. Swapping Autoencoder (SA) [24] trains a domain-speciﬁc GAN to disentangle structure and texture in images, and swap these representations between two images in the domain. In contrast to SA, our method is not restricted to any particular domain, it does not require a collection of images for training, nor it involves adversarial training.
+Recently, image-to-image translation methods trained on a single example were proposed [7, 3, 17]. These methods only utilize low-level visual information and lack semantic understanding. Our method is also trained only on a single image pair, but leverages a pre-trained ViT model to inject powerful semantic information into the generation process (see Sec. 4 for comparison).
+Neural Style Transfer (NST). In its classical setting, NST transfers an artistic style from one image to another [9, 12]. STROTSS [15] uses pre-trained VGG features to represent style and their self-similarity to capture structure in an optimization-based framework to perform artistic style transfer in a global manner. In contrast, our goal is to transfer the appearance between semantically related objects and regions in two natural images.
+Semantic style transfer methods also aim at mapping appearance across semantically related regions between two images [20, 16, 32, 31]. However, these methods are usually restricted to color transformation [33, 31, 35], or depend on additional semantic inputs (e.g., annotations, segmentation, point correspondences, etc.) [9, 13, 5, 15]. Other works tackle the problem for speciﬁc controlled domains [26, 27]. In contrast, we aim to work with arbitrary, in-the-wild input pairs.
+Vision Transformers (ViT). ViTs [8] have been shown to achieve competitive results to state-of-the-art CNN architectures on image classiﬁcation tasks, while demonstrating impressive robustness [21]. DINO-ViT [4] is a ViT model that has been trained, without labels, using a self-distillation approach. The effectiveness of the learned representation has been demonstrated on several downstream tasks, including image retrieval and segmentation.
+Amir et al. [1] have demonstrated the power of DINOViT Features as dense visual descriptors. Their key observation is that deep DINO-ViT features capture rich seman-
+
+120749
+
+Target apperance image
+
+Transformer Encoder
+[CLS] token
+DINO ViT (Pre-trained)
+
+Transformer Encoder
+
+[CLS] token
+
+Source structure image
+
+Generator
+
+Output
+
+DINO ViT (Pre-trained)
+
+Transformer Encoder
+
+[CLS] token
+
+DINO ViT (Pre-trained)
+Figure 2. Pipeline. Our generator Gθ takes an input structure image Is and outputs Io. We establish our training losses using a pre-trained and ﬁxed DINO-ViT model, which serves as an external semantic prior: we represent structure via the self-similarity of keys in the deepest attention module (Self-Sim), and appearance via the [CLS] token in the deepest layer. Our objective is twofold: (i) Lapp encourages the [CLS] of Io to match the [CLS] of It, and (ii) Lstructure encourages the self-similarity representation of Io and Is to be the same. See Sec. 3.3 for details.
+
+tic information at ﬁne spatial granularity, e.g, describing semantic object parts. Furthermore, they observed that the representation is shared across different yet related object classes. This power of DINO-ViT features was exempliﬁed by performing “out-of-the-box” unsupervised semantic part co-segmentation and establishing semantic correspondences across different object categories. Inspired by these observations, we harness the power of DINO-ViT features in a novel generative direction – we derive new perceptual losses capable of splicing structure and semantic appearance across semantically related objects.
+
+3.1. Vision Transformers – overview
+In ViT, an image I is processed as a sequence of n non-overlapping patches as follows: ﬁrst, spatial tokens are formed by linearly embedding each patch to a ddimensional vector, and adding learned positional embeddings. An additional learnable token, a.k.a [CLS] token, serves as a global representation of the image.
+The set of tokens are then passed through L Transformer layers, each consists of layer normalization (LN), Multihead Self-Attention (MSA) modules, and MLP blocks:
+Tˆl = MSA(LN(T l−1)) + T l−1 T l = MLP(LN(Tˆl)) + Tˆl
+where T l(I) = tlcls(I), tl1(I) . . . tln(I) are the output tokens for layer l for image I.
+In each MSA block the (normalized) tokens are linearly projected into queries, keys and values:.
+Ql = T l−1 · Wql, Kl = T l−1 · Wkl , Vhl = T l−1 · Wvl (1)
+which are then fused using multihead self-attention to form the output of the MSA block (for full details see [8]).
+After the last layer, the [CLS] token is passed through an additional MLP to form the ﬁnal output, e.g., output distribution over a set of labels [8]. In our framework, we leverage DINO-ViT [4], in which the model has been trained in a self-supervised manner using a self-distillation approach. Generally speaking, the model is trained to produce the same distribution for two different augmented views of the same image. As shown in [4], and in [1], DINO-ViT learns powerful visual representations that are less noisy and more semantically meaningful than those of the supervised ViT.
+3.2. Structure & Appearance in ViT’s Feature Space
+
+3. Method
+Given a source structure image Is and a target appearance image It, our goal is to generate an image Io, in which objects in Is are “painted” with the visual appearance of their semantically related objects in It.
+Our framework is illustrated in Fig. 2: for a given pair {Is, It}, we train a generator Gθ(Is) = Io. To establish our training losses, we leverage DINO-ViT – a self-supervised, pre-trained ViT model [4] – which is kept ﬁxed and serves as an external high-level prior. We propose new deep representations for structure and appearance in DINO-ViT feature space; we train Gθ to output an image, that when fed into DINO-ViT, matches the source structure and target appearance representations. Speciﬁcally, our training objective is twofold: (i) Lapp that encourages the deep appearance representation of Io and It to match, and (ii) Lstructure, which encourages the deep structure representation of Io and Is to match.
+We next brieﬂy review ViT architecture, then provide qualitative analysis of DINO-ViT’s features in Sec. 3.2, and describe our framework in Sec. 3.3.
+
+The pillar of our method is the representation of appearance and structure in the space of DINO-ViT features. For appearance, we want a representation that can be spatially ﬂexible, i.e., discards the exact objects’ pose and scene’s spatial layout, while capturing global appearance information and style. To this end, we leverage the [CLS] token, which serves as a global image representation.
+For structure, we want a representation that is robust to local texture patterns, yet preserves the spatial layout, shape and perceived semantics of the objects and their surrounding. To this end, we leverage deep spatial features extracted from DINO-ViT, and use their self-similarity as structure representation:
+
+SL(I)ij = cos-sim kiL(I), kjL(I)
+
+(2)
+
+where cos-sim is the cosine similarity between keys (See Eq. 1). Thus, the dimensionality of our self-similarity descriptor is SL(I) ∈ R(n+1)×(n+1), where n is the number of patches.
+The effectiveness of self-similarly-based descriptors in capturing structure while ignoring appearance information has been previously demonstrated by both classical methods [25], and recently also using deep CNN features for
+
+130750
+
+(a) Original Images
+
+Layer 11 Layer 6 Layer 3 Layer 0
+
+(b) CLS token inversion results across layers
+Figure 3. Inverting the [CLS] token across layers. Each input image (a) is fed to DINO-ViT to compute its global [CLS] token at different layers. (b) Inversion results: starting from a noise image, we optimize for an image that would match the original [CLS] token at a speciﬁc layer. While earlier layers capture local texture, higher level information such as object parts emerges at the deeper layers (see Sec. 3.2).
+
+artistic style transfer [15]. We opt to use the self similarities
+of keys, rather than other facets of ViT, based on [1].
+Understanding and visualizing DINO-ViT’s features. To better understand our ViT-based representations, we take a feature inversion approach – given an image, we extract target features, and optimize for an image that matches the extracted features. Feature inversion has been widely explored in the context of CNNs (e.g., [28, 19]), however has not been attempted for understanding ViT features yet. For CNNs, it is well-known that solely optimizing the image pixels is insufﬁcient for converging into a meaningful result [22]. We observed a similar phenomenon when inverting ViT features (see Supplementary Materials on our website – SM). Hence, we incorporate “Deep Image Prior“ [30], i.e., we optimize for the weights of a CNN Fθ that translates a ﬁxed random noise z to an output image:
+
+arg min ||φ(Fθ(z)) − φ(I)||F ,
+
+(3)
+
+θ
+
+where φ(I) denotes the target features, and || · ||F denotes
+Frobenius norm. First, we consider inverting the [CLS] token: φ(I) = tlcls(I). Figure 3 shows our inversion results across layers, which illustrate the following observations:
+
+1. From shallow to deep layers, the [CLS] token gradually accumulates appearance information. Earlier layers mostly capture local texture patterns, while in deeper layers, more global information such as object parts emerges.
+
+2. The [CLS] token encodes appearance information in a spatially ﬂexible manner, i.e., different object parts can
+
+Figure 4. [CLS] token inversion over multiple runs. The variations in structure in multiple inversion runs of the same image demonstrate the spatial ﬂexibility of the [CLS] token.
+stretch, deform or be ﬂipped. Figure 4 shows multiple runs of our inversions per image; in all runs, we can notice similar global information, but the diversity across runs demonstrate the spatial ﬂexibility of the representation.
+Next, in Fig. 5(a), we show the inversion of the spatial keys extracted from the last layer, i.e., φ(I) = KL(I). These features have been shown to encode high level information [4, 1]. Surprisingly, we observe that the original image can still be reconstructed from this representation.
+To discard appearance information encoded in the keys, we consider the self-similarity of the keys (see Sec. 3.2). This is demonstrated in the PCA visualization of the keys’ self-similarity in Fig. 5(b). As seen, the self-similarity mostly captures the structure of objects, as well as their distinct semantic components. For example, the legs and the
+
+140751
+
+(a) Keys inversion results (layer 11)
+
+(b) PCA of keys’ self-similarity (3 leading components, layer 11)
+Figure 5. DINO-ViT keys visualization. (a) Inverting keys from the deepest layer surprisingly reveals that the image can be reconstructed. (b) PCA visualization of the keys’ self-similarity: the leading components mostly capture semantic scene/objects parts, while discarding appearance information (e.g., zebra stripes).
+
+body of the polar bear that have the same texture, are distinctive.
+3.3. Splicing ViT Features
+Based on our understanding of DINO-ViT’s internal representation, we turn to the task of training our generator.
+Our objective function takes the following form:
+
+Lsplice = Lapp + αLstructure + βLid,
+
+(4)
+
+where α and β set the relative weights between the terms. The driving loss of our objective function is Lapp, and we set α = 0.1, β = 0.1 for all experiments.
+
+Appearance loss. The term Lapp. encourages the output image to match the appearance of It, and is deﬁned as the difference in [CLS] token between the generated and appear-
+ance image:
+
+Lapp = tL[CLS](It) − tL[CLS](Io) ,
+
+(5)
+
+2
+
+where tL[CLS](·) = tLcls is the [CLS] token extracted from the deepest layer (see Sec. 3.1).
+
+Structure loss. The term Lstructure encourages the output image to match the structure of Is, and is deﬁned by the difference in self-similarity of the keys extracted from the
+attention module at deepest transformer layer:
+
+Lstructure = SL(Is) − SL(Io) ,
+
+(6)
+
+F
+
+where SL(I) is deﬁned in Eq. (2).
+
+Identity Loss. The term Lid is used as a regularization. Speciﬁcally, when we feed It to the generator, this loss encourages Gθ to preserve the keys representation of It:
+
+Lid = KL(It) − KL(Gθ(It))
+
+(7)
+
+F
+
+Similar loss terms, deﬁned in RGB space, have been used as a regularization in training GAN-based generators for image-to-image translation [23, 29, 36]. Here, we apply the identity loss with respect to the keys in the deepest ViT layer, a semantic yet invertible representation of the input image (as discussed in section 3.2).
+
+Data augmentations and training. Since we only have a single input pair {Is, It}, we create additional training examples, {Isi, Iti}Ni=1, by applying augmentations such as crops and color jittering (see SM for implementation details). Gθ is now trained on multiple internal examples. Thus, it has to learn a good mapping function for a dataset containing N examples, rather than solving a test-time optimization problem for a single instance. Speciﬁcally, for each example, the objective is to generate Ioi = Gθ(Isi), that matches the structure of Isi and the appearance of Iti.
+4. Results
+Datasets. We tested our method on a variety of image pairs gathered from Animal Faces HQ (AFHQ) dataset [6], and images crawled from Flickr Mountain. In addition, we collected our own dataset, named Wild-Pairs, which includes a set of 25 high resolution image pairs taken from Pixabay, each pair depicts semantically related objects from different categories including animals, fruits, and other objects. The number of objects, pose and appearance may signiﬁcantly vary between the images in each pair. The image resolution ranges from 512px to 2000px.
+Sample pairs from our dataset along with our results can be seen in Fig. 1 and Fig. 6, and the full set of pairs and results is included in the SM. As can be seen, in all examples, our method successfully transfers the visual appearance in a semantically meaningful manner at several levels: (i) across objects: the target visual appearance of objects is being transferred to their semantically related objects in the source structure image, under signiﬁcant variations in pose, number of objects, and appearance between the input images. (ii) within objects: visual appearance is transferred between corresponding body parts or object elements. For example, in Fig. 6 top row, we can see the appearance of a single duck is semantically transferred to each of the 5 ducks in the source image, and that the appearance of each body part is mapped to its corresponding part in the output image. This can be consistently observed in all our results.
+The results demonstrate that our method is capable of performing semantic appearance transfer across diverse image pairs, unlike GAN-based methods which are restricted to the dataset they have been trained on.
+4.1. Comparisons to Prior Work
+There are no existing methods that are tailored for solving our task: semantic appearance transfer between two natural images (not restricted to a speciﬁc domain), without explicit user-guided inputs. We thus compare to prior works in which the problem setting is most similar to ours in some aspects (see discussion on these methods in Sec. 2): (i) Swapping Autoencoder (SA) [24] – a domain-speciﬁc, GAN-based method which has been trained to “swap” the texture and structure of two images in a realistic manner; (ii) STROTSS [15], a style transfer method that also uses self-similarity of a pre-trained CNN features as the content descriptor, (ii) WCT2 [35], a photorealistic NST method.
+
+150752
+
+Figure 6. Sample results on in-the-wild image pairs. For each example, shown left-to-right: the target appearance image, the source structure image and our result. The full set of results is included in the SM. Notice the variability in number of objects, pose, and the signiﬁcant appearance changes between the images in each pair.
+
+Since SA requires a dataset of images from two domains to train, we can only compare our results to their trained models on AHFQ and Flicker Mountain datasets. For the rest of the methods, we also later compare to image pairs from our Wild-Pairs examples. We evaluate our performance across a variety of image pairs both qualitatively, quantitatively and via an AMT user study.
+4.1.1 Qualitative comparison
+Figure 7 shows sample results for all methods. In all examples, our method correctly relates semantically matching regions between the input images, and successfully transfers the visual appearance between them. In the landscapes results, it can be seen that SA outputs high quality images but sometimes struggles to maintain high ﬁdelity to the structure and appearance image: elements for the appearance image are often missing e.g., the fog in the left most example, or the trees in the second from left example. These visual elements are captured well in our results. For AHFQ, we noticed that SA often outputs a result that is nearly identical to the structure image. A possible cause to such behavior might be the adversarial loss, which ensures that the swapping result is a realistic image according to the distribution of the training data. However, in some cases, this require-
+
+ment does not hold (e.g. a German Shepherd with leopard’s texture), and by outputting the structure image the adversarial loss can be trivially satisﬁed.
+NST methods such as STROTSS and WCT2 well preserve the structure of the source image, but their results often depict visual artifacts: STROTSS’s results often suffer from color bleeding artifacts, while WCT2 results in global color artifacts, demonstrating that transferring color is insufﬁcient for tackling our task.
+Our method demonstrates better ﬁdelity to the input structure and appearance images than GAN-based SA, while training only on the single input pair, without requiring a large collection of examples from each domain. With respect to style transfer, our method better transfers the appearance across semantically related regions in the input images, such as matching facial regions (e.g., eyes-to-eyes, nose-to-nose), while persevering the source structure.
+Finally, we also include a comparison to SinCUT [23], a recent GAN-based image translation method. As demonstrated in Fig. 8, SinCUT performs well for the landscape example, but since it can only utilize low-level visual information, it fails to transfer the appearance of the swan in the second example. Our method successfully transfers the appearance across semantically realted regions, and generates high quality results without adversarial loss.
+
+160753
+
+Input apperance
+Input structure
+SA
+STROTSS
+WCT2
+Splice (ours)
+Figure 7. Comparisons with style transfer and swapping autoencoder. First two rows: input appearance and structure images taken from the AFHQ and Flickr Mountains. The following rows, from top to bottom, show the results of: swapping autoencoder (SA) [24], STROTSS [15], and WCT2 [35]. See SM for additional comparisons.
+
+(a) Apperance
+
+(b) Structure
+
+(c) SinCUT
+
+(d) Splice (ours)
+
+Figure 8. Comparison to SinCUT [23]. SinCUT results (c),
+
+when trained on each input pair (a-b), demonstrate that it works
+
+well when transferring low-level information (top), but fails when
+
+higher level reasoning is required (bottom). (d) Our method suc-
+
+cessfully transfers the appearance across semantic regions, and
+
+generates high quality results w/o adversarial training.
+
+4.1.2 Quantitative comparison
+There is no existing automatic metric suitable for evaluating semantic appearance transfer across two natural images. We follow existing style/appearance transfer methods, which mostly rely on human perceptual evaluation (e.g., [12, 20, 13, 24]), and perform an extensive user study on Amazon Mechanical Turk (AMT).
+Human Perceptual Evaluation We design a user survey suitable for evaluating the task of appearance transfer across semantically related scenes. We adopt the Two-alternative Forced Choice (2AFC) protocol suggested in [24, 15]. Participants are shown with 2 reference images: the input structure image (A), shown in grayscale, and the input appearance image (B), along with 2 alternatives: our result and another baseline result. The participants are asked: “Which
+
+Apperance
+
+Structure
+
+Full objective
+
+Figure 9. Loss ablation. Our results when training without speciﬁc loss terms. When one of our loss terms is removed, the model fails to map the target appearance, preserve the input structure, or maintain ﬁne details. See Sec. 4.2 for more details.
+image best shows the shape/structure of image A combined with the appearance/style of image B?”.
+We perform the survey using a collection of 65 images in total, gathered from AFHQ, Mountains, and Wild-Pairs. We collected 7000 user judgments w.r.t. existing baselines. Table 4.2 reports the percentage of votes in our favor. As seen, our method outperforms all baselines across all collections, especially for Wild-Pairs, which highlights our superiority in challenging settings. Note that SA was trained on 500K mountain images, yet our method performs competitively.
+Semantic layout preservation. A key property of our method is the ability to preserve the semantic layout of the
+
+170754
+
+A
+
+B
+
+A-to-B
+
+B-to-A
+
+(a) A and B are semantically related, B is non-realistic
+(b) A and B are from different, unrelated object categories Figure 10. Semantic appearance transfer across different domains. (a) Objects in the input images (A-B) are semantically related, yet B is non-realistic. (b) Objects are from unrelated object categories. See Sec. 4.3 for discussion.
+scene (while signiﬁcantly changing the appearance of objects). We demonstrate this through the following evaluation. We run off-the-shelf semantic segmentation model (e.g., MaskRCNN [10]) to compute object masks for the input structure images and our results. Table 2 reports IoU for our method and the baselines. Our method better preserves the scene layout than SA and STROTSS, and is the closet competitor to WCT2 which only modiﬁes colors, and as expected, achieves the highest IoU.
+4.2. Ablation
+We ablate the different loss terms in our objective by qualitatively comparing the results for our method when trained with our full objective (Eq. 4), and with a speciﬁc loss removed. The results are shown in Fig. 9. As can be seen, without the appearance loss (w/o Lapp), the model fails to map the target appearance, but only slightly modiﬁes the colors of the input structure image due to the identity loss. That is, the identity loss encourages the model to learn an identity when it is fed with the target appearance image, and therefore even without the appearance loss some appearance supervision is available. Without the structure loss (w/o Lstructure), the model outputs an image with the desired appearance, but fails to fully preserve the structure of the input image, as can be seen by the distorted shape of the pears. Lastly, we observe that the identity loss encourages the model to pay more attention to ﬁne details both in terms of appearance and structure, e.g., the ﬁne texture details of the avocado are reﬁned.
+4.3. Limitations
+Our performance depends on the internal representation learned by DINO-ViT. Therefore, in cases where the representation does not capture well the semantic association across objects in both images, our method would fail to ac-
+
+SA
+
+STROTSS WCT2
+
+Wild-Pairs
+
+-
+
+79.0 ± 13.0 83.1 ± 14.9
+
+mountains 56.3 ± 10.0 58.8 ± 14.2 60.3 ± 12.1
+
+AFHQ 71.8 ± 7.7 59.7 ± 15.3 61.0 ± 18.3
+
+Table 1. AMT perceptual evaluation. We report results on AMT
+
+surveys evaluating the task of appearance transfer across semanti-
+
+cally related objects (see Sec. 4.1.2). For each dataset and a base-
+
+line, we report the percentage of judgments in our favor (mean,
+
+std). Our method outperforms all baselines: GAN-based, SA [24], and style transfer methods, STROTSS [15], and WCT2 [35].
+
+SA STROTSS WCT2 Splice (Ours)
+
+Wild-Pairs
+
+-
+
+0.83±0.11 0.89±0.06 0.88±0.06
+
+mountains 0.91±0.07 0.94±0.12 0.96±0.82 0.95±0.10
+
+Table 2. Layout preservation evaluation.. We compute semantic
+
+segmentation maps (using Mask-RCNN [10]) for the input struc-
+
+ture images and their corresponding output images, for the Wild-
+
+Pairs and mountains collections. Mean IoU is reported.
+
+complish that too. Figure 10 shows a few such cases: (a) objects are semantically related but one image is highly nonrealistic (and thus out of distribution for DINO-ViT). For some regions, our method successfully transfers the appearance but for some others it fails. In the cat example, we can see that in B-to-A result, the face and the body of the cat are nicely mapped, yet our method fails to ﬁnd a semantic correspondence for the rings, and we get a wrong mapping of the ear from image A. In (b), our method does not manage to semantically relate a bird to an airplane.
+
+5. Conclusions
+We tackled a new problem setting in the context of style/appearance transfer: semantically transferring appearance across related objects in two in-the-wild natural images, without any user guidance. Our approach demonstrates the power of DINO-ViT as an external semantic prior, and the effectiveness of utilizing it to establish our training losses – we show how structure and appearance information can be disentangled from an input image, and then spliced together in a semantically meaningful way in the space of ViT features, through a generation process. We demonstrated that our method can be applied on a variety of challenging input pairs across domains, in diverse poses and multiplicity of objects, and can produce high-quality results without adversarial training. Our work unveils the potential of self-supervised representation learning not only for discriminative tasks such as image classiﬁcation, but also for learning more powerful generative models.
+
+Acknowledgments: We thank Meirav Galun and Shir Amir for their insightful comments and discussion. We thank Oliver Wang and Taesung Park for their help with the comparison to SA. This project received funding from the Israeli Science Foundation (grant 2303/20), and the Carolito Stiftung. Dr. Bagon is a Robin Chemers Neustein AI Fellow.
+
+180755
+
+References
+[1] Shir Amir, Yossi Gandelsman, Shai Bagon, and Tali Dekel. Deep vit features as dense visual descriptors. arXiv preprint arXiv:2112.05814, 2021. 2, 3, 4
+[2] Frank Beech. Splicing ropes illustrated. CCCBR, 2005. 1
+[3] Saguy Benaim, Ron Mokady, Amit Bermano, and Lior Wolf. Structural analogy from a single image pair. Comput. Graph. Forum, 2021. 2
+[4] Mathilde Caron, Hugo Touvron, Ishan Misra, Herve Jegou, Julien Mairal, Piotr Bojanowski, and Armand Joulin. Emerging properties in self-supervised vision transformers. ICCV, 2021. 2, 3, 4
+[5] Alex J. Champandard. Semantic style transfer and turning two-bit doodles into ﬁne artworks. arXiv, 2016. 2
+[6] Yunjey Choi, Youngjung Uh, Jaejun Yoo, and Jung-Woo Ha. Stargan v2: Diverse image synthesis for multiple domains. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), 2020. 5
+[7] Tomer Cohen and Lior Wolf. Bidirectional one-shot unsupervised domain mapping. In Proceedings of the IEEE/CVF International Conference on Computer Vision, 2019. 2
+[8] Alexey Dosovitskiy, Lucas Beyer, Alexander Kolesnikov, Dirk Weissenborn, Xiaohua Zhai, Thomas Unterthiner, Mostafa Dehghani, Matthias Minderer, Georg Heigold, Sylvain Gelly, Jakob Uszkoreit, and Neil Houlsby. An image is worth 16x16 words: Transformers for image recognition at scale. ICLR, 2021. 2, 3
+[9] Leon A. Gatys, Alexander S. Ecker, Matthias Bethge, Aaron Hertzmann, and Eli Shechtman. Controlling perceptual factors in neural style transfer. In IEEE Conf. Comput. Vis. Pattern Recog., 2017. 2
+[10] Kaiming He, Georgia Gkioxari, Piotr Dolla´r, and Ross Girshick. Mask r-cnn. In Proceedings of the IEEE international conference on computer vision, 2017. 8
+[11] Phillip Isola, Jun-Yan Zhu, Tinghui Zhou, and Alexei A. Efros. Image-to-image translation with conditional adversarial networks. In 2017 IEEE Conference on Computer Vision and Pattern Recognition (CVPR), 2017. 2
+[12] Yongcheng Jing, Yezhou Yang, Zunlei Feng, Jingwen Ye, Yizhou Yu, and Mingli Song. Neural style transfer: A review. IEEE Trans. Vis. Comput. Graph., 2020. 2, 7
+[13] Sunnie SY Kim, Nicholas Kolkin, Jason Salavon, and Gregory Shakhnarovich. Deformable style transfer. In Eur. Conf. Comput. Vis., 2020. 2, 7
+[14] Taeksoo Kim, Moonsu Cha, Hyunsoo Kim, Jung Kwon Lee, and Jiwon Kim. Learning to discover cross-domain relations with generative adversarial networks. In International Conference on Machine Learning. PMLR, 2017. 2
+[15] Nicholas Kolkin, Jason Salavon, and Gregory Shakhnarovich. Style transfer by relaxed optimal transport and self-similarity. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2019. 2, 4, 5, 7, 8
+[16] Chuan Li and Michael Wand. Combining markov random ﬁelds and convolutional neural networks for image synthesis. In IEEE Conf. Comput. Vis. Pattern Recog., 2016. 2
+[17] Jianxin Lin, Yingxue Pang, Yingce Xia, Zhibo Chen, and Jiebo Luo. Tuigan: Learning versatile image-to-image translation with two unpaired images. In European Conference on Computer Vision. Springer, 2020. 2
+
+[18] Ming-Yu Liu, Thomas Breuel, and Jan Kautz. Unsupervised image-to-image translation networks. In Proceedings of the 31st International Conference on Neural Information Processing Systems, NIPS’17. Curran Associates Inc., 2017. 2
+[19] Aravindh Mahendran and Andrea Vedaldi. Understanding deep image representations by inverting them, 2014. 4
+[20] Roey Mechrez, Itamar Talmi, and Lihi Zelnik-Manor. The contextual loss for image transformation with non-aligned data. In Eur. Conf. Comput. Vis., 2018. 2, 7
+[21] Muzammal Naseer, Kanchana Ranasinghe, Salman Khan, Munawar Hayat, Fahad Shahbaz Khan, and Ming-Hsuan Yang. Intriguing properties of vision transformers, 2021. 2
+[22] Chris Olah, Alexander Mordvintsev, and Ludwig Schubert. Feature visualization. Distill, 2017. 4
+[23] Taesung Park, Alexei A Efros, Richard Zhang, and JunYan Zhu. Contrastive learning for unpaired image-to-image translation. In European Conference on Computer Vision. Springer, 2020. 2, 5, 6, 7
+[24] Taesung Park, Jun-Yan Zhu, Oliver Wang, Jingwan Lu, Eli Shechtman, Alexei A Efros, and Richard Zhang. Swapping autoencoder for deep image manipulation. arXiv preprint arXiv:2007.00653, 2020. 2, 5, 7, 8
+[25] Eli Shechtman and Michal Irani. Matching local selfsimilarities across images and videos. In CVPR, 2007. 3
+[26] Yi-Chang Shih, Sylvain Paris, Connelly Barnes, William T. Freeman, and Fre´do Durand. Style transfer for headshot portraits. ACM Trans. Graph., 2014. 2
+[27] Yi-Chang Shih, Sylvain Paris, Fre´do Durand, and William T. Freeman. Data-driven hallucination of different times of day from a single outdoor photo. ACM Trans. Graph., 2013. 2
+[28] Karen Simonyan, Andrea Vedaldi, and Andrew Zisserman. Deep inside convolutional networks: Visualising image classiﬁcation models and saliency maps. In In Workshop at International Conference on Learning Representations, 2014. 4
+[29] Yaniv Taigman, Adam Polyak, and Lior Wolf. Unsupervised cross-domain image generation. In 5th International Conference on Learning Representations, ICLR 2017, Toulon, France, April 24-26, 2017, Conference Track Proceedings. OpenReview.net, 2017. 5
+[30] Dmitry Ulyanov, Andrea Vedaldi, and Victor Lempitsky. Deep image prior. arXiv:1711.10925, 2017. 4
+[31] Li Wang, Nan Xiang, Xiaosong Yang, and Jianjun Zhang. Fast photographic style transfer based on convolutional neural networks. In Proceedings of Computer Graphics International 2018, CGI 2018, New York, NY, USA, 2018. Association for Computing Machinery. 2
+[32] Pierre Wilmot, Eric Risser, and Connelly Barnes. Stable and controllable neural texture synthesis and style transfer using histogram losses. ArXiv, 2017. 2
+[33] Zhongyou Xu, Tingting Wang, Faming Fang, Yun Sheng, and Guixu Zhang. Stylization-based architecture for fast deep exemplar colorization. In IEEE Conf. Comput. Vis. Pattern Recog., 2020. 2
+[34] Zili Yi, Hao Zhang, Ping Tan, and Minglun Gong. Dualgan: Unsupervised dual learning for image-to-image translation. In 2017 IEEE International Conference on Computer Vision (ICCV), 2017. 2
+[35] Jaejun Yoo, Youngjung Uh, Sanghyuk Chun, Byeongkyu Kang, and Jung-Woo Ha. Photorealistic style transfer via
+
+190756
+
+wavelet transforms. In Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV), October 2019. 2, 5, 7, 8 [36] Jun-Yan Zhu, Taesung Park, Phillip Isola, and Alexei A. Efros. Unpaired image-to-image translation using cycleconsistent adversarial networks. In 2017 IEEE International Conference on Computer Vision (ICCV), 2017. 2, 5
+1100757
+

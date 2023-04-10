@@ -1,0 +1,3 @@
+- 使用傅立叶变化（Fourier feature mapping）使MLP可以更好地从低维信号中学习到图像中所隐藏的高频信息![[Pasted image 20230309182155.png]]
+- NTK（neural tangent kernel）![[Pasted image 20230309184139.png]]
+	- 用于kernel regression，目的是使数据集中的一个点（一个样本）x可以被表示成多个training label的加权和，K_ij反映xi和xj两个样本的相似程度![[Pasted image 20230309184202.png]]

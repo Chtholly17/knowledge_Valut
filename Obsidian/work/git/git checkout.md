@@ -1,0 +1,2 @@
+- git checkout + 某次commit记录的hash值（使用git log查看，输入前几位即可），可以将HEAD分离到当前commit的节点上（HEAD默认在该分支最新的节点上）
+- 可以使用相对移动，HEAD^或HEAD~n

@@ -1,0 +1,786 @@
+Article PDF Available
+On between-coefficient contrast masking of DCT basis functions
+
+    January 2007
+
+Authors:
+Nikolay Nikolaevych Ponomarenko at KhAI - Aerospace university
+Nikolay Nikolaevych Ponomarenko
+
+    KhAI - Aerospace university 
+
+Flavia Silvestri
+Flavia Silvestri
+Karen Egiazarian at Tampere University
+Karen Egiazarian
+
+    Tampere University 
+
+Marco Carli at Università Degli Studi Roma Tre
+Marco Carli
+
+    Università Degli Studi Roma Tre 
+
+Show all 6 authors
+Download full-text PDF Read full-text
+Download citation
+Copy link Link copied
+Citations (324)
+References (9)
+Figures (6)
+Abstract and Figures
+In this paper we propose a simple and effective model of visual between-coefficient contrast masking of DCT basis functions based on a human visual system (HVS). The model operates with the values of DCT coefficients of 8x8 pixel block of an image. For each DCT coefficient of the block the model allows to calculate its maximal distortion that is not visible due to the between-coefficient masking. A modification of the PSNR is also described in this paper. The proposed metric, PSNR-HVS-M, takes into account the proposed model and the contrast sensitivity function (CSF). For efficiency analysis of the proposed model, a set of 18 test images with different effects of noise masking has been used. During experiments, 155 observers have sorted this set of test images in the order of their visual appearance comparing them to undistorted original. The new metric, PSNRHVS- M has outperformed other well-known reference based quality metrics and demonstrated high correlation with the results of subjective experiments (Spearman correlation is 0.984, Kendall correlation is 0.948).
+Block D of an image contains an edge
+Block D of an image contains an edge
+… 
+Flow-chart of PSNR-HVS-M calculation
+Flow-chart of PSNR-HVS-M calculation
+… 
+Original test image
+Original test image
+… 
+. Cross correlation factors:
+. Cross correlation factors:
+… 
+Image Baboon (a) and the image with masked noise (b), PSNR=26.18 dB, PSNR-HVS=34.43 dB, PSNR-HVS-M=51.67 dB (both images are available from [8])
++1
+Image Baboon (a) and the image with masked noise (b), PSNR=26.18 dB, PSNR-HVS=34.43 dB, PSNR-HVS-M=51.67 dB (both images are available from [8])
+… 
+Figures - uploaded by Vladimir Vasilyevich Lukin
+Author content
+Content may be subject to copyright.
+ResearchGate Logo
+
+Discover the world's research
+
+    20+ million members
+    135+ million publication pages
+    2.3+ billion citations
+
+Join for free
+Public Full-text 1
+Content uploaded by Vladimir Vasilyevich Lukin
+Author content
+All content in this area was uploaded by Vladimir Vasilyevich Lukin
+Content may be subject to copyright.
+ON BETWEEN-COEF FICIENT CO NTRAST MASKING OF DCT BASIS FUNCTIONS
+Nikolay Ponomarenko (*), Flavia Silvest ri(**), Karen Egiazarian (***),
+Marco Carli (**), Jaakko Astola (***) and Vladimir Lu kin (*)
+(*) National Aerospace University, Kharkov , Ukraine
+(**) Univer sity of Rome "Roma TRE", Rom e, Italy
+(***) Tampere University of Techn ology, Tampere, Finland
+ABSTRACT
+In this paper we pr opose a simple and effective model
+of visual betwe en-coef ficie nt cont rast m as king of D CT
+basis func tions bas ed on a hum an vis ual sy stem (HVS).
+The model operates with the values of DCT coefficien ts
+of 8x8 pixel block of an image. For each DCT coefficient
+of the block the model allows to calculate its maximal
+distort ion that is not vi sible due to th e betwe en-coe ffici ent
+maski ng. A modi fic ation of th e PSNR i s also descri bed in
+this paper . The propos ed met ric, PSNR -HVS-M , takes
+into ac count the pr oposed m odel and t he con trast
+sensitivity function (CSF). For ef ficiency analysis of the
+proposed model, a set of 18 test images with different
+effects of noise masking has been used . During
+experiments, 155 observer s have sorted this set of test
+images in the order of their visual appearance comparing
+them to undistorted original. The n ew metric, PSNR-
+HVS-M has outperfor med other well-known reference
+based qua lity met rics and dem onstr ated hi gh corr elat ion
+with the results of sub jective experiments (Spearman
+correlation is 0.984 , Kendall correlation is 0.948).
+1. INTRODU CTION
+In the last decad es, the scientific community m ade a great
+effort to de velop im age and video qua lit y asse ssm ent
+methods incorpor ating perceptual measures. Many of the
+quality metrics proposed were bas ed on prop erties of
+HVS, such as CSF and luminance masking [1, 2]. Some
+of subjective q uality models are focused on subband
+decomposition separating the visual stimulus into
+different spatial and temporal bands. In itially the Discrete
+Cosine Tr ansform (DCT ) has of ten bee n util ized in
+contrast masking due to its suitability for certain
+applications and accu racy in modeling the cortical
+neurons [3] . In the DCT domain there are different
+approach es to m odel t he con trast sensi tivi ty m aski ng in
+order to compute a visually optimal quantization matrix
+for a g iven image [4]. Although in literature the mutual
+interrelation between DCT coefficients has been analyzed
+[5], it does not always match with subjective quality
+assess me nt . In this paper, we propose an efficient and
+simp le m odel that do es not requir e any addit ional data
+except an image itself.
+Secti on 2 conta ins des cript ion of the pr oposed m odel .
+In Sect ion 3 i t is shown how this m odel can be t aken into
+the derivation of PSNR. The used set of test im ages and
+noise parameters are describ ed in Section 4. Section 5
+descri bes the experi men t inte nded on v erific ati on of t he
+proposed m ode l effi cienc y. Exp erim enta l re sults and data
+analysis are given in Section 6.
+2. DESCRIPTION OF PROPOSED MODEL
+As stated in [5], each DCT coefficient X
+ij
+of an image
+block in some degree masks any oth er block coefficients,
+except DC coeff icient with the index 0,0 that corresp onds
+to the bl ock m ean lum ina nce. In our m odel, we re ly on
+assumption that masking degree of each coeff icient X
+ij
+depends upo n its square value (po wer) and human eye
+sensitivity to this DCT basis f unction determined by
+means of CSF. Several basis fu nctions can join tly mask
+one or fe w other b asis fu ncti ons. Then, t heir m as king
+effect value depends upon a sum of their weighted
+powers.
+Let us denote a weighted energ y of DCT coefficients
+of an im age bl ock 8x8 as E
+w
+(X):
+∑∑
+==
+=
+7
+0 i
+7
+0 j
+ij
+2
+ij w
+C X ) X ( E
+, ( 1 )
+where X
+ij
+is a DCT coefficient w ith indices i,j, C
+ij
+is a
+correcting factor determined by the CSF.
+The DCT coefficients X and Y are visually
+undisti nguish ed if E
+w
+(X-Y) < max(E
+w
+(X)/16, E
+w
+(Y)/16) ,
+where E
+w
+(X)/16 is a masking ef fect E
+m
+of DCT
+coefficients X (nor malizing factor 16 has been selected
+experimentally).
+Fig.1. Block D of an image contains an edge
+The value of masking effect (1 ) can be too high if an
+imag e block be longs t o an edge (see Fi g. 1). In such a
+case we pr opose to re duce a m aski ng effect for a block
+D
+proporti onall y to the lo cal va rianc es V(.) i n bloc ks D1,
+D2, D3, D4 in c ompar ison t o the en tire bl ock:
+E
+m
+(D) = E
+w
+(D) δ (D)/16, (2)
+where δ (D) = (V(D 1)+V(D2)+V( D3)+V(D4))/ 4V(D),
+V(D) is t he vari ance of t he pi xel val ues in bl ock D.
+Table 1 presents the calculated valu es of C
+ij
+. While
+obtaini ng them , we have use d the quan tiza tion t able f or
+the color component Y o f JPEG [6] that has been also
+obtaine d on the bas is of CSF. Note t hat t he val ues in
+quantization table JPEG have been no rmalized and then
+squared.
+Table 1. Values of C
+ij
+i\j 0 1 2 3 4 5 6 7
+0 0 0.8264 1.0000 0.3906 0.1736 0.0625 0.0384 0.0269
+1 0.6944 0.6944 0.5102 0.2770 0.1479 0.0297 0.0278 0.0331
+2 0.5102 0.5917 0.3906 0.1736 0.0625 0.0308 0.0210 0.0319
+3 0.5102 0.3460 0.2066 0.1189 0.0384 0.0132 0.0156 0.0260
+4 0.3086 0.2066 0.0730 0.0319 0.0216 0.0084 0.0094 0.0169
+5 0.1736 0.0816 0.0331 0.0244 0.0152 0.0092 0.0078 0.0118
+6 0.0416 0.0244 0.0164 0.0132 0.0094 0.0068 0.0069 0.0098
+7 0.0193 0.0118 0.0111 0.0104 0.0080 0.0100 0.0094 0.0102
+Using this p roposed model, it is poss ible to evaluate a
+masking effect for each image block. In the nex t Section
+we show how this c an be use d for ass essm ent of ima ge
+visual qua lity .
+3. MODIFIC ATION OF PSNR US ING A NEW
+MASKING MO DEL
+A basis of the p roposed met ric i s a P SNR-HVS [7]. The
+modified metric, PSNR-HVS-M that takes into account
+the propo sed masking model can be calculated for each
+imag e block as i t is shown in Fi g. 2. Here MSE
+H
+is the
+MSE taking into account CSF [7].
+B l oc k 8 x 8
+o f origin a l
+image
+B l oc k 8 x 8
+of di st ort e d
+image
+DCT of
+d if fer e nce
+be t we e n
+pi x el
+va l ue s
+Redu ction
+by va lue o f
+contr ast
+mas k ing
+MS E
+H
+calcu la tio n
+of the bl oc k
+Fig. 2. Flow-chart of PSNR-HVS-M calculation
+Reduction by value o f contrast masking in acco rdance to
+the propos ed m odel i s ca rried out in th e foll owing
+manne r. First , the maximal mas kin g ef fect E
+max
+is
+calculated as
+max (E
+m
+(X
+e
+), E
+m
+(X
+d
+)) where X
+e
+and X
+d
+are
+the DCT coefficients of a original image block and a
+distorted image block, respectively. Then , the visible
+differe nce bet ween X
+e
+and X
+d
+is determined as
+X
+∆ ij
+=
+⎪
+⎪
+⎩
+⎪
+⎪
+⎨
+⎧
++ −
+> − − −
+≤ −
+= = −
+otherwise , C / E X X
+C / E X X , C / E X X
+C / E X X , 0
+0 j , 0 i , X X
+ij norm dij eij
+ij norm dij eij ij norm dij eij
+ij norm dij eij
+dij eij
+, (3)
+where E
+norm
+is 64 / E
+max
+. The Matlab source of the
+proposed PS NR-HVS-M is av aila ble from [8] . Sim il arly
+to [7], PSNR- HVS-M can be calculated in bo th non-
+overlapping and overlap ping blocks (in exper imental part
+we used the former one).
+4. TEST IMAGE SET
+In our experiments we hav e used a set of test images that
+contains 19 images av ailable from [8]. Original image
+synthe sized by us is sh own on Fig. 3.
+Table 2 gives an inf ormation on the test image set. We
+have considered add itive i.i.d. Gaussian noise (G) and
+spatially correlated additive Gaussian noise (SC) with
+three different intensities. Besides, we have considered
+three different cases of n oise spatial location:
+1) Uniformly through ent ire image (without masking) (U);
+2) Mostl y i n regio ns posse ssing a high ma sking effect
+(H);
+3) Mostly in regions po ssessing a low masking effect (L).
+This Table also contains the values for all analyzed and
+compared metrics and the result (averaged p ositions of
+each test image in the ordered test set) of subjective
+experiments RSE (s ee Section 5). DT denotes r esults for
+DCTune 2. 0 softwa re [11] t hat r ealiz es m et rics pr oposed
+in [5].
+8
+8
+D
+D1 D2
+D3 D4
+Fig 3. Original test image
+Table 2. Obtained characteristics for different metri cs
+№
+Noise
+Pre-
+sence
+PSNR
+PSNR
+-HVS
+[7]
+UQI
+[9]
+MSSIM
+[10]
+DT
+[5]
+[11]
+PSNR
+HVS-
+M
+RSE
+1 G U 28.60 28.23 0.73 0.80 24.9
+33.20
+3.6
+2 G H 28.60 27.51 0.78 0.91 13.7
+35.47
+1.6
+3 G L 28.60 28.55 0.71 0.76 37.2
+30.64
+6.7
+4 SC U 28.58 23.86 0.73 0.82 36.2
+26.68
+12.7
+5 SC H 28.58 26.46 0.78 0.93 17.1
+32.49
+5.3
+6 SC L 28.59 23.79 0.71 0.79 43.5
+25.27
+13
+7 G U 27.55 27.19 0.72 0.78 29.7
+32.07
+5.6
+8 G H 27.55 26.63 0.75 0.85 19.0
+33.65
+2.8
+9 G L 27.51 27.46 0.71 0.74 41.2
+29.56
+8.4
+10 SC U 27.52 22.81 0.72 0.80 42.5
+25.50
+14.7
+11 SC H 27.54 24.73 0.75 0.87 24.5
+29.31
+10.3
+12 SC L 27.56 22.82 0.71 0.77 47.2
+24.39
+14.9
+13 G U 26.06 25.71 0.70 0.75 34.6
+30.40
+8.0
+14 G H 26.02 25.26 0.72 0.79 27.2
+31.29
+5.4
+15 G L 26.04 25.96 0.69 0.72 48.5
+28.06
+10.0
+16 SC U 26.05 21.34 0.71 0.77 49.0
+23.85
+16.3
+17 SC H 26.01 22.56 0.72 0.81 35.0
+26.09
+14.5
+18 SC L 26.01 21.29 0.69 0.75 54.1
+22.91
+17.1
+5. SUBJECTIV E EXPERIMEN TS
+In carrying out sub jective experiments, 155 observer s (45
+from Finl and, 43 from It aly, 67 from Ukraine ) have
+participated. In each experiment, an o bserver has to
+choose fro m a pair of distorted images one which is
+“closer” to the sample (undistor ted) image. In this way,
+each observer f ormed a sorted sequence o f distorted
+images in the order of increased visual appearance.
+Totall y, 8192 com pari sons of vi sual appear ance of test
+images have been perf ormed (on average 53, fo r each
+observer).
+A monitor brigh tness, illumination and distance fro m
+an observ er’s eyes to the monitor v aried in wide limits.
+The only fixed param ete r in ou r exper im ents wa s the
+monit or resolut ion, 1152x86 4 pixels . There wer e 128
+experiments carried o ut using CRT monitor s, and 27
+experiments using LCD monitors.
+By analyzing the obtained sequences for all obs ervers,
+averaged orders (or dered sequences) of distorted test
+images have been obtained. It is important that the cross
+correlation factors f or differen t groups o f observers w ere
+very hi gh (see da ta in Table 3 ).
+Table 3. Cross correlation factors:
+Group of observers
+Spearma n
+correlation
+Kendall
+correlation
+Finland – Italy 0.996 0.895
+Finland – Ukraine 0.996 0.935
+Italy - Ukraine 0.997 0.961
+CRT - LCD 0.998 0.922
+These data evidence in fav or of high confidence of
+experimental results and applicability of conclu sions to
+both CRT and LCD monitors.
+6. EXPER IMENTAL RESULTS
+The result of subjective exper iments consists in getting
+the ordered set of distorted test images. For analysis of
+adequac y of the conside red m etri cs we ha ve use d
+Spearman and Kendall cor relations that can be exploited
+for determination of co rrelation between sor ted data.
+Kendall correlation usually produces more “careful”
+results than Spearman cor relation (it appro aches to unity
+more slowly). Table 4 presents the cor relation data for the
+considered metrics with data of subjective exp eriments.
+Table 4. Correlations for the considered m etrics
+Measure
+Spearman
+correlation
+Kendall
+correlation
+PSNR 0.537 0.359
+PSNR-HVS [7] 0.895 0.712
+UQI [9] 0.550 0.438
+MSSIM [10] 0.406 0.358
+DCTune [5, 11] 0.829 0.712
+PSNR-HVS-M 0.984 0.948
+The data presented in Table 4 allow concluding the
+following. First, th e popular metrics UQI and MSSIM as
+well a s the s tanda rd PSNR do not rela te to hum an
+perception well. The metrics PSNR-HVS and D CTune
+suit visual perception consid erably bet ter although cross-
+correlation is not too high (Kendall correlation is equal to
+0.712). Finally, the pr oposed PSNR-H VS-M outperfor ms
+all other considered metrics and demonstrates an
+appropriate corres pondence to human percep tion.
+a)
+b)
+Fig 4. Image Baboon (a) and the image with masked noise (b ), PSNR=26.18 dB, PSNR-HVS=34. 43 dB, PSNR-HVS-M=51.67 dB (both
+images are available from [8])
+An example of a disto rtion masking in image Baboon in
+accordance with the pr oposed model is given in Fig. 4 .
+7. CONCLUSION S
+In this paper, a simple model of between-coefficient
+maski ng of DC T basi s func tions i s prop osed a nd the
+modifications of PS NR that take into acco unt this model
+are put for ward. The n ew measure PSNR-HVS-M has
+shown its higher efficiency (adeq uacy) in comparison to
+known me trics .
+One more advant age of the new m etri c is tha t it is
+expresse d in dB. T herefore , for peopl e who ar e got used
+to exploit and analyze standard PSNR, the ne w metric
+could be convenie nt and understa ndabl e.
+ACKNOWLED GEMENT S
+The aut hors woul d like to th ank Dr. G. Boato for r unning
+subjective experiments at the University of Tr ento, Italy.
+REFER ENCES
+[1] A.B. Watson and J.A. Solom on, “Model of visual contrast
+gain control and pattern masking”, J. Opt. Soc. Am. A , 14(9), pp.
+2379–2391, 1997.
+[2] Foley, J.M. “Human Luminance Pattern-Vision Mechanisms-
+Masking Experiments Require a New Model”, Journal of the
+Optical Society of A merica a-Optics Image Science and Vision ,
+11 (6), 1710-1719, 1994.
+[3] W. Zhou, R.S. Hami d, and A.C. Bovik. The handbook of
+video databases: Design and Applications , CRC Press, 2003.
+[4] A. B. Watson, “Perceptual optimization of DCT colour
+quantization matrices”, Image Processing ICIP-94 , 1, pp. 100–
+104, 1994.
+[5] Solomon J. A., Watson A. B., and Ah umada A. “Visibility of
+DCT basis functions: Effects of contrast masking”, Proceedings
+of Data Compression Co nference , Snowbir d, Uta h: IEEE
+Computer Society Press, 361-370, 1994.
+[6] G. Wallace, The JPEG Still Pictur e Compression Standar d ,
+Comm. of the ACM, vol. 34, No.4, 1991.
+[7] K. Egiazarian, J. Astola, N. Ponomarenko, V. Lukin, F.
+Battisti, M. Carli, New full-reference quality metrics based on
+HVS, CD-ROM Proceedings of the Second Internation al
+Workshop on Video Processing and Quality Metrics , Scotts dale,
+USA, 2006, 4 p.
+[8] www.cs.tut.fi/~ponom/psnrhvsm.htm
+, PSNR-HVS-M page.
+[9] Z. Wang, A. Bovik, A uni versal image quality index, IEEE
+Signal Processing Letters , vol. 9, pp. 81–84, March, 2002.
+[10] Z. Wang, A. Bovik, H. Sh eikh, E. Simo ncelli, Image quality
+assessment: from error visibility to structural similarity, IEEE
+Transactions on Image Processing , vol. 13, is sue 4, pp. 600-612,
+April, 2004.
+[11] http://vision.arc.nasa.gov/dctune/
+DCTune 2.0 page.
+Citations (324)
+References (9)
+... At the same time, there are quite many elementary visual image quality metrics that perform well enough for such an application as lossy compression and similar types of distortions [12]. For example, the metric PSNR-HVS-M [13] takes into account different sensitivity of HVS to distortions in high and low spatial frequencies as well as masking effect. Its values are smaller (that corresponds to worse quality) if distortions are spatially correlated (compared to spatially uncorrelated distortions). ...
+... Such distortions relate to PSNR about 35 dB and larger [10]. Since PSNR is not the best metric to characterize visual quality of compressed images, let us also use the aforementioned metric PSNR-HVS-M [13] the properties of which have been thoroughly analyzed in [10]. This metric is, similarly to PSNR, expressed in dB. ...
+Analysis of Statistical and Spatial Spectral Characteristics of Distortions in Lossy Image Compression
+Conference Paper
+
+    Feb 2023 
+
+    Vladimir Vasilyevich Lukin Vladimir Vasilyevich Lukin
+    Sergey Abramov Sergey Abramov
+    Victoriya V Abramova Victoriya V Abramova
+    Ekaterina Bataeva Ekaterina Bataeva 
+
+Image lossy compression is currently widely employed in different fields. Compared to lossless compression, it allows providing a considerably larger compression ratio but distortions are introduced inevitably. Properties of these distortions depend on a used coder, an image subject to compression, and compression parameters. Distortions affect visual perception of compressed images and efficiency of their further processing. Thus, statistical and spatial spectral properties of introduced distortions have to be understood well to explain effects observed in compressed image processing and, possibly, enabling their simulation. In this paper, we describe the tools that can be used in analysis of distortion properties and give an example of such analysis for grayscale images compressed by AGU coder. It is shown that distortions, in general, have spatially variant statistics where they are more intensive in locally active areas. Besides, distortions are spatially uncorrelated for all considered quantization steps and, respectively, compression ratios. Experiments are carried out using four typical remote sensing images.
+View
+Show abstract
+... In [10] authors proposed a full reference image quality assessment approach, known as Center-Emphasized Quality Index (CEQI), using visual saliency and contrast. Objective measures Peak Signal to Noise Ratio -Human Visual System (PSNR-HVS) [11] and PSNR-HVS-Modified (PSNR-HVS-M) [12] are subband models that take into account the human visual system contrast sensitivity function. Additionally, PSNR-HVS-M takes into account the between-coefficient contrast masking of the discrete cosine transform basis functions. ...
+... Comparative LCC and SROCC values for the complete dataset and subset of images distorted with Gaussian blurring, between the proposed measure and 19 other measures [6][7][8][9][10][11] [12] [19][20][21][22][23][24][25][26][27][28][29] are presented in Table IV. Only the subset with Gaussian blurring degradation is used because CQM showed the best performance with this distortion. ...
+Contrast Quality Measure: Full-Reference Image Quality Assessment Metric for Infrared Images
+Conference Paper
+
+    Oct 2022 
+
+    Nenad Stojanovic Nenad Stojanovic
+    Boban Bondzulic Boban Bondzulic
+    Boban Pavlović Boban Pavlović
+    Vladimir Ristić 
+
+The paper proposes an objective image quality assessment measure with full referencing. The measure is based on a comparison of the contrast of the original image and the image with the degradation. Discrete cosine transform coefficients are used for contrast estimation. By applying the measure, a scalar value is obtained that reflects the quality of the test (degraded) image. The proposed measure is tested on an infrared image dataset developed by the Military Academy in Belgrade, Serbia. The performance of the measure was compared with other well-known objective full-reference image quality assessment metrics, which were developed for the images in visible domain. It was shown that measure performance can be improved with the adequate selections of the block dimensions and the number of discrete cosine transform coefficients during the calculation of image quality value. The proposed measure obtained a correlation with the subjective scores near 82%, which puts the measure into the top three of all tested image quality assessment measures. The proposed measure showed the best performance on the images distorted by Gaussian blurring, where the level of agreement with the subjective scores is over 97%, according to which the measure stands out as the best compared to other tested measures.
+View
+Show abstract
+... OOP is such a parameter of a coder that provides minimal difference in some quality metric between the compressed and noise-free image. In our study, we analyze the visual quality metrics PSNR-HVS-M [12] and MS-SSIM [13]. ...
+... PSNR-HVS-M is defined as (2) where MSE-HVS-M is determined in 8x8 blocks in DCT domain taking into account the masking effect and less sensitivity of a human eye to distortions in high spatial frequencies than distortions in low spatial frequencies. Note that PSNR-HVS-M is expressed in dB with larger values relating to better quality [12] . ...
+Analysis of color image compression by BPG coder
+Conference Paper
+
+    Oct 2022 
+
+    Богдан Витальевич Коваленко Богдан Витальевич Коваленко
+    Vladimir Vasilyevich Lukin Vladimir Vasilyevich Lukin 
+
+Lossy image compression is a popular way to get higher compression ratio, it also has several peculiarities if one deals with compressing images corrupted by noise. First, a specific noise filtering effect is observed. Second, optimal operational point (OOP) might exist where quality of a compressed image is closer to the corresponding noise-free image according to a chosen quality metric. In this case, it is worth compressing this image in OOP area. These peculiarities have been earlier mainly studied for grayscale images. In this paper, we analyze compression of color images corrupted by additive white Gaussian noise using better portable graphics (BPG) encoder in the cases of different chroma subsampling. Based on simulation results obtained for a set of color images, the initial recommendations on encoder parameter setting are given.
+View
+Show abstract
+... The subjective method of assessment involved the MOS of the images, whereas the objective method of the assessment involved various metric proposed in the literature for IQA. In this paper, we have used objective image quality metrics (IQM) such as MSE, PSNR, SSIM [38], IFC [39], VIFP [40], VSNR [41], P_HVS_M [42] , P_HVS [43], RFSIM [44], FSIM [45], ADM [46], IWSSIM [47], IWMSE [47], IWPSNR [47], SRSIM [48], GSM [49], IGM [50], GMSD [51], UQI [52], MSSIM [53] and WSNR [47] for finding out the correlation coefficient. Here, we used Pearson's linear correlation coefficient (PLCC), Spearman's rank order correlation coefficient (SROCC) and Kendall's rank order correlation coefficient (KROCC) methods to evaluate proposed database over the above stated IQM. ...
+NITS-IQA Database: A New Image Quality Assessment Database
+Article
+Full-text available
+
+    Feb 2023
+    SENSORS-BASEL 
+
+    Jayesh D. Ruikar
+    Saurabh Chaudhury 
+
+This paper describes a newly-created image database termed as the NITS-IQA database for image quality assessment (IQA). In spite of recently developed IQA databases, which contain a collection of a huge number of images and type of distortions, there is still a lack of new distortion and use of real natural images taken by the camera. The NITS-IQA database contains total 414 images, including 405 distorted images (nine types of distortion with five levels in each of the distortion type) and nine original images. In this paper, a detailed step by step description of the database development along with the procedure of the subjective test experiment is explained. The subjective test experiment is carried out in order to obtain the individual opinion score of the quality of the images presented before them. The mean opinion score (MOS) is obtained from the individual opinion score. In this paper, the Pearson, Spearman and Kendall rank correlation between a state-of-the-art IQA technique and the MOS are analyzed and presented.
+View
+Show abstract
+... In addition to the previously presented results for the PESQ and VQUAD metrics, the authors used the PSNR, SSIM and VMAF metrics, and also converted their scores to the MOS scale. Conversion of the original PSNR, SSIM and VMAF scores to the MOS scale was done based on the averaging of the values presented by the QoE models described in [27][10] [28] [29] (for PSNR), [27][30] [31] (for SSIM) and [32] (for VMAF). The values from Tables II, IV and VI confirm the high correlation between the measurement methods used in this work. ...
+Determination of Video Service Quality in an IP Environment with the Use of Different Software Tools: A Comparison Study
+Conference Paper
+Full-text available
+
+    Oct 2022 
+
+    Tadeus Uhl Tadeus Uhl
+    Christian Hoppe Christian Hoppe
+    Janusz Klink Janusz Klink 
+
+The paper deals with the determination of video service quality in an IP environment with the use of different software tools. The typical impairment parameters of the IP transport platform, i.e. packet loss and burst factor, are taken into account. The encoding rates for video content also play an important role here. In the study, the advantages and disadvantages of the different software tools for determining video service quality are analysed. Two groups of measurement techniques are considered here: a) signal-based methods, and b) parameterized models. The output from these results are discussed and graphically displayed in several diagrams.
+View
+Show abstract
+Phase Watermarking Method for Video Copyright Protection
+Article
+
+    Mar 2023 
+
+    V.V. Sergeyev
+    V.A. Fedoseev
+    D. A. Shapiro 
+
+View
+WMCP-EM: An integrated dehazing framework for visibility restoration in single image
+Article
+
+    Feb 2023
+    COMPUT VIS IMAGE UND 
+
+    Sidharth Gautam Sidharth Gautam
+    Tapan K. Gandhi Tapan K. Gandhi
+    Bijaya Ketan Panigrahi Bijaya Ketan Panigrahi 
+
+View
+A large-scale image database for benchmarking mobile camera quality and NR-IQA algorithms
+Article
+
+    Jan 2023
+    DISPLAYS 
+
+    Zongxi Han
+    Yutao Liu
+    Rong Xie 
+
+View
+Visual Quality Assessment of Adversarially Attacked Images
+Conference Paper
+
+    Sep 2022 
+
+    Ali Mezher Ali Mezher
+    Yingpeng Deng
+    Lina Karam Lina Karam 
+
+View
+Visual stream connectivity predicts assessments of image quality
+Article
+Full-text available
+
+    Oct 2022
+    J VISION 
+
+    Elijah F. W. Bowen
+    Antonio Rodriguez
+    Damian Sowinski Damian Sowinski
+    Richard Granger 
+
+Despite extensive study of early vision, new and unexpected mechanisms continue to be identified. We introduce a novel formal treatment of the psychophysics of image similarity, derived directly from straightforward connectivity patterns in early visual pathways. The resulting differential geometry formulation is shown to provide accurate and explanatory accounts of human perceptual similarity judgments. The direct formal predictions are then shown to be further improved via simple regression on human behavioral reports, which in turn are used to construct more elaborate hypothesized neural connectivity patterns. It is shown that the predictive approaches introduced here outperform a standard successful published measure of perceived image fidelity; moreover, the approach provides clear explanatory principles of these similarity findings.
+View
+Show abstract
+Show more
+Recommendations
+Discover more
+Project
+Prediction of performance parameters for processing (filtering, lossy compression) of multichannel images
+
+    Vladimir Vasilyevich Lukin Vladimir Vasilyevich Lukin
+    Sergey Abramov Sergey Abramov
+    Sergii S. Kryvenko Sergii S. Kryvenko
+    [...]
+    Nikolay Nikolaevych Ponomarenko Nikolay Nikolaevych Ponomarenko 
+
+In image processing chain, there is a need to know in advance (to predict with appropriate accuracy) what will be efficiency (performance parameters or indicators) of certain typical stages of proc essing (denoising, lossy compression). Such a prediction can allow to decide is this operation needed (denoising) and to save time if it is useless as well as to set proper parameters of these operations (thresholds in denoising, compression ratio or quantization step in lossy compression) to have the highest positive effect or to satisfy requirements for a given image to be processed. ... [more]
+View project
+Project
+Implementation of efficient Wavelet Transformation Algorithm
+
+    Juha Lemmetti Juha Lemmetti
+    Karen Egiazarian Karen Egiazarian
+    Hakan Öktem Hakan Öktem
+    [...]
+    Juhana Helovuo 
+
+View project
+Project
+Denoising of multichannel images
+
+    Karen Egiazarian Karen Egiazarian
+    Vladimir Vasilyevich Lukin Vladimir Vasilyevich Lukin
+    Victoriya V Abramova Victoriya V Abramova
+    [...]
+    Mykola Lavreniuk Mykola Lavreniuk 
+
+View project
+Project
+wavefront reconstruction
+
+    Karen Egiazarian Karen Egiazarian
+    Vladimir Katkovnik Vladimir Katkovnik
+    Igor Shevkunov Igor Shevkunov
+    [...]
+    Nikolay Balbekin Nikolay Balbekin 
+
+View project
+Article
+Improved SSIM image quality assessment of contrast distortion based on the contrast sensitivity char...
+January 2018 · IET Image Processing
+
+    Juncai Yao
+    Guizhong Liu Guizhong Liu 
+
+Currently, the structural similarity index metric (SSIM) is recognised generally and applied widely in image quality assessment (IQA). However, using SSIM to evaluate contrast-distorted images from TID2013 and CSIQ databases is low effective. In this study, the authors improve SSIM for contrast-distorted images by combining it with the contrast sensitivity characteristics of human visual system ... [Show full abstract] (HVS). In the improved method, first, they combine the visual characteristics to propose a model that HVS perceives the real image. Then, this model is used to eliminate the visual redundancy of real images. Afterwards, the perceived images are evaluated using SSIM. Furthermore, 241 contrast-distorted images from TID2013 and CSIQ databases were used in experiments. The results have shown that in comparison with SSIM scores, the scores obtained by the improved SSIM are more consistent with the subjective assessment scores. Moreover, the Pearson linear correlation coefficient and Spearman rank order correlation coefficient between subjective and objective scores are averagely improved by 12.83 and 22.78%, respectively. In addition, the assessment accuracy of the improved SSIM is better than that of five commonly used IQA metrics. Also, it has an excellent generalisation performance. These results show that the assessment performance of the improved SSIM is effectively enhanced.
+Read more
+Article
+New Metric for Stereo Video Quality Assessment
+August 2009
+
+    Zhongjie Zhu
+    Yuer Wang
+    Yongqiang Bai Yongqiang Bai
+    Qiaozhen Shi 
+
+Stereo video is regarded as an important developing trend of video technology and there is an increasing need to develop efficient and perceptually consistent measures for stereo video quality evaluation in the field of stereo video signal processing. In this paper, a new metric for stereo video image quality assessment is proposed by incorporating the main characteristics of human visual systems ... [Show full abstract] (HVS) such as the visual non-linearity, contrast sensitivity, multi-channel model and so on. Experimental results show that the proposed method outperforms conventional objective image quality assessment methods such as PSNR.
+Read more
+Article
+Full-text available
+Novel Image Quality Metric Based on Similarity
+June 2011
+
+    Nikolay Nikolaevych Ponomarenko Nikolay Nikolaevych Ponomarenko
+    Karen Egiazarian Karen Egiazarian
+    Lina Jin Lina Jin 
+
+In this paper, we present a novel approach to image quality metric taking into account degradation of contrast and brightness as well as block similarity. The metric is achieved by performing of the following steps: 1) reducing contrast and brightness in distorted image, 2) using block-matching (BM) to group similar 2D image fragments into 3D data arrays in original image and preprocessed ... [Show full abstract] distorted image separately, 3) analyzing of these blocks in DCT domain. The DCT coefficients differences are calculated between pixel values with contrast sensitivity function (CSF) and reduced by contrast masking according to Human Visual System (HVS). We validate the performance of our algorithms with five most popular quality image databases: TID, LIVE, CSIQ, IVC and Cornell-A57. The analysis of the results shows that the proposed quality metric provides better correlation to Mean Observer Score (MOS) than most of recent popular state- of-the-art metrics, e.g. MSSIM, SSIM. The average Spearman Correlation of proposed metric reaches 0.894. I. INTRODUCTION
+View full-text
+Article
+Combining full-reference image visual quality metrics by neural network
+March 2015 · Proceedings of SPIE - The International Society for Optical Engineering
+
+    Vladimir Vasilyevich Lukin Vladimir Vasilyevich Lukin
+    Nikolay Nikolaevych Ponomarenko Nikolay Nikolaevych Ponomarenko
+    J. T. Astola J. T. Astola
+    [...]
+    O. Ieremeiev O. Ieremeiev 
+
+A task of assessing full-reference visual quality of images is considered. Correlation between the obtained array of mean opinion scores (MOS) and the corresponding array of given metric values allows characterizing correspondence of a considered metric to HVS. For the largest openly available database TID2013 intended for metric verification, a Spearman correlation is about 0.85 for the best ... [Show full abstract] existing HVS-metrics. One simple way to improve an efficiency of assessing visual quality of images is to combine several metrics. Our work addresses a possibility of using neural networks for the aforementioned purpose. As leaning data, we have used metric sets for images of the database TID2013 that are employed as the network inputs. Randomly selected half of 3000 images of the database TID2013 has been used at the learning stage whilst other half have been exploited for assessing quality of neural network based HVS-metric. Six metrics "cover" well all types of distortions: FSIMc, PSNR-HMA, PSNR-HVS, SFF, SR-SIM, and VIF, have been selected. As the result of NN learning, the Spearman correlation between the NN output and the MOS for the verification set of database TID2013 reaches 0.93 for the best configuration of NN. This is considerably better than for any particular metric employed as an input (FSIMc is the best among them). Analysis of the designed metric efficiency is carried out, its advantages and drawbacks are demonstrated.
+Read more
+Conference Paper
+Full-text available
+Analysis of HVS-Metrics’ Properties Using Color Image Database TID2013
+October 2015
+
+    Nikolay Nikolaevych Ponomarenko Nikolay Nikolaevych Ponomarenko
+    Vladimir Vasilyevich Lukin Vladimir Vasilyevich Lukin
+    Karen Egiazarian Karen Egiazarian
+    J. T. Astola J. T. Astola 
+
+Various full-reference image quality metrics (indices) that take into account peculiarities of human vision system (HVS) have been proposed during last decade. Most of them have been already tested on several image databases including TID2013, a recently proposed database of distorted color images. Metrics performance is usually characterized by the rank order correlation coefficients of the ... [Show full abstract] considered metric and a mean opinion score (MOS). In this paper, we characterize HVS-metrics from another practically important viewpoint. We determine and analyze image statistics such as mean and standard deviation for several state of the art quality metrics on classes of images with multiple or particular types of distortions. This allows setting threshold value(s) for a given metric and application.
+View full-text
+Article
+Full-text available
+A NEW FULL-REFERENCE QUALITY METRICS BASED ON HVS
+January 2006
+
+    Karen Egiazarian Karen Egiazarian
+    J. T. Astola J. T. Astola
+    Vladimir Vasilyevich Lukin Vladimir Vasilyevich Lukin
+    [...]
+    Marco Carli Marco Carli 
+
+In this paper, two new full-reference metrics for image quality assessment are presented. They are based on the Peak-Signal-to-Noise Ratio (PSNR) and Universal Quality Index (UQI) modified to take into account the Human Visual System (HVS) properties. Many studies confirm that the HVS is more sensitive to low frequency distortions rather than to high frequency ones. It is also very sensitive to ... [Show full abstract] contrast changes and noise. To test the effectiveness of the proposed metrics, we have performed a subjective experiment. In our experiment we have used seven types of distortions with three distortion levels in each. Three independent groups of observers from Finland, Ukraine and Italy, have been participating in image quality evaluation test. The analysis of the results shows that the proposed PSNR-HVS provides better correlation to Mean Observer Score (MOS) than PSNR, and that the proposed UQI-HVS metric outperforms two recently proposed state-of-the-art metrics: UQI and MSSIM.
+View full-text
+ResearchGate Logo
+or
+Discover by subject area
+
+    Recruit researchers
+    Join for free
+    Login
+
+App Store
+Get it on Google Play
+Company
+About us
+News
+Careers
+Support
+Help Center
+Business solutions
+Advertising
+Recruiting
+© 2008-2023 ResearchGate GmbH. All rights reserved.
+
+    Terms
+    Privacy
+    Copyright
+    Imprint 
+
+We and our partners use cookies ✕
+
+By using this site, you consent to the processing of your personal data, the storing of cookies on your device, and the use of similar technologies for personalization, ads, analytics, etc. For more information or to opt out, see our Privacy Policy

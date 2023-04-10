@@ -1,0 +1,3 @@
+- Batch Normalize
+- Layer Normalize
+- Instance Normalize

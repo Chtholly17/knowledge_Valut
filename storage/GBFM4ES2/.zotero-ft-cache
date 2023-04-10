@@ -1,0 +1,802 @@
+A Theory of the Distortion-Perception Tradeoff in Wasserstein Space
+
+Dror Freirich Technion – Israel Institute of Technology
+drorfrc@gmail.com
+
+Tomer Michaeli Technion – Israel Institute of Technology
+tomer.m@ee.technion.ac.il
+
+Ron Meir Technion – Israel Institute of Technology
+rmeir@ee.technion.ac.il
+
+Abstract
+The lower the distortion of an estimator, the more the distribution of its outputs generally deviates from the distribution of the signals it attempts to estimate. This phenomenon, known as the perception-distortion tradeoff, has captured signiﬁcant attention in image restoration, where it implies that ﬁdelity to ground truth images comes at the expense of perceptual quality (deviation from statistics of natural images). However, despite the increasing popularity of performing comparisons on the perception-distortion plane, there remains an important open question: what is the minimal distortion that can be achieved under a given perception constraint? In this paper, we derive a closed form expression for this distortion-perception (DP) function for the mean squared-error (MSE) distortion and the Wasserstein-2 perception index. We prove that the DP function is always quadratic, regardless of the underlying distribution. This stems from the fact that estimators on the DP curve form a geodesic in Wasserstein space. In the Gaussian setting, we further provide a closed form expression for such estimators. For general distributions, we show how these estimators can be constructed from the estimators at the two extremes of the tradeoff: The global MSE minimizer, and a minimizer of the MSE under a perfect perceptual quality constraint. The latter can be obtained as a stochastic transformation of the former.
+1 Introduction
+Inverse problems that involve signal reconstruction from partial or noisy measurements, arise in numerous scientiﬁc domains. Examples range from medical imaging to tomography, microscopy, astronomy and audio enhancement. In many such problems it is desired to design an estimator that (i) has a small reconstruction error (low distortion), and (ii) outputs reconstructions that cannot be told apart from valid signals (good perceptual quality). Interestingly, however, it has been shown that the lower the average distortion of an estimator, the more the distribution of its outputs generally deviates from the distribution of the signals it attempts to estimate [4]. In other words, low distortion generally comes at the price of poor perceptual quality, and vice versa. This phenomenon, known as the perception-distortion tradeoff, has found particular interest in the image restoration domain (see Fig. 1), where algorithms are now commonly being evaluated using both distortion measures and perception indices [5].
+Unfortunately, despite the increasing popularity of performing comparisons on the perceptiondistortion plane, the minimal distortion that can be achieved under a given perception constraint (red curve in Fig. 1) remains an open question. Blau and Michaeli [4] investigated several properties
+35th Conference on Neural Information Processing Systems (NeurIPS 2021).
+
+ESRGAN
+
+EDSR
+
+Distortion
+
+Low resolution input
+
+EDSR (low MSE, high FID)
+
+ESRGAN (high MSE, low FID)
+
+Perception
+
+Figure 1: Illustration of the distortion-perception tradeoff in super-resolution. A low resolution image (left) is fed to two state-of-the-art super-resolution algorithms (middle). EDSR [14] achieves a low MSE distortion, but produces blurry reconstructions with high FID values [10]. ESRGAN [31] outputs photo-realistic recoveries with low FID, but its MSE is signiﬁcantly higher. This is a result of the distortion-perception tradeoff (right). Namely, estimators cannot simulatenously achieve a low distortion and have their outputs distributed like the signals they are designed to estimate. In this paper, we derive a closed form expression for the distortion-perception function (red curve) for the MSE distortion and Wasserstein-2 perception index.
+
+of this distortion-perception function, such as monotonicity and convexity. But beyond this rather general characterization, little is known about its precise nature. In this paper, we derive a closed form expression for the distortion-perception (DP) function for the special case where distortion is measured by mean squared-error (MSE) and perception is measured by the Wasserstein-2 distance between the probability laws of the estimate and the estimand.
+Our main contributions are: (i) We prove that the DP function is always quadratic in the perception constraint P , regardless of the underlying distribution (Theorem 1). (ii) We show that it is possible to construct estimators on the DP curve from the estimators at the two extremes of the tradeoff (Theorem 3): The one that globally minimizes the MSE, and a minimizer of the MSE under a perfect perceptual quality constraint. The latter can be obtained as a stochastic transformation of the former. (iii) In the Gaussian setting, we further provide a closed form expression for optimal estimators and for the corresponding DP curve (Theorems 4 and 5). We show this Gaussian DP curve is a lower bound on the DP curve of any distribution having the same second order statistics. Finally, we illustrate our results, numerically and visually, in a super-resolution setting in Section 5. The proofs of all our theorems are provided in Appendix B.
+Our theoretical results shed light on several topics that are subject to much practical activity. Particularly, many recent works adress the task of diverse perceptual image reconstruction, by employing randomization among possible restorations [15, 3, 22, 1]. Commonly, such works attempt to sample from the posterior distribution of natural images given the degraded input image. This is done, for example, using priors over image patches [7], conditional generative models [18, 21], or implicit priors induced by deep denoiser networks [11]. Theoretically, posterior sampling leads to perfect perceptual quality (the restored outputs are distributed like the prior). However, a fundamental question is whether this is optimal in terms of distortion. As we show in Section 3.1, posterior sampling is often not an optimal strategy, in the sense that there exist perfect perceptual quality estimators that achieve lower distortion.
+Another topic of practical interest is the ability to traverse the distortion-perception tradeoff at test time, without having to train a different model for each working point. Recently, interpolation between distortion-oriented models and perception-oriented ones, has been suggested for this end. Existing methods include interpolation in pixel space [31] or in some latent space [26], interpolation between network weights [31, 32], and style transfer between a low-distortion reconstruction and a high perceptual quality one [6]. In light of this plethora of approaches, it is natural to ask which strategy is optimal. In Section 3.2 we show that for the MSE–Wasserstein-2 tradeoff, linear interpolation in pixel space leads to optimal estimators. We also discuss a geometric connection between interpolation and the fact that estimators on the DP curve form a geodesic in Wasserstein space.
+2
+
+2 Problem setting and preliminaries
+
+2.1 The distortion-perception tradeoff
+Let X, Y be random vectors taking values in Rnx and Rny , respectively. We consider the problem of constructing an estimator Xˆ of X based on Y . Namely, we are interested in determining a conditional distribution pXˆ|Y such that Xˆ constitutes a good estimate of X. For example, in the super-resolution setting shown in Fig. 1, Y is the low resolution image (left), X is the corresponding ground-truth high-resolution image (not shown), and Xˆ is a super-resolution reconstruction generated from Y (e.g. the EDSR or ESRGAN estimators in the middle).
+In many practical cases, the goodness of an estimator is associated with two factors: (i) the degree to which Xˆ is close to X on average (low distortion), and (ii) the degree to which the distribution of Xˆ is close to that of X (good perceptual quality). An important question, then, is what is the minimal distortion that can be achieved under a given level of perceptual quality? and how can we construct estimators that achieve this lower bound? In mathematical language, we are interested in analyzing the distortion-perception (DP) function (deﬁned similarly to the perception-distortion function of [4])
+
+D(P ) = min
+pXˆ |Y
+
+E[d(X, Xˆ )] : dp(pX , pXˆ ) ≤ P
+
+.
+
+(1)
+
+Here, d : Rnx × Rnx → R+ ∪ {0} is some distortion criterion, dp(·, ·) is some divergence between probability measures, and pXˆ is the probability measure on Rnx induced by pXˆ|Y and pY . The expectation is taken w.r.t. the measure pXXˆ induced by pXˆ|Y and pXY , where we assume that Xˆ is
+independent of X given Y .
+
+As discussed in [4], the function D(P ) is monotonically non-increasing and is convex whenever dp(·, ·) is convex in its second argument (which is the case for most popular divergences). However, without further concrete assumptions on the distortion measure d(·, ·) and the perception index dp(·, ·), little can be said about the precise nature of D(P ).
+Here, we focus our attention on the squared-error distortion d(x, xˆ) = x−xˆ 2 and the Wasserstein-2 distance dp(pX , pXˆ ) = W2(pX , pXˆ ), with which (1) reads
+
+D(P ) = min
+pXˆ |Y
+
+E[ X − Xˆ 2] : W2(pX , pXˆ ) ≤ P
+
+.
+
+(2)
+
+We assume that all distributions have ﬁnite ﬁrst and second moments. In addition, from Theorem 3 below it will follow that the minimum is indeed attained, so that (2) is well deﬁned.
+
+It is well known that the estimator minimizing the mean squared error (MSE) without any constraints, is given by X∗ = E[X|Y ]. This implies that D(P ) monotonically decreases until P reaches
+P ∗ W2(pX , pX∗ ), beyond which point D(P ) takes the constant value D∗ E[ X − X∗ 2]. This is illustrated in Fig. 2. It is also known that D(0) ≤ 2D∗ since the posterior sampling estimator pXˆ|Y = pX|Y achieves W2(pX , pXˆ ) = 0 and E[ X − Xˆ 2] = 2D∗ [4]. However, apart from these
+rather general properties, the precise shape of the DP curve has not been determined to date, and
+neither have the estimators that achieve the optimum in (2). This is our goal in this paper.
+
+2.2 The Wasserstein and Gelbrich Distances
+
+Before we present our main results, we brieﬂy survey a few properties of the Wasserstein distance, mostly taken from [20]. The Wasserstein-p (p ≥ 1) distance between measures µ and γ on a separable Banach space X with norm · is deﬁned by
+
+Wpp(µ, γ) inf E(U,V )∼ν [ U − V p] : ν ∈ Π(µ, γ) ,
+
+(3)
+
+where Π(µ, γ) is the set of all probabilities on X × X with marginals µ and γ. A joint probability ν achieving the optimum in (3) is often referred to as optimal plan. The Wasserstein space of probability measures is deﬁned as
+
+Wp(X )
+
+γ : x pdγ < ∞ ,
+X
+
+3
+
+Source dist. Optimal dist. Estimator dist.
+
+γP
+
+pX∗ = µ P ∗ − P
+
+P
+
+pX = γ
+
+Figure 2: The MSE–Wasserstein-2 tradeoff and the geometry of optimal estimators. The left
+pane depicts the distortion-perception function for the MSE distortion and the Wasserstein-2 perception index. The minimal possible distortion, D∗, is achieved by the estimator X∗ = E[X|Y ]. The perception index attained by this estimator is P ∗. At the other extreme of the tradeoff, we know that D(0) ≤ 2D∗. The right pane shows the geometry of the distributions of optimal estimators in Wasserstein space. The minimal distortion D(P ) can be achieved by an estimator with distri-
+bution γP , which lies on a straight line (or geodesic) between pX and pX∗ . Its distance from the former is W2(pX , γP ) = P and its distance from the latter is W2(pX∗ , γP ) = P ∗ − P . Therefore, D(P ) = D∗ + W22(pX∗ , γP ) = D∗ + (P ∗ − P )2.
+
+and Wp constitutes a metric on Wp(X ).
+For any (m1, Σ1), (m2, Σ2) ∈ Rd × Sd+ (where Sd+ is the set of symmetric positive semideﬁnite matrices in Rd×d), the Gelbrich distance is deﬁned as
+
+1
+
+G2((m1, Σ1), (m2, Σ2))
+
+m1 − m2
+
+2 2
+
++
+
+Tr
+
+Σ1 + Σ2 − 2
+
+1
+
+1
+
+Σ12 Σ2Σ12
+
+2
+
+.
+
+(4)
+
+The root of a PSD matrix is always taken to be PSD. For any two probability measures µ1, µ2 on Rd with means and covariances (m1, Σ1), (m2, Σ2), from [8, Thm. 2.1] we have that
+
+W22(µ1, µ2) ≥ G2((m1, Σ1), (m2, Σ2)).
+
+(5)
+
+When µ1 = N (m1, Σ1) and µ2 = N (m2, Σ2) are Gaussian distributions on Rd, we have that W2(µ1, µ2) = G((m1, Σ1), (m2, Σ2)). This equality is obvious for non-singular measures but is true for any two Gaussian distributions [20, p. 18]. If Σ1 and Σ2 are non-singular, then the distribution
+attaining the optimum in (3) corresponds to
+
+U ∼ N (m1, Σ1), V = m2 + T1→2(U − m1),
+
+(6)
+
+where
+
+1
+
+T1→2
+
+=
+
+Σ−1
+
+1 2
+
+1
+
+1
+
+Σ12 Σ2Σ12
+
+Σ 2
+
+−
+
+1 2
+
+1
+
+(7)
+
+is the optimal transformation pushing forward from N (0, Σ1) to N (0, Σ2) [12]. This transformation satisﬁes Σ2 = T1→2Σ1T1→2. For a discussion on singular distributions, please see App. A.
+
+3 Main results
+3.1 The MSE–Wasserstein-2 tradeoff
+The DP function (2) depends, of course, on the underlying joint probability pXY of the signal X and measurements Y . Our ﬁrst key result is that this dependence can be expressed solely in terms of D∗ and P ∗. In other words, knowing the distortion and perception index attained by the minimum MSE estimator X∗, sufﬁces for determining D(P ) for any P .
+
+4
+
+Theorem 1 (The DP function). The DP function (2) is given by
+
+D(P ) = D∗ + [(P ∗ − P )+]2 ,
+
+(8)
+
+where (x)+ = max(0, x). Furthermore, an estimator achieving perception index P and distortion D(P ) can always be constructed by applying a (possibly stochastic) transformation to X∗.
+
+Theorem 1 is of practical importance because in many cases constructing an estimator that achieves a low MSE (i.e. an approximation of X∗) is a rather simple task. This is the case, for example, in
+image restoration with deep neural networks. There, it is common practice to train a network by
+minimizing its average squared error on a training set. Measuring the MSE of such a network on a large test set provides an approximation for D∗. We can also obtain an approximation of at least a lower bound on P ∗ by estimating the second order statistics of X and X∗. Speciﬁcally, recall that P ∗ is lower bounded by the Gelbrich distance between (mX , ΣX ) and (mX∗ , ΣX∗ ), which is given by (G∗)2 Tr{ΣX + ΣX∗ − 2(Σ1X/2ΣX∗ Σ1X/2)1/2} (see (5)). Given approximations for D∗ and G∗, we can approximate a lower bound on the DP function for any P ,
+
+D(P ) ≥ D∗ + [(G∗ − P )+]2.
+
+(9)
+
+The bound is attained when X and Y are jointly Gaussian.
+
+Uniqueness A remark is in place regarding the uniqueness of an estimator achieving (8). As we discuss below, what deﬁnes an optimal estimator Xˆ is its joint distribution with X∗. This
+joint distribution may not be unique, in which case the optimal estimator is not unique. Moreover, even if pXˆX∗ is unique, the uniqueness of the estimator is not guaranteed because there may be different conditional distributions pXˆ|Y that lead to the same optimal pXˆX∗ . In other words, given the optimal pXˆX∗ , one can choose any joint probability pXˆY X∗ that has marginals pXˆX∗ and pY X∗ . One option is to take the estimator Xˆ to be a (possibly stochastic) transformation of X∗, namely pXˆ|Y = pXˆ|X∗ pX∗|Y . But there may be other options. In cases where either Y or Xˆ are a deterministic transformation of X∗ (e.g. when X∗ has a density, or is an invertible function of Y ), there is a unique joint distribution pXˆY X∗ with the given marginals [2, Lemma 5.3.2]. In this case, if pXˆX∗ is unique then so is the estimator pXˆ|Y .
+
+Randomness Under the settings of image restoration, many methods encourage diversity in their
+output by adding randomness [15, 3, 22]. In our setting, we may ask under what conditions there exists an optimal estimator Xˆ which is a deterministic function of Y . For example, when pY = δ0 but X has some non-atomic distribution, it is clear that no deterministic function of Y can attain perfect perceptual quality. It turns out that a sufﬁcient condition for the optimal Xˆ to be a deterministic function of Y is that X∗ have a density. We discuss this in App. B and explicitly illustrate it in the Gaussian case (see Sec. 3.3), where if X∗ has a non-singular covariance matrix then Xˆ is a
+deterministic function of Y .
+
+When is posterior sampling optimal? Many recent image restoration methods attempt to produce
+
+diverse high perceptual quality reconstructions by sampling from the posterior distribution pX|Y [7, 18, 11]. As discussed in [4], the posterior sampling estimator attains a perception index of 0
+
+(namely W2(pX , pXˆ ) = 0) and distortion 2D∗. But an interesting question is: when is this strategy optimal? In other words, in what cases do we have that the DP function at P = 0 equals precisely
+
+2D∗ and is not strictly smaller? Note from the deﬁnition of the Wasserstein distance (3), that
+
+(P ∗)2 = W22(pX , pX∗ ) ≤ E[ X − X∗ 2] = D∗. Using this in (8) shows that the DP function at
+
+P = 0 is upper bounded by
+
+D(0) = D∗ + (P ∗)2 ≤ 2D∗,
+
+(10)
+
+and the upper bound is attained when (P ∗)2 = D∗. To see when this happens, observe that
+
+Tr
+
+ΣX
+
++
+
+ΣX ∗
+
+−
+
+1
+2(ΣX2
+
+ΣX
+
+∗
+
+1
+ΣX2
+
+)
+
+1 2
+
+= (G∗)2 ≤ (P ∗)2 ≤ D∗ = Tr{ΣX − ΣX∗ }.
+
+(11)
+
+We can see that when Tr{ΣX∗ } = Tr{(Σ1X/2ΣX∗ Σ1X/2)1/2}, the leftmost and rightmost sides become equal, and thus (P ∗)2 = D∗. To understand the meaning of this condition, let us focus on the case where ΣX and ΣX∗ are jointly diagonalizable. This is a reasonable assumption for natural images,
+
+5
+
+where shift-invariance induces diagonalization by the Fourier basis [30]. In this case, the condition can
+be written in terms of the eigenvalues of the matrices, namely i λi(ΣX∗ ) = i λi(ΣX∗ )λi(ΣX ). This condition is satisﬁed when each λi(ΣX∗ ) equals either λi(ΣX ) or 0. Namely, the ith eigenvalue of the error covariance of X∗, which is given by ΣX − ΣX∗ , is either λi(ΣX ) or 0. We conclude that posterior sampling is optimal when there exists a subspace S spanned by some of the eigenvectors of ΣX , such that the projection of X onto S can be recovered from Y with zero error, but the projection of X onto S⊥ cannot be recovered at all (the optimal estimator is trivial). This is likely not the case in most practical scenarios. Therefore, it seems that posterior sampling is often not optimal. That is,
+posterior sampling can be improved upon in terms of MSE without any sacriﬁce in perceptual quality.
+
+3.2 Optimal estimators
+
+While Theorem 1 reveals the shape of the DP function, it does not provide a recipe for constructing optimal estimators on the DP tradeoff. We now discuss the nature of such estimators.
+Our ﬁrst observation is that since Xˆ is independent of X given Y , its MSE can be decomposed as E[ X − Xˆ 2] = E[ X − X∗ 2 + E[ X∗ − Xˆ 2] (see App. B). Therefore, the DP function (2) can be equivalently written as
+
+D(P ) = D∗ + min
+pXˆ |Y
+
+E[ Xˆ − X∗ 2] : W2(pX , pXˆ ) ≤ P
+
+.
+
+(12)
+
+Note that the objective in (12) depends on the MSE between Xˆ and X∗, so that we can perform the minimization on pXˆ|X∗ rather than on pXˆ|Y (once we determine the optimal pXˆ|X∗ we can construct a consistent pXˆ|Y as discussed above).
+
+Now, let us start by examining the leftmost side of the curve D(P ), which corresponds to a perfect perceptual quality estimator (i.e. P = 0). In this case, the constraint becomes pXˆ = pX . Therefore,
+
+D(0) = D∗ + min
+pXˆ X∗
+
+E[ Xˆ − X∗ 2] : pXˆ X∗ ∈ Π(pX , pX∗ )
+
+,
+
+(13)
+
+where Π(pX , pX∗ ) is the set of all probabilities on Rnx × Rnx with marginals pX , pX∗ . One may readily recognize this as the optimization problem underlying the Wasserstein-2 distance between pX and pX∗ . This leads us to the following conclusion.
+Theorem 2 (Optimal estimator for P = 0). Let Xˆ0 be an estimator achieving perception index 0 and MSE D(0). Then its joint distribution with X∗ attains the optimum in the deﬁnition of W2(pX , pX∗ ). Namely, pXˆ0X∗ is an optimal plan between pX and pX∗ .
+
+Having understood the estimator Xˆ0 at the leftmost end of the tradeoff, we now turn to study optimal estimators for arbitrary P . Interestingly, we can show that Problem (12) is equivalent to (see App. B)
+
+D(P ) = D∗ + min
+pXˆ
+
+W22(pXˆ , pX∗ ) : W2(pXˆ , pX ) ≤ P
+
+.
+
+(14)
+
+Namely, an optimal pXˆ is closest to pX∗ among all distributions within a ball of radius P around pX , as illustrated in Fig. 2. Moreover, pXˆX∗ is an optimal plan between pXˆ and pX∗ . As it turns out, this somewhat abstract viewpoint leads to a rather practical construction for Xˆ from the estimators Xˆ0 and X∗ at the two extremes of the tradeoff. Speciﬁcally, we have the following result. Theorem 3 (Optimal estimators for arbitrary P ). Let Xˆ0 be an estimator achieving perception index 0 and MSE D(0). Then for any P ∈ [0, P ∗], the estimator
+
+XˆP =
+
+1
+
+−
+
+P P∗
+
+Xˆ0
+
++
+
+P P∗
+
+X∗
+
+(15)
+
+is optimal for perception index P . Namely, it achieves perception index P and distortion D(P ).
+
+Theorem 3 has important implications for perceptual signal restoration. For example, in the task
+of image super-resolution, there exist many deep network based methods that achieve a low MSE [14, 29, 25]. These provide an approximation for X∗. Moreover, there is an abundance of methods
+that achieve good perceptual quality at the price of a reasonable degradation in MSE (often by
+
+6
+
+incorporating a GAN-based loss) [13, 31, 24]. These constitute approximations for Xˆ0. However, achieving results that strike other prescribed balances between MSE and perceptual quality commonly require training a different model for each setting. Shoshan et al. [26] and Navarrete Michelini et al. [17] tried to address this difﬁculty by introducing new training techniques that allow traversing the distortion-perception tradeoff at test time. However, Theorem 3 shows that such specialized training methods are not required in our setting. Having a model that leads to low MSE and one that leads to good perceptual quality, it is possible to construct any other estimator on the DP tradeoff, by simply averaging the outputs of these two models with appropriate weights. We illustrate this in Sec. 5.
+
+3.3 The Gaussian setting
+
+When X and Y are jointly Gaussian, it is well known that the minimum MSE estimator X∗ is a linear function of the measurements Y . However, it is not a-priori clear whether all estimators along the DP tradeoff are linear in this case, and what kind of randomness they possess. As we now show, equipped with Theorem 3, we can obtain closed form expressions for optimal estimators for any P . For simplicity, we assume here that X and Y have zero means and that ΣX , ΣY 0.
+
+It is instructive to start by considering the simple case, where ΣX∗ is non-singular (in Theorem 4 below we address the more general case of a possibly singular ΣX∗ ). It is well known that
+
+X∗ = ΣXY Σ−Y 1Y,
+
+ΣX∗ = ΣXY Σ−Y 1ΣY X .
+
+(16)
+
+Now, since we assumed that ΣX , ΣX∗ 0, we have from Theorem 2 and (6),(7) that
+
+1
+
+Xˆ0
+
+=
+
+Σ−
+
+1 2
+
+X∗
+
+1
+
+1
+
+ΣX2 ∗ ΣX ΣX2 ∗
+
+2
+
+ΣX−
+
+1 2 ∗
+
+X
+
+∗
+
+.
+
+(17)
+
+Finally, we know that P ∗ = G∗, which is given by the left-hand side of (11). Substituting these expressions into (15), we obtain that an optimal estimator for perception P ∈ [0, G∗] is given by
+
+XˆP =
+
+1
+
+−
+
+P G∗
+
+Σ−
+
+1 2
+
+X∗
+
+1
+
+1
+
+ΣX2 ∗ ΣX ΣX2 ∗
+
+1 2
+
+Σ−
+
+1 2
+
+X∗
+
++
+
+P G∗ I
+
+ΣXY Σ−Y 1Y.
+
+(18)
+
+As can be seen, this optimal estimator is a deterministic linear transformation of Y for any P .
+
+The setting just described does not cover the case where Y is of lower dimensionality than X because in that case ΣX∗ is necessarily singular (it is a nx × nx matrix of rank at most ny; see (16)). In this case, any deterministic linear function of Y would result in an estimator Xˆ with a rank-ny covariance. Obviously, the distribution of such an estimator cannot be arbitrarily close to that of X,
+whose covariance has rank nx. What is the optimal estimator in this more general setting, then?
+
+Theorem 4 (Optimal estimators in the Gaussian case). Assume X and Y are zero-mean jointly Gaus-
+
+sian random vectors with ΣX , ΣY 0. Then for any P ∈ [0, G∗], an estimator
+
+Denote T ∗ TpX →pX∗ with perception index P
+
+= Σ−X1/2(Σ1X/2ΣX∗ Σ1X/2)1/2Σ−X1/2. and MSE D(P ) can be constructed
+
+as
+
+XˆP =
+
+1
+
+−
+
+P G∗
+
+1
+ΣX2
+
+1
+
+1
+
+ΣX2 ΣX∗ ΣX2
+
+1 2
+
+Σ−X
+
+1 2
+
+Σ†X
+
+∗
+
++
+
+P G∗ I
+
+ΣXY Σ−Y 1Y +
+
+1
+
+−
+
+P G∗
+
+W, (19)
+
+where W is a zero-mean Gaussian noise with covariance ΣW = ΣX1/2(I −Σ1X/2T ∗Σ†X∗ T ∗Σ1X/2)Σ1X/2, which is independent of Y, X, and Σ†X∗ is the pseudo-inverse of ΣX∗ .
+
+Note that in this case, we indeed have a random noise component that shapes the covariance of XˆP to
+become closer to ΣX as P gets closer to 0. It can be shown (see App. B) that when ΣX∗ is invertible, ΣW = 0 and (19) reduces to (18). Also note that, as in (18), the dependence of XˆP on Y in (19) is only through X∗ = ΣXY Σ−Y 1Y .
+
+As mentioned in Sec. 3.1, the optimal estimator is generally not unique. Interestingly, in the Gaussian setting we can explicitly characterize a set of optimal estimators.
+
+Theorem 5 (A set of optimal estimators in the Gaussian case). Consider the setting of Theorem 4. Let ΣXˆ0Y ∈ Rnx×ny satisfy
+
+ΣXˆ0Y Σ−Y 1ΣY X
+
+=
+
+1
+ΣX2
+
+1
+(ΣX2
+
+ΣX
+
+∗
+
+1
+ΣX2
+
+)
+
+1 2
+
+ΣX−
+
+1 2
+
+,
+
+(20)
+
+7
+
+and W0 be a zero-mean Gaussian noise with covariance
+
+ΣW0 = ΣX − ΣXˆ0Y Σ−Y 1ΣTXˆ0Y 0
+
+(21)
+
+that is independent of X, Y . Then, for any P ∈ [0, G∗], an optimal estimator with perception index P can be obtained by
+
+XˆP =
+
+1
+
+−
+
+P G∗
+
+P ΣXˆ0Y + G∗ ΣXY
+
+Σ−Y 1Y +
+
+1
+
+−
+
+P G∗
+
+W0.
+
+(22)
+
+The estimator given in (19) is one solution to (20)-(21), but is generally not unique.
+
+3.4 A Comment on the MSE–Wasserstein-p tradeoff
+While our results concern the MSE − W2 tradeoff, they can be used to draw conclusions regarding the DP tradeoff with other divergences. In particular, (8) constitutes a lower bound on the MSEWasserstein-p tradeoff for any p ≥ 2. Furthermore, we can show that the MSE − W1 DP function is lower bounded by D∗ + [(P1∗ − P )+]2, where P1∗ W1(pX , pX∗ ).
+Note that at the point P = 0, the DP function coincides with (8) for any plausible divergence. For a detailed discussion, we kindly refer the reader to the Appendix.
+
+4 A geometric perspective on the distortion-perception tradeoff
+
+In this section we provide a geometric point of view on our main results. Speciﬁcally, we show that
+the results of Theorems 1 and 3 are a consequence of a more general geometric property of the space W2(Rnx ). In the Gaussian case, this is simpliﬁed to a geometry of covariance matrices.
+
+Recall from (14) that the optimal pXˆ is the one closest to pX∗ (in terms of Wasserstein distance) among all measures at a distance P from pX . This implies that to determine pXˆ , we should traverse the geodesic between pX∗ and pX until reaching a distance of P from pX . Furthermore, pXˆX∗ should be the optimal plan between pXˆ and pX∗ . Interestingly, geodesics in Wasserstein spaces take a particularly simple form, and their explicit construction also turns out to satisfy the latter requirement.
+
+Speciﬁcally, let γ, µ be measures in W2(Rd), let ν ∈ Π(γ, µ) be an optimal plan attaining W2(γ, µ),
+
+and let πi denote the projection πi : Rd × Rd → Rd such that πi((x1, x2)) = xi, i = 1, 2. Then,
+
+the curve
+
+γt [(1 − t)π1 + tπ2] #ν, t ∈ [0, 1]
+
+(23)
+
+is a constant-speed geodesic from γ to µ in W2(Rd) [2], where # is the push-forward operation1.
+
+Particularly,
+
+W2(γt, γs) = |t − s|W2(γ, µ),
+
+(24)
+
+and it follows that W2(γt, γ) = tW2(γ, µ) and W2(γt, µ) = (1 − t)W2(γ, µ). Furthermore, if γt, t ∈ [0, 1] is a constant-speed geodesic with γ0 = γ, γ1 = µ, then the optimal plans between γ, γt
+and between γt, µ are given by
+
+[π1, (1 − t)π1 + tπ2] #ν, [(1 − t)π1 + tπ2, π2] #ν,
+
+(25)
+
+respectively, where ν ∈ Π(γ, µ) is some optimal plan. Applying (23) to (Xˆ0, X∗) ∼ ν with t = P/P ∗, we obtain (15), where we show that the obtained estimator achieves E[ XˆP − X∗ 2] = (1 − t)2W22(pX , pX∗ ). This explains the result of Theorem 3.
+It is worth mentioning that this geometric interpretation is simpliﬁed under some common settings. For example, when γ is absolutely continuous (w.r.t. the Lebesgue measure), we have a measurable map Tγ→µ which is the solution to the optimal transport problem with the quadratic cost [20, Thm 1.6.2, p.16]. The geodesic (23) then takes the form
+
+γt = [Id + t(Tγ→µ − Id)]#γ, t ∈ [0, 1].
+
+(26)
+
+Therefore, in our setting, if γ = pX∗ has a density, then we can obtain XˆP by the deterministic
+
+transformation [X∗ +
+
+1
+
+−
+
+P P∗
+
+(TpX∗ →pX (X∗) − X∗)] (see Remark about randomness in Sec. 3.1).
+
+1For measures γ, µ on X , Y, we say that a measurable transform T : X → Y pushes γ forward to µ (denoted T #γ = µ) iff γ(T −1(B)) = µ(B) for any measurable B ⊆ Y.
+
+8
+
+Further simpliﬁcation arises when γ, µ are centered non-singular Gaussian measures, in which case Tγ→µ is the linear and symmetric transformation (7). Then, γt is a Gaussian measure with covariance Σγt = TtΣγTt, where Tt [I + t(Tγ→µ − I)]. Therefore, in the Gaussian case, the shortest path (23) between distributions is reduced to a trajectory in the geometry of covariance matrices induced by the Gelbrich distance [27]. If additionally Σγ and Σµ commute, then the Gelbrich distance is further reduced to the 2-distance between matrices, as we discuss in App. D.
+5 Numerical illustration
+We now experimentally illustrate the results of Theorems 1 and 3. We compute distortion and perception indices for 13 super resolution algorithms in a 4× magniﬁcation task on the BSD100 dataset2 [16]. We then demonstrate the efﬁciency of approximating the lower bound (9) on the distortion D(P ), and of the estimators suggested in (15), in this practical setting. The evaluated algorithms include EDSR [14], ESRGAN [31], SinGAN [24], ZSSR [25], DIP [29], SRResNet variants which optimize MSE and VGG2,2, SRGAN variants which optimize MSE, VGG2,2 and VGG5,4 in addition to an adversarial loss [13], ENet [23] (“PAT” and “E” variants), and the stochastic explorable SR method of [3] (ExpSR). Low resolution images were obtained by 4× downsampling of BSD100 images using a bicubic kernel.
+In Fig. 3 we plot each method on the distortion-perception plane. In the left pane, we consider natural (and reconstructed) images to be stationary random sources, and use 9 × 9 patches (totally 1.6 × 106 patches) to empirically estimate the mean and covariance matrix for the ground-truth images, and for the reconstructions produced by each method. We then use the estimated Gelbrich distances (4) between the patch distribution of each method and that of ground-truth images, as a perceptual quality index. Recall this is a lower bound on the Wasserstein distance. In the right pane of Fig. 3, we measure perception using the popular FID index [10], which relies on the Fréchet distance between deep feature distributions of ground-truth and reconstructed images (assuming they are normally distributed). FID is known to correlate well with visual quality, and while it is not directly related to our theory, we can see a qualitatively similar behavior to that depicted in the left pane.
+We consider the EDSR method [14] to constitute a good approximation for the minimum MSE estimator X∗ since it achieves the lowest MSE among the evaluated methods. We therefore estimate the lower bound (9) as
+Dˆ (P ) = DEDSR + [(PEDSR − P )+]2 ,
+where DEDSR is the MSE of EDSR, and PEDSR is the estimated Gelbrich distance between EDSR reconstructions and ground-truth images. Note the unoccupied region under the estimated curve in Fig. 3, which is indeed unattainable according to the theory.
+The ﬁgure also shows 9 estimators Xˆt, which we construct by interpolation between EDSR and ESRGAN, Xˆt = tXEDSR + (1 − t)XESRGAN with t ∈ [0, 1]. We observe that estimators constructed using these two extreme points are closer to the optimal DP tradeoff than the other evaluated methods. This is true both for the Gelbrich perception index and for FID. In Fig. 4 we present a visual comparison between SRGAN-VGG2,2 [13] and our interpolated estimator Xˆ0.12. Both achieve roughly the same RMSE distortion (18.08 for SRGAN, 18.14 for Xˆ0.12), but our estimator achieves a lower perception index. Namely, by using interpolation, we manage to achieve improvement in perceptual quality, without degradation in distortion. The improvement in visual quality is also apparent in the ﬁgure. Additional visual comparisons including more points along the DP curve and ground-truth images can be found in the Appendix.
+6 Conclusion
+In this paper we provide a full characterization of the distortion-perception tradeoff for the MSE distortion and the Wasserstein-2 perception index. We show that optimal estimators are obtained by interpolation between the minimum MSE estimator and an optimal perfect perceptual quality estimator. In the Gaussian case, we explicitly formulate these estimators. To the best of our knowledge, this is the ﬁrst work to derive such closed-form expressions. Our work paves the way towards fully
+2All codes are freely available and provided by the authors.
+9
+
+RMSE
+
+crop size 9 × 9, stride 3 × 3
+
+ExpSR
+
+20
+
+ENet SRGAN
+
+PAT
+
+VGG5,4
+
+SinGAN
+
+Dˆ (P )
+
+20
+
+19
+
+ESRGAN
+
+Xˆ0.1
+
+SRGAN VGG2,2
+
+19
+
+18
+
+Xˆ0.2
+
+18
+
+SRGAN
+
+RMSE
+
+17
+
+Xˆ0.3 MSE SRResNet
+
+17
+
+Xˆ0.4
+
+VGG2,2
+
+DIP
+
+16
+
+Xˆ0.5
+
+16
+
+15
+
+Xˆ0.6 Xˆ0.7
+
+ENet E
+
+ZSSR SRResNet
+
+15
+
+14
+
+Xˆ0.8 EDSR MSE 14
+
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+P
+
+crop size 299 × 299, stride 181 × 181
+
+ExpSR ENet SRGAN PAT VGG5,4
+
+ESRGAN
+
+Xˆ0.1
+
+SRGAN VGG2,2
+
+SinGAN
+
+Xˆ0.2 Xˆ0.3
+
+SRGAN MSE
+
+Xˆ0.4
+
+SRResNet DIP
+
+Xˆ0.5 Xˆ0.6
+
+VGG2,2
+
+Xˆ0.7
+
+SRResNet MSE
+
+ZSSR ENet E
+
+Xˆ0.8
+
+EDSR
+
+8
+
+9 √ 10
+
+11
+
+12
+
+FID
+
+Figure 3: Evaluation of SR algorithms. We plot 13 algorithms (blue) on the Distortion-Perception plane. In the left pane, perception is measured using the Gelbrich distance between empirical means
+and covariances of patches from the ground-truth images and the reconstructed images. In the
+right pane, we measure perception using FID. In orange is the estimated lower bound (9), where we consider EDSR to be the global minimizer X∗. Note the unoccupied region under the estimated curve, which is unattainable. We also plot 9 estimators Xˆt (Green) created by interpolation between EDSR and ESRGAN reconstructions, using different relative weights t. Note that estimators constructed
+using these two extreme estimators are closer to the optimal DP curve than the compared methods.
+
+SRGAN VGG2,2
+
+Ground. LowRes. EDSR ESRGAN ˆX0.12
+
+Figure 4: A visual comparison between estimators with approximately the same MSE. Upper: SRGAN-VGG2,2. Lower: Xˆ0.12, an interpolation between EDSR and ESRGAN using t = 0.12. Observe the improvement in perceptual quality, without any signiﬁcant degradation in distortion.
+understanding the DP tradeoff under more general distortions and perceptual criteria, and bridging between ﬁdelity and visual quality at test-time, without training different models.
+Broader impact Synthesis of photo-realistic visual contents may raise concerns of inappropriate and malicious use. This is true for image generation in general (e.g. with GANs), but to some extent also for image restoration tasks like super-resolution. However, even without malicious intent, the outputs of a high perceptual quality algorithm can often not be very close to the ground truth images. In this paper we quantify this effect, by studying the best similarity (lowest distortion) one can hope to achieve with an algorithm having a prescribed level of perceptual quality. Acknoledgments This work was partially supported by grants 451/17 and 852/17 from the Israel Science Foundation, by the Ollendorff Center of the Viterbi Faculty of Electrical and Computer Engineering at the Technion, and by the Skillman chair in biomedical sciences.
+10
+
+References
+[1] Mohamed Abderrahmen Abid, Ihsen Hedhli, and Christian Gagné. A generative model for hallucinating diverse versions of super resolution images. arXiv preprint arXiv:2102.06624, 2021.
+[2] Luigi Ambrosio, Nicola Gigli, and Giuseppe Savaré. Gradient ﬂows: in metric spaces and in the space of probability measures. Springer Science & Business Media, 2008.
+[3] Yuval Bahat and Tomer Michaeli. Explorable super resolution. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 2716–2725, 2020.
+[4] Yochai Blau and Tomer Michaeli. The perception-distortion tradeoff. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 6228–6237, 2018.
+[5] Yochai Blau, Roey Mechrez, Radu Timofte, Tomer Michaeli, and Lihi Zelnik-Manor. The 2018 PIRM challenge on perceptual image super-resolution. In Proceedings of the European Conference on Computer Vision (ECCV) Workshops, pages 0–0, 2018.
+[6] Xin Deng. Enhancing image quality via style transfer for single image super-resolution. IEEE Signal Processing Letters, 25(4):571–575, 2018.
+[7] Roy Friedman and Yair Weiss. Posterior sampling for image restoration using explicit patch priors. arXiv preprint arXiv:2104.09895, 2021.
+[8] Matthias Gelbrich. On a formula for the l2 wasserstein metric between measures on euclidean and hilbert spaces. Mathematische Nachrichten, 147(1):185–203, 1990.
+[9] Robert M Gray. Toeplitz and circulant matrices: A review. 2006.
+[10] Martin Heusel, Hubert Ramsauer, Thomas Unterthiner, Bernhard Nessler, and Sepp Hochreiter. Gans trained by a two time-scale update rule converge to a local nash equilibrium. In I. Guyon, U. V. Luxburg, S. Bengio, H. Wallach, R. Fergus, S. Vishwanathan, and R. Garnett, editors, Advances in Neural Information Processing Systems, volume 30. Curran Associates, Inc., 2017. URL https://proceedings.neurips.cc/paper/2017/file/ 8a1d694707eb0fefe65871369074926d-Paper.pdf.
+[11] Bahjat Kawar, Gregory Vaksman, and Michael Elad. Stochastic image denoising by sampling from the posterior distribution. arXiv preprint arXiv:2101.09552, 2021.
+[12] Martin Knott and Cyril S Smith. On the optimal mapping of distributions. Journal of Optimization Theory and Applications, 43(1):39–49, 1984.
+[13] Christian Ledig, Lucas Theis, Ferenc Huszár, Jose Caballero, Andrew Cunningham, Alejandro Acosta, Andrew Aitken, Alykhan Tejani, Johannes Totz, Zehan Wang, et al. Photo-realistic single image super-resolution using a generative adversarial network. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 4681–4690, 2017.
+[14] Bee Lim, Sanghyun Son, Heewon Kim, Seungjun Nah, and Kyoung Mu Lee. Enhanced deep residual networks for single image super-resolution. In Proceedings of the IEEE conference on computer vision and pattern recognition workshops, pages 136–144, 2017.
+[15] Andreas Lugmayr, Martin Danelljan, Luc Van Gool, and Radu Timofte. Srﬂow: Learning the super-resolution space with normalizing ﬂow. In European Conference on Computer Vision, pages 715–732. Springer, 2020.
+[16] David Martin, Charless Fowlkes, Doron Tal, and Jitendra Malik. A database of human segmented natural images and its application to evaluating segmentation algorithms and measuring ecological statistics. In Proceedings Eighth IEEE International Conference on Computer Vision. ICCV 2001, volume 2, pages 416–423. IEEE, 2001.
+[17] Pablo Navarrete Michelini, Dan Zhu, and Hanwen Liu. Multi–scale recursive and perception– distortion controllable image super–resolution. In Proceedings of the European Conference on Computer Vision (ECCV) Workshops, pages 0–0, 2018.
+11
+
+[18] Guy Ohayon, Theo Adrai, Gregory Vaksman, Michael Elad, and Peyman Milanfar. High perceptual quality image denoising with a posterior sampling cgan. arXiv preprint arXiv:2103.04192, 2021.
+[19] Felix Otto and Cédric Villani. Generalization of an inequality by talagrand and links with the logarithmic sobolev inequality. Journal of Functional Analysis, 173(2):361–400, 2000.
+[20] Victor M Panaretos and Yoav Zemel. An invitation to statistics in Wasserstein space. Springer Nature, 2020.
+[21] Mangal Prakash, Alexander Krull, and Florian Jug. Divnoising: diversity denoising with fully convolutional variational autoencoders. arXiv preprint arXiv:2006.06072, 2020.
+[22] Mangal Prakash, Mauricio Delbracio, Peyman Milanfar, and Florian Jug. Removing pixel noises and spatial artifacts with generative diversity denoising methods. arXiv preprint arXiv:2104.01374, 2021.
+[23] Mehdi SM Sajjadi, Bernhard Scholkopf, and Michael Hirsch. Enhancenet: Single image super-resolution through automated texture synthesis. In Proceedings of the IEEE International Conference on Computer Vision, pages 4491–4500, 2017.
+[24] Tamar Rott Shaham, Tali Dekel, and Tomer Michaeli. SinGAN: Learning a generative model from a single natural image. In Proceedings of the IEEE/CVF International Conference on Computer Vision, pages 4570–4580, 2019.
+[25] Assaf Shocher, Nadav Cohen, and Michal Irani. “zero-shot” super-resolution using deep internal learning. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 3118–3126, 2018.
+[26] Alon Shoshan, Roey Mechrez, and Lihi Zelnik-Manor. Dynamic-net: Tuning the objective without re-training for synthesis tasks. In Proceedings of the IEEE/CVF International Conference on Computer Vision, pages 3215–3223, 2019.
+[27] Asuka Takatsu. On wasserstein geometry of gaussian measures. In Probabilistic approach to geometry, pages 463–472. Mathematical Society of Japan, 2010.
+[28] Michel Talagrand. Transportation cost for gaussian and other product measures. Geometric & Functional Analysis GAFA, 6(3):587–600, 1996.
+[29] Dmitry Ulyanov, Andrea Vedaldi, and Victor Lempitsky. Deep image prior. In Proceedings of the IEEE conference on computer vision and pattern recognition, pages 9446–9454, 2018.
+[30] Michael Unser. On the approximation of the discrete karhunen-loeve transform for stationary processes. Signal Processing, 7(3):231–249, 1984.
+[31] Xintao Wang, Ke Yu, Shixiang Wu, Jinjin Gu, Yihao Liu, Chao Dong, Yu Qiao, and Chen Change Loy. ESRGAN: Enhanced super-resolution generative adversarial networks. In Proceedings of the European Conference on Computer Vision (ECCV) Workshops, pages 0–0, 2018.
+[32] Xintao Wang, Ke Yu, Chao Dong, Xiaoou Tang, and Chen Change Loy. Deep network interpolation for continuous imagery effect transition. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pages 1692–1701, 2019.
+[33] Zhen Zhang, Mianzhi Wang, and Arye Nehorai. Optimal transport in reproducing kernel hilbert spaces: Theory and applications. IEEE transactions on pattern analysis and machine intelligence, 42(7):1741–1754, 2019.
+12
+

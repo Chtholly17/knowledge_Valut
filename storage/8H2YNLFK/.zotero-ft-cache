@@ -1,0 +1,718 @@
+Subspace Robust Wasserstein Distances
+
+Franc¸ois-Pierre Paty 1 Marco Cuturi 2 1
+
+Abstract
+Making sense of Wasserstein distances between discrete measures in high-dimensional settings remains a challenge. Recent work has advocated a two-step approach to improve robustness and facilitate the computation of optimal transport, using for instance projections on random real lines, or a preliminary quantization of the measures to reduce the size of their support. We propose in this work a “max-min” robust variant of the Wasserstein distance by considering the maximal possible distance that can be realized between two measures, assuming they can be projected orthogonally on a lower k-dimensional subspace. Alternatively, we show that the corresponding “min-max” OT problem has a tight convex relaxation which can be cast as that of ﬁnding an optimal transport plan with a low transportation cost, where the cost is alternatively deﬁned as the sum of the k largest eigenvalues of the second order moment matrix of the displacements (or matchings) corresponding to that plan (the usual OT definition only considers the trace of that matrix). We show that both quantities inherit several favorable properties from the OT geometry. We propose two algorithms to compute the latter formulation using entropic regularization, and illustrate the interest of this approach empirically.
+1. Introduction
+The optimal transport (OT) toolbox (Villani, 2009) is gaining popularity in machine learning, with several applications to data science outlined in the recent review paper (Peyre´ & Cuturi, 2019). When using OT on high-dimensional data, practitioners are often confronted to the intrinsic instability of OT with respect to input measures. A well known result states for instance that the sample complexity of Wasserstein
+1CREST-ENSAE, Palaiseau, France 2Google Brain, Paris, France. Correspondence to: Franc¸ois-Pierre Paty <francois.pierre.paty@ensae.fr>.
+Proceedings of the 36 th International Conference on Machine Learning, Long Beach, California, PMLR 97, 2019. Copyright 2019 by the author(s).
+
+distances can grow exponentially in dimension (Dudley, 1969; Fournier & Guillin, 2015), which means that an irrealistic amount of samples from two continuous measures is needed to approximate faithfully the true distance between them. This result can be mitigated when data lives on lower dimensional manifolds as shown in (Weed & Bach, 2017), but sample complexity bounds remain pessimistic even in that case. From a computational point of view, that problem can be interpreted as that of a lack of robustness and instability of OT metrics with respect to their inputs. This fact was already a common concern of the community when these tools were ﬁrst adopted, as can be seen in the use of 1 costs (Ling & Okada, 2007) or in the common practice of thresholding cost matrices (Pele & Werman, 2009).
+Regularization The idea to trade off a little optimality in exchange for more regularity is by now considered a crucial ingredient to make OT work in data sciences. A line of work initiated in (Cuturi, 2013) advocates adding an entropic penalty to the original OT problem, which results in faster and differentiable quantities, as well as improved sample complexity bounds (Genevay et al., 2019). Following this, other regularizations (Dessein et al., 2018), notably quadratic (Blondel et al., 2018), have also been investigated. Sticking to an entropic regularization, one can also interpret the recent proposal by Altschuler et al. (2018b) to approximate Gaussian kernel matrices appearing in the regularized OT problem with Nystro¨m-type factorizations (or exact features using a Taylor expansion (Cotter et al., 2011) as in (Altschuler et al., 2018a)), as robust approaches that are willing to tradeoff yet a little more cost optimality in exchange for faster Sinkhorn iterations. In a different line of work, quantizing ﬁrst the measures to be compared before carrying out OT on the resulting distriutions of centroids is a fruitful alternative (Canas & Rosasco, 2012) which has been recently revisited in (Forrow et al., 2019). Another approach exploits the fact that the OT problem between two distributions on the real line boils down to the direct comparison of their generalized quantile functions (Santambrogio, 2015, §2). Computing quantile functions only requires sorting values, with a mere log-linear complexity. The sliced approximation of OT (Rabin et al., 2011) consists in projecting two probability distributions on a given line, compute the optimal transport cost between these projected values, and then repeat this procedure to average these distances over
+
+1 0.5
+0 -0.5
+-1 -1
+
+Optimal Vπ⋆
+
+π⋆, C = 1.24 λ1(Vπ⋆ ) = 1.04
+
+-0.5
+
+0
+
+0.5
+
+1
+
+1 0.5
+0 -0.5
+-1 -1
+
+Subspace Robust Wasserstein Distances
+
+Random feasible π
+
+1-Projection robust π⋆(θ∗)
+1
+
+0.5
+
+Gap between P1 and S1
+2
+
+OT cost for θ
+
+λ1(Vπ⋆(θ))
+
+1.5
+
+λ2(Vπ⋆(θ))
+
+0
+
+Optimal projection θ∗
+
+1
+
+π, C = 1.43
+
+-0.5
+
+π⋆(θ∗), C = 1.26
+
+0.5
+
+λ1(Vπ) = 1.15
+
+-0.5
+
+0
+
+0.5
+
+1
+
+λ1(Vπ⋆(θ∗)) = 0.853
+
+-1
+
+-1
+
+-0.5
+
+0
+
+0.5
+
+1
+
+θ in degrees
+0
+
+0
+
+50
+
+100
+
+150
+
+MAXSWD
+
+Figure 1. We consider two discrete measures (red and blue dots) on the plane. The left-most plot shows the optimal transport between these points, in which the width of the segment is proportional to the mass transported between two locations. The total cost is displayed in the lower right part of the plot as π , C , where C is the pairwise squared-Euclidean distance matrix. The largest eigenvalue of the corresponding second order moment matrix Vπ of displacements, see (1), is given below. As can be expected and seen in the second plot, choosing a random transportation plan yields a higher cost. The third plot displays the most robust projection direction (green line), that upon which the OT cost of these point clouds is largest once projected. The maximal eigenvalue of the second order moment matrix (still in dimension 2) is smaller than that obtained with the initial OT plan. Finally, we plot as a function of the angle θ between (0, 180) the OT cost (which, in agreement with the third plot, is largest for the angle corresponding to the green line of the third plot) as well as the corresponding maximal eigenvalue of the second order moment of the optimal plan corresponding to each of these angles θ. The maximum of the red curve, as well as the minimum reached by the dark blue one, correspond respectively to the values of the projection Pk and subspace Sk robust Wasserstein distances described in §3. They happen to coincide in this example, but one may ﬁnd examples in which they do not, as can be seen in Figure 11 (supplementary material). The smallest eigenvalue is given for illustrative purposes only.
+
+several random lines. This approach can be used to deﬁne kernels (Kolouri et al., 2016), compute barycenters (Bonneel et al., 2015) but also to train generative models (Kolouri et al., 2018; Deshpande et al., 2018). Beyond its practical applicability, this approach is based on a perhaps surprising point-of-view: OT on the real line may be sufﬁcient to extract geometric information from two high-dimensional distributions. Our work builds upon this idea, and more candidly asks what can be extracted from a little more than a real line, namely a subspace of dimension k ≥ 2. Rather than project two measures on several lines, we consider in this paper projecting them on a k-dimensional subspace that maximizes their transport cost. This results in optimizing the Wasserstein distance over the ground metric, which was already considered for supervised learning (Cuturi & Avis, 2014; Flamary et al., 2018).
+Contributions This optimal projection translates into a “max-min” robust OT problem with desirable features. Although that formulation cannot be solved with convex solvers, we show that the corresponding “min-max” problem admits on the contrary a tight convex relaxation and also has an intuitive interpretation. To see that, one can ﬁrst notice that the usual 2-Wasserstein distance can be described as the minimization of the trace of the second order moment matrix of the displacements associated with a transport plan. We show that computing a maximally discriminating optimal k dimensional subspace in this “min-max” formulation can be carried out by minimizing the sum of the k largest eigenvalues (instead of the entire trace) of that second order
+
+moment matrix. A simple example summarizing the link between these two “min-max” and “max-min” quantities is given in Figure 1. That ﬁgure considers a toy example where points in dimension d = 2 are projected on lines k = 1, our idea is designed to work for larger k and d, as shown in §6.
+Paper structure We start this paper with background material on Wasserstein distances in §2 and present an alternative formulation for the 2-Wasserstein distance using the second order moment matrix of displacements described in a transport plan. We deﬁne in §3 our “max-min” and “minmax” formulations for, respectively, projection (PRW) and subspace (SRW) robust Wasserstein distances. We study the geodesic structure induced by the SRW distance on the space of probability measures in §4, as well as its dependence on the dimension parameter k. We provide computational tools to evaluate SRW using entropic regularization in §5. We conclude the paper with experiments in §6 to validate and illustrate our claims, on both simulated and real datasets.
+
+2. Background on Optimal Transport
+For d ∈ N, we write d = {1, ..., d}. Let P(Rd) be the set of Borel probability measures in Rd, and let
+
+P2(Rd) = µ ∈ P(Rd)
+
+x 2 dµ(x) < ∞ .
+
+Subspace Robust Wasserstein Distances
+
+Monge and Kantorovich Formulations of OT For µ, ν ∈ P(Rd), we write Π(µ, ν) for the set of couplings
+
+Π(µ, ν) = {π ∈ P(Rd × Rd) s.t. ∀A, B ⊂ Rd Borel, π(A × Rd) = µ(A), π(Rd × B) = ν(B)},
+
+and their 2-Wasserstein distance is deﬁned as
+
+W2(µ, ν) := inf
+π∈Π(µ,ν)
+
+1/2
+x − y 2 dπ(x, y) .
+
+Because we only consider quadratic costs in the remainder of this paper, we drop the subscript 2 in our notation and will only use W to denote the 2-Wasserstein distance. For Borel X , Y ⊂ Rd, Borel T : X → Y and µ ∈ P(X ), we denote by T#µ ∈ P(Y) the push-forward of µ by T , i.e. the measure such that for any Borel set A ⊂ Y,
+T#µ(A) = µ T −1(A) .
+
+The Monge (1781) formulation of optimal transport is, when this minimization is feasible, equivalent to that of Kantorovich, namely
+
+W(µ, ν) = inf
+T :T#µ=ν
+
+1/2
+x − T (x) 2 dµ(x) .
+
+W as Trace-minimization For any coupling π, we deﬁne the d × d second order displacement matrix
+
+Vπ := (x − y)(x − y)T dπ(x, y).
+
+(1)
+
+Notice that when a coupling π corresponds to a Monge map, namely π = (Id, T )#µ, then one can interpret even more naturally Vπ as the second order moment of all displacement (x − T (x))(x − T (x))T weighted by µ. With
+this convention, we remark that the total cost of a coupling π is equal to the trace of Vπ, using the simple identity trace(x − y)(x − y)T = x − y 2 and the linearity of the integral sum. Computing the W distance can therefore be interpreted as minimizing the trace of Vπ. This simple observation will play an important role in the next section, and more speciﬁcally the study of λl(Vπ), the l-th largest eigenvalue of Vπ.
+
+3. Subspace Robust Wasserstein Distances
+With the conventions and notations provided in §2, we consider here different robust formulations of the Wasserstein distance. Consider ﬁrst for k ∈ d , the Grassmannian of k-dimensional subspaces of Rd :
+Gk = E ⊂ Rd | dim(E) = k .
+For E ∈ Gk, we note PE the orthogonal projector onto E. Given two measures µ, ν ∈ P2(Rd), a ﬁrst attempt at
+
+computing a robust version of W(µ, ν) is to consider the worst possible OT cost over all possible low dimensional projections:
+Deﬁnition 1. For k ∈ d , the k-dimensional projection robust 2-Wasserstein (PRW) distance between µ and ν is
+Pk(µ, ν) = sup W PE#µ, PE#ν .
+E∈Gk
+
+As we show in the supplementary material, this quantity is well posed and itself worthy of interest, yet difﬁcult to compute. In this paper, we focus our attention on the corresponding “min-max” problem, to deﬁne the k-dimensional subspace robust 2-Wasserstein (SRW) distance:
+Deﬁnition 2. For k ∈ d , the k-dimensional subspace robust 2-Wasserstein distance between µ and ν is
+
+Sk(µ, ν) = inf sup
+π∈Π(µ,ν) E∈Gk
+
+1/2
+PE(x − y) 2dπ(x, y)
+
+Remark 1. Both quantities Sk and Pk can be interpreted as robust variants of the W distance. By a simple application of weak duality we have that Pk(µ, ν) ≤ Sk(µ, ν).
+Lemma 1. Optimal solutions for Sk exist, i.e.
+
+Sk(µ, ν) = min max
+π∈Π(µ,ν) E∈Gk
+
+1/2
+PE(x − y) 2dπ(x, y)
+
+We show next that the SRW variant Sk can be elegantly reformulated as a function of the eigendecomposition of the displacement second-order moment matrix Vπ (1): Lemma 2. For k ∈ d and µ, ν ∈ P2(Rd), one has
+
+Sk2(µ,
+
+ν)
+
+=
+
+min
+π∈Π(µ,ν)
+
+max
+U ∈Rk×d
+
+U U T =Ik
+
+U x − U y 2 dπ(x, y)
+
+k
+
+= min
+
+λl (Vπ ).
+
+π∈Π(µ,ν)
+
+l=1
+
+This characterization as a sum of eigenvalues will be crucial to study theoretical properties of Sk. Subspace robust Wasserstein distances can in fact be interpreted as a convex relaxation of projection robust Wasserstein distances: they can be computed as the maximum of a concave function over a convex set, which will make computations tractable. Theorem 1. For k ∈ d and µ, ν ∈ P2(Rd),
+
+Sk2(µ,
+
+ν)
+
+=
+
+min
+π∈Π(µ,ν)
+
+max
+0ΩI
+
+d2Ω dπ
+
+(2)
+
+trace(Ω)=k
+
+= max min
+0 Ω I π∈Π(µ,ν)
+
+d2Ω dπ
+
+(3)
+
+trace(Ω)=k
+
+concave function
+
+= max W2 Ω1/2#µ, Ω1/2#ν
+0ΩI
+
+(4)
+
+trace(Ω)=k
+
+Subspace Robust Wasserstein Distances
+
+where dΩ stands for the Mahalanobis distance d2Ω(x, y) = (x − y)T Ω(x − y).
+
+where δx, δy, δ0 are Dirac masses at points x, y, 0 ∈ Rd and σ is the uniform probability distribution over the centered unit sphere in Rd.
+
+We can now prove that both PRW and SRW variants are, indeed, distances over P2(Rd).
+Proposition 1. For k ∈ d , both Pk and Sk are distances over P2(Rd).
+Proof. Symmetry is clear for both objects, and for µ ∈ P2(Rd), Sk(µ, µ) = Pk(µ, µ) = 0. Let µ, ν ∈ P2(Rd) such that Sk(µ, ν) = 0. Then Pk(µ, ν) = 0 and for any E ∈ Gk, W(PE#µ, PE#ν) = 0, i.e. PE#µ = PE#ν. Lemma 7 (in the supplementary material) then shows that µ = ν. For the triangle inequalities, let µ0, µ1, µ2 ∈ P2(Rd). Let Ω ∈ {0 Ω I, trace(Ω) = k} be optimal between µ0 and µ2. Using the triangle inequalities for the Wasserstein distance,
+Sk(µ0, µ2) = W Ω1/2#µ0, Ω1/2#µ2
+≤ W Ω1/2#µ0, Ω1/2#µ1 + W Ω1/2#µ1, Ω1/2#µ2
+≤ sup W Ω1/2#µ0, Ω1/2#µ1
+0ΩI trace(Ω)=k
++ sup W Ω1/2#µ1, Ω1/2#µ2
+0ΩI trace(Ω)=k
+= Sk(µ0, µ1) + Sk(µ1, µ2).
+The same argument, used this time with projections, yields the triangle inequalities for Pk.
+
+4. Geometry of Subspace Robust Distances
+We prove in this section that SRW distances share several fundamental geometric properties with the Wasserstein distance. The ﬁrst one states that distances between Diracs match the ground metric: Lemma 3. For x, y ∈ Rd and k ∈ d ,
+Sk(δx, δy) = x − y .
+
+Metric Equivalence. Subspace robust Wasserstein distances Sk are equivalent to the Wasserstein distance W:
+Proposition 2. For k ∈ d , Sk is equivalent to W. More precisely, for µ, ν ∈ P2(Rd),
+
+k d W(µ, ν) ≤ Sk(µ, ν) ≤ W(µ, ν). Moreover, the constants are tight since
+
+Sk(δx, δy) = W(δx, δy)
+
+Sk(δ0, σ) =
+
+k d
+
+W
+
+(δ0
+
+,
+
+σ)
+
+Dependence on the dimension. We ﬁx µ, ν ∈ P2(Rd) and we ask the following question : how does Sk(µ, ν) depend on the dimension k ∈ d ? The following lemma gives a result in terms of eigenvalues of Vπk , where πk ∈ Π(µ, ν) is optimal for some dimension k, then we translate in Proposition 3 this result in terms of Sk. Lemma 4. Let µ, ν ∈ P2(Rd). For any k ∈ d − 1 ,
+λk+1(Vπk+1 ) ≤ Sk2+1(µ, ν) − Sk2(µ, ν)
+≤ λk+1(Vπk )
+
+L
+where for L ∈ d , πL ∈ arg min λl(Vπ).
+π∈Π(µ,ν) l=1
+Proposition 3. Let µ, ν ∈ P2(Rd). The sequence k → Sk2(µ, ν) is increasing and concave. In particular, for k ∈ d−1 ,
+
+Sk2+1(µ, ν)
+
+−
+
+Sk2(µ, ν)
+
+≥
+
+W2(µ, ν) − Sk2(µ, ν) . d−k
+
+Moreover, for any k ∈ d − 1 ,
+
+k+1
+
+Sk(µ, ν) ≤ Sk+1(µ, ν) ≤
+
+k Sk(µ, ν).
+
+Geodesics We have shown in Proposition 2 that for any k ∈ d , P2(Rd), Sk is a metric space with the same topology as that of the Wasserstein space P2(Rd), W . We conclude this section by showing that P2(Rd), Sk is in fact a geodesic length space, and exhibits explicit constant speed geodesics. This can be used to interpolate between measures in Sk sense. Proposition 4. Let µ, ν ∈ P2(Rd) and k ∈ d . Take
+k
+π∗ ∈ arg min λl(Vπ)
+π∈Π(µ,ν) l=1
+and let ft(x, y) = (1 − t)x + ty. Then the curve
+t → µt := ft#π∗
+is a constant speed geodesic in P2(Rd), Sk connecting µ and ν. Consequently, P2(Rd), Sk is a geodesic space.
+
+Proof. We ﬁrst show that for any s, t ∈ [0, 1],
+
+Sk(µs, µt) = |t − s|Sk(µ, ν)
+
+by computing the cost of the transport plan π(s, t) = (fs, ft)#π∗ ∈ Π(µs, µt) and using the triangular inequality. Then the curve (µt) has constant speed
+
+|µt|
+
+=
+
+lim
+→0
+
+Sk (µt+ ||
+
+, µt)
+
+=
+
+Sk(µ, ν),
+
+Subspace Robust Wasserstein Distances
+
+and the length of the curve (µt) is
+
+n−1
+
+sup
+
+Sk(µti , µti+1 )
+
+i=0
+
+= Sk(µ, ν),
+
+n≥1 0 = t0 < ... < tn = 1
+
+i.e. (µt) is a geodesic connecting µ and ν.
+
+5. Computation
+
+We provide in this section algorithms to compute the saddle
+
+point solution of Sk. µ, ν are now discrete with respectively
+
+n and and ν
+
+m :=
+
+points
+m
+j=1
+
+and weights a biδyj . For k ∈
+
+and b : µ :=
+
+n i=1
+
+aiδxi
+
+d , three different objects
+
+are of interest: (i) the value of Sk(µ, ν), (ii) an optimal
+
+subspace E∗ obtained through the relaxation for SRW, (iii)
+
+an optimal transport plan solving SRW. A subspace can
+
+be used for dimensionality reduction, whereas an optimal
+
+transport plan can be used to compute a geodesic, i.e. to
+
+interpolate between µ and ν.
+
+5.1. Computational challenges to approximate Sk
+
+We observe that solving minπ∈Π(µ,ν)
+
+k l=1
+
+λl(Vπ
+
+)
+
+is
+
+chal-
+
+lenging. Considering a direct projection onto the transporta-
+
+tion polytope
+
+Π(µ, ν) = π ∈ Rn×m | π1m = a, πT 1n = b
+
+would result in a costly quadratic network ﬂow problem.
+
+The Frank-Wolfe algorithm, which does not require such
+
+projections, cannot be used directly because the application
+
+π→
+
+k l=1
+
+λl(Vπ
+
+)
+
+is
+
+not
+
+smooth.
+
+On the other hand, thanks to Theorem 1, solving the maximization problem is easier. Indeed, we can project onto the set of constraints R = {Ω ∈ Rd×d | 0 Ω I ; trace(Ω) = k} using Dykstra’s projection algorithm (Boyle & Dykstra, 1986). In this case, we will only get the value of Sk(µ, ν) and an optimal subspace, but not necessarily the actual optimal transport plan due to the lack of uniqueness for OT plans in general.
+
+Smoothing It is well known that saddle points are hard to compute for a bilinear objective (Hammond, 1984). Computations are greatly facilitated by adding smoothness, which allows the use of saddle point Frank-Wolfe algorithms (Gidel et al., 2017). Out of the two problems, the maximization problem is seemingly easier. Indeed, we can leverage the framework of regularized OT (Cuturi, 2013) to output, using Sinkhorn’s algorithm, a unique optimal transport plan π at each inner loop of the maximization. To save time, we remark that initial iterations can be solved with a low accuracy by limiting the number of iterations, and beneﬁt from warm starts, using the scalings computed at the previous iteration, see (Peyre´ & Cuturi, 2019, §4).
+
+Algorithm 1 Projected supergradient method for SRW
+Input: Measures (xi, ai) and (yj, bj), dimension k, learning rate τ0 π ← OT((x, a), (y, b), cost = · 2)
+U ← top k eigenvectors of Vπ Initialize Ω = U U T ∈ Rd×d for t = 0 to max iter do
+π ← OT((x, a), (y, b), cost = d2Ω) τ = τ0/(t + 1) Ω ← ProjR [Ω + τ Vπ] end for
+Output: Ω, Ω | Vπ
+
+5.2. Projected Supergradient Method for SRW
+
+In order to compute SRW and an optimal subspace, we can solve equation (3) by maximizing the concave function
+
+f : Ω → min
+π∈Π(µ,ν)
+
+d2Ω(xi, yj ) πi,j
+
+=
+
+min
+π∈Π(µ,ν)
+
+Ω | Vπ
+
+i,j
+
+over the convex set R. Since f is not differentiable, but only superdifferentiable, we can only use a projected supergradient method. This algorithm is outlined in Algorithm 1. Note that by Danskin’s theorem, for any Ω ∈ R,
+
+∂f (Ω) = Conv Vπ∗ π∗ ∈ arg min Ω | Vπ .
+π∈Π(µ,ν)
+
+5.3. Frank-Wolfe using Entropy Regularization
+
+Entropy-regularized optimal transport can be used to compute a unique optimal plan given a subspace. Let γ > 0 be the regularization strength. In this case, we want to maximize the concave function
+
+fγ : Ω → min Ω | Vπ + γ πi,j [log(πi,j) − 1]
+π∈Π(µ,ν) i,j
+over the convex set R. Since for all Ω ∈ R, there is a unique π∗ minimizing π → Ω | Vπ + γ i,j πi,j [log(πi,j) − 1], fγ is differentiable. Instead of running a projected gradient ascent on Ω ∈ R, we propose to use the Frank-Wolfe algorithm when the regularization strength is positive. Indeed, there is no need to tune a learning rate in Frank-Wolfe, making it easier to use. We only need to compute, for ﬁxed π ∈ Π(µ, ν), the maximum over R of Ω → Ω | Vπ :
+Lemma 5. For π ∈ Π(µ, ν), compute the eigendecomposition of Vπ = U diag (λ1, ..., λd) U T with λ1 ≥ ... ≥ λd. Then for k ∈ d , Ω = U diag ([1k, 0d−k]) U T solves
+
+max
+0ΩI trace(Ω)=k
+
+d2Ω dπ.
+
+This algorithm is outlined in algorithm 2.
+
+Subspace Robust Wasserstein Distances
+
+Algorithm 2 Frank-Wolfe algorithm for regularized SRW
+
+Input: Measures (xi, ai) and (yj, bj), dimension k, reg-
+
+ularization strength γ > 0, precision > 0
+
+π ← reg OT((x, a), (y, b), reg = γ, cost = · 2)
+
+U ← top k eigenvectors of Vπ Initialize Ω = U U T ∈ Rd×d
+
+for t = 0 to max iter do
+
+π ← reg OT((x, a), (y, b), reg = γ, cost = d2Ω)
+
+U ← top k eigenvectors of Vπ
+
+if
+
+k l=1
+
+λl(Vπ
+
+)
+
+−
+
+Ω | Vπ
+
+≤
+
+Ω | Vπ then
+
+break
+
+end if
+
+Ω ← U diag ([1k, 0d−k]) U T
+
+τ = 2/(2 + t)
+
+Ω ← (1 − τ )Ω + τ Ω
+
+end for
+
+Output: Ω, π, Ω | Vπ
+
+5.4. Initialization and Stopping Criterion
+We propose to initialize Algorithms 1 and 2 with Ω0 = U U T where U ∈ Rd×k is the matrix of the top k eigenvectors (i.e. the eigenvectors associated with the top k eigenvalues) of Vπ∗ and π∗ is an optimal transport plan between µ and ν. In other words, Ω0 is the projection matrix onto the k ﬁrst principal components of the transport-weighted displacement vectors. Note that Ω0 would be optimal is π∗ were optimal for the min-max problem, and that this initialization only costs the equivalent of one iteration.
+When entropic regularization is used, Sinkhorn algorithm is run at each iteration of Algorithms 1 and 2. We propose to initialize the potentials in Sinkhorn algorithm with the latest computed potentials, so that the number of iterations in Sinkhorn algorithm should be small after a few iterations of Algorithms 1 or 2.
+
+tation error at iteration t is:
+
+|Sk(µ, ν) − Sk(t)| ≤ ∆(t)
+
+Sk(µ, ν)
+
+Sk (t)
+
+where Sk(t) is the computed “max-min” value and ∆(t) is the duality gap at iteration t. We stop as soon as
+∆(t)/Sk(t) ≤ .
+Frank-Wolfe 6. Experiments
+
+We ﬁrst compare SRW with the experimental setup used to evaluate FactoredOT (Forrow et al., 2019). We then study the ability of SRW distances to capture the dimension of sampled measures by looking at their value for increasing dimensions k, as well as their robustness to noise.
+
+6.1. Fragmented Hypercube
+
+We ﬁrst consider µ = U ([−1, 1])d to be uniform over an
+
+hypercube, and ν = T#µ the pushforward of µ under the
+
+map T (x) = x+2 sign(x) (
+
+k∗ k=1
+
+ek
+
+),
+
+where
+
+sign
+
+is
+
+taken
+
+elementwise, k∗ ∈ d and (e1, ..., ed) is the canonical basis
+
+of Rd. The map T splits the hypercube into four different
+
+hyperrectangles. T is a subgradient of a convex function, so
+
+by Brenier’s theorem (1991) it is an optimal transport map
+
+between µ and ν = T#µ and
+
+W2(µ, ν) = x − T (x) 2 dµ(x) = 4k∗.
+
+Note that for any x, the displacement vector T (x) − x lies in the k∗-dimensional subspace span{e1, ..., ek∗ } ∈ Gk∗ , which is optimal. This means that for k ≥ k∗, Sk2(µ, ν) is constant equal to 4k∗. We show the interest of plotting,
+based on two empirical distributions µˆ from µ and νˆ from ν, the sequence k → Sk2(µˆ, νˆ), for different values of k∗. That sequence is increasing concave by proposition 3, and increases more slowly after k = k∗, as can be seen on Figure 2. This is the case because the last d − k∗ dimensions
+only represent noise, but is recovered in our plot.
+
+We sometimes need to compute Sk(µ, ν) for all k ∈ d , for example to choose the optimal k with an “elbow” rule. To speed the computations up, we propose to compute this sequence iteratively from k = d to k = 1. At each iteration, i.e. for each dimension k, we initialize the algorithm with Ω0 = U U T , where U ∈ Rd×k is the matrix of the top k eigenvectors of Vπk+1 and πk+1 is the optimal transport plan for dimension k + 1. We also initialize the Sinkhorn algorithm with the latest computed potentials.
+Instead of running a ﬁxed number of iterations in Algorithm 2, we propose to stop the algorithm when the computation error is smaller than a ﬁxed threshold . The compu-
+
+Figure 2. Sk2(µˆ, νˆ) depending on the dimension k ∈ d , for k∗ ∈ {2, 4, 7, 10}, where µˆ, νˆ are empirical measures from µ and ν respectively with 100 points each. Each curve is the mean over 100 samples, and shaded area show the min and max values.
+We consider next k∗ = 2, and choose from the result of Figure 2, k = 2. We look at the estimation error
+
+Subspace Robust Wasserstein Distances
+
+|W2(µ, ν) − Sk2(µˆ, νˆ)| where µˆ, νˆ are empirical measures from µ and ν respectively with n points each. In Figure 3, we plot this estimation error depending on the number of points n. In Figure 4, we plot the subspace estimation error Ω∗ − Ω depending on n, where Ω∗ is the optimal projection matrix onto span{e1, e2}.
+Figure 3. Mean estimation error over 500 random samples for n points, n ∈ {25, 50, 100, 250, 500, 1000}. The shaded areas represent the 10%-90% and 25%-75% quantiles over the 500 samples.
+
+may be different. Since the union of two k-dimensional subspaces is included in a 2k-dimensional subspace, for any l ≥ 2k, Sl2(µ, ν) = W2(µ, ν).
+For our experiment, we simulated 100 independent couples of covariance matrices Σ1, Σ2 in dimension d = 20, each having independently a Wishart distribution with k = 5 degrees of freedom. For each couple of matrices, we draw n = 100 points from N (0, Σ1) and N (0, Σ2) and considered µˆ and νˆ the empirical measures on those points. In Figure 6, we plot the mean (over the 100 samples) of l → Sl2(µˆ, νˆ)/W2(µˆ, νˆ). We plot the same curve for noisy data, where each point was added a N (0, I) random vector. With moderate noise, the data is only approximately on the two k = 5-dimensional subspaces, but the SRW does not vary too much.
+
+Figure 4. Mean estimation of the subspace estimation error over 500 samples, depending on n ∈ {25, 50, 100, 250, 500, 1000}. The shaded areas represent the 10%-90% and 25%-75% quantiles over the 500 samples.
+
+Figure 6. Mean normalized SRW distance, depending on the dimension. The shaded area show the 10%-90% and 25%-75% quantiles and the minimum and maximum values over the 100 samples.
+
+We also plot the optimal transport plan (in the sense of W, Figure 5 left) and the optimal transport plan (in the sense of S2) between µˆ and νˆ (with n = 250 points each, Figure 5 right).
+Figure 5. Fragmented hypercube, n = 250, d = 30. Optimal mapping in the Wasserstein space (left) and in the SRW space (right). Geodesics in the SRW space are robust to statistical noise.
+6.2. Robustness, with 20-D Gaussians We consider µ = N (0, Σ1) and ν = N (0, Σ2), with Σ1, Σ2 ∈ Rd×d semideﬁnite positive of rank k. It means that the supports of µ and ν are k-dimensional subspaces of Rd. Although those two subspaces are k-dimensional, they
+
+6.3. Sk is Robust to Noise
+
+As in experiment 6.2, we consider 100 independent samples of couples Σ1, Σ2 ∈ Rd×d, each following independently a Wishart distribution with k = 5 degrees of freedom. For
+
+each couple, we draw n = 100 points from N (0, Σ1) and
+
+N (0, Σ2) and consider the empirical measures µˆ and νˆ
+
+on those points. We then gradually add Gaussian noise
+
+σN (0, I) to the points, giving measures µˆσ, νˆσ. In Figure 7,
+
+we plot the mean (over the 100 samples) of the relative
+
+errors
+
+σ
+
+→
+
+|S52(µˆσ, νˆσ) − S52(µˆ0, νˆ0)| S52(µˆ0, νˆ0)
+
+and
+
+σ
+
+→
+
+|W
+
+2
+
+(µˆσ
+
+, νˆσ) − W 2 (µˆ0
+
+W 2 (µˆ0 , , νˆ0)
+
+νˆ0
+
+)|
+
+.
+
+Note that for small noise level, the imprecision in the computation of the SRW distance adds up to the error caused by the added noise. SRW distances seem more robust to noise than the Wasserstein distance when the noise has moderate to high variance.
+
+Subspace Robust Wasserstein Distances
+
+Figure 7. Mean SRW distance over 100 samples, depending on the noise level. Shaded areas show the min-max values and the 10%-90% quantiles.
+6.4. Computation time
+We consider the Fragmented Hypercube experiment, with increasing dimension d and ﬁxed k∗ = 2. Using k = 2 and Algorithm 2 with γ = 0.1 and stopping threshold = 0.05, we plot in Figure 8 the mean computation time of both SRW and Wasserstein distances on GPU, over 100 random samplings with n = 100. It shows that SRW computation is quadratic in dimension d, because of the eigendecomposition of matrix Vπ in Algorithm 2.
+
+D G I KB1 KB2 TM T D 0 0.186 0.186 0.195 0.203 0.186 0.171 G 0.186 0 0.173 0.197 0.204 0.176 0.185 I 0.186 0.173 0 0.196 0.203 0.171 0.181 KB1 0.195 0.197 0.196 0 0.165 0.190 0.180 KB2 0.203 0.204 0.203 0.165 0 0.194 0.180 TM 0.186 0.176 0.171 0.190 0.194 0 0.183 T 0.171 0.185 0.181 0.180 0.180 0.183 0 Figure 9. Sk2 distances between different movie scripts. Bold values correspond to the minimum of each line. D=Dunkirk, G=Gravity, I=Interstellar, KB1=Kill Bill Vol.1, KB2=Kill Bill Vol.2, TM=The Martian, T=Titanic.
+’planet’. The optimal subspace recovers the semantic dissimilarities between the two ﬁlms.
+
+Figure 8. Mean computation times on GPU (log-log scale). The shaded areas show the minimum and maximum values over the 100 experiments.
+6.5. Real Data Experiment
+We consider the scripts of seven movies. Each script is transformed into a list of words, and using word2vec (Mikolov et al., 2018), into a measure over R300 where the weights correspond to the frequency of the words. We then compute the SRW distance between all pairs of ﬁlms: see Figure 9 for the SRW values. Movies with a same genre or thematic tend to be closer to each other: this can be visualized by running a two-dimensional metric multidimensional scaling (mMDS) on the SRW distances, as shown in Figure 10 (left).
+In Figure 10 (right), we display the projection of the two measures associated with ﬁlms Kill Bill Vol.1 and Interstellar onto their optimal subspace. We compute the ﬁrst (weighted) principal component of each projected measure, and ﬁnd among the whole dictionary their 5 nearest neighbors in terms of cosine similarity. For Kill Bill Vol.1 , these are: ’swords’, ’hull’, ’sword’, ’ice’, ’blade’. For Interstellar, they are: ’spacecraft’, ’planets’, ’satellites’, ’asteroids’,
+
+Figure 10. Left: Metric MDS projection for the distances of Figure 9. Right: Optimal 2-dimensional projection between Kill Bill Vol.1 (red) and Interstellar (blue). Words appearing in both scripts are displayed in violet. For clarity, only the 30 most frequent words of each script are displayed.
+7. Conclusion
+We have proposed in this paper a new family of OT distances with robust properties. These distances take a particular interest when used with a squared-Euclidean cost, in which case they have several properties, both theoretical and computational. These distances share important properties with the 2-Wasserstein distance, yet seem far more robust to random perturbation of the data and able to capture better signal. We have provided algorithmic tools to compute these SRW distance. They come at a relatively modest overhead, given that they require using regularized OT as the inner loop of a FW type algorithm. Future work includes the investigation of even faster techniques to carry out these computations, eventually automatic differentiation schemes as those currently beneﬁtting the simple use of Sinkhorn divergences.
+Acknowledegments. Both authors acknowledge the support of a ”Chaire d’excellence de l’IDEX Paris Saclay”. We thank P. Rigollet and J. Weed for their remarks and their valuable input.
+
+Subspace Robust Wasserstein Distances
+
+References
+Altschuler, J., Bach, F., Rudi, A., and Weed, J. Approximating the quadratic transportation metric in near-linear time. arXiv preprint arXiv:1810.10046, 2018a.
+Altschuler, J., Bach, F., Rudi, A., and Weed, J. Massively scalable sinkhorn distances via the nystro¨m method. arXiv preprint arXiv:1812.05189, 2018b.
+Blondel, M., Seguy, V., and Rolet, A. Smooth and sparse optimal transport. In International Conference on Artiﬁcial Intelligence and Statistics, pp. 880–889, 2018.
+Bonneel, N., Rabin, J., Peyre´, G., and Pﬁster, H. Sliced and Radon Wasserstein barycenters of measures. Journal of Mathematical Imaging and Vision, 51(1):22–45, 2015.
+Boyle, J. P. and Dykstra, R. L. A method for ﬁnding projections onto the intersection of convex sets in hilbert spaces. In Advances in order restricted statistical inference, pp. 28–47. Springer, 1986.
+Brenier, Y. Polar factorization and monotone rearrangement of vector-valued functions. Communications on Pure and Applied Mathematics, 44(4):375–417, 1991.
+Canas, G. and Rosasco, L. Learning probability measures with respect to optimal transport metrics. In Pereira, F., Burges, C. J. C., Bottou, L., and Weinberger, K. Q. (eds.), Advances in Neural Information Processing Systems 25, pp. 2492–2500. 2012.
+Cotter, A., Keshet, J., and Srebro, N. Explicit approximations of the gaussian kernel. arXiv preprint arXiv:1109.4603, 2011.
+Cuturi, M. Sinkhorn distances: lightspeed computation of optimal transport. In Advances in Neural Information Processing Systems 26, pp. 2292–2300, 2013.
+Cuturi, M. and Avis, D. Ground metric learning. The Journal of Machine Learning Research, 15(1):533–564, 2014.
+Deshpande, I., Zhang, Z., and Schwing, A. G. Generative modeling using the sliced wasserstein distance. In The IEEE Conference on Computer Vision and Pattern Recognition (CVPR), June 2018.
+Dessein, A., Papadakis, N., and Rouas, J.-L. Regularized optimal transport and the rot mover’s distance. Journal of Machine Learning Research, 19(15):1–53, 2018.
+Dudley, R. M. The speed of mean Glivenko-Cantelli convergence. Annals of Mathematical Statistics, 40(1):40–50, 1969.
+
+Fan, K. On a theorem of weyl concerning eigenvalues of linear transformations i. Proceedings of the National Academy of Sciences, 35(11):652–655, 1949.
+Flamary, R., Cuturi, M., Courty, N., and Rakotomamonjy, A. Wasserstein discriminant analysis. Machine Learning, 107(12):1923–1945, 2018.
+Forrow, A., Hu¨tter, J.-C., Nitzan, M., Rigollet, P., Schiebinger, G., and Weed, J. Statistical optimal transport via factored couplings. 2019.
+Fournier, N. and Guillin, A. On the rate of convergence in Wasserstein distance of the empirical measure. Probability Theory and Related Fields, 162(3-4):707–738, 2015.
+Genevay, A., Chizat, L., Bach, F., Cuturi, M., and Peyre´, G. Sample complexity of sinkhorn divergences. 2019.
+Gidel, G., Jebara, T., and Lacoste-Julien, S. Frank-Wolfe algorithms for saddle point problems. In Proceedings of the 20th International Conference on Artiﬁcial Intelligence and Statistics (AISTATS), 2017.
+Hammond, J. H. Solving asymmetric variational inequality problems and systems of equations with generalized nonlinear programming algorithms. PhD thesis, Massachusetts Institute of Technology, 1984.
+Kolouri, S., Zou, Y., and Rohde, G. K. Sliced Wasserstein kernels for probability distributions. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pp. 5258–5267, 2016.
+Kolouri, S., Martin, C. E., and Rohde, G. K. Slicedwasserstein autoencoder: An embarrassingly simple generative model. arXiv preprint arXiv:1804.01947, 2018.
+Ling, H. and Okada, K. An efﬁcient earth mover’s distance algorithm for robust histogram comparison. IEEE Transactions on Pattern Analysis and Machine Intelligence, 29 (5):840–853, 2007.
+Mikolov, T., Grave, E., Bojanowski, P., Puhrsch, C., and Joulin, A. Advances in pre-training distributed word representations. In Proceedings of the International Conference on Language Resources and Evaluation (LREC 2018), 2018.
+Monge, G. Me´moire sur la the´orie des de´blais et des remblais. Histoire de l’Acade´mie Royale des Sciences, pp. 666–704, 1781.
+Overton, M. L. and Womersley, R. S. Optimality conditions and duality theory for minimizing sums of the largest eigenvalues of symmetric matrices. Mathematical Programming, 62(1-3):321–357, 1993.
+
+Subspace Robust Wasserstein Distances
+Pele, O. and Werman, M. Fast and robust earth mover’s distances. In IEEE 12th International Conference on Computer Vision, pp. 460–467, 2009.
+Peyre´, G. and Cuturi, M. Computational optimal transport. Foundations and Trends in Machine Learning, 11(5-6), 2019.
+Rabin, J., Peyre´, G., Delon, J., and Bernot, M. Wasserstein barycenter and its application to texture mixing. In International Conference on Scale Space and Variational Methods in Computer Vision, pp. 435–446. Springer, 2011.
+Santambrogio, F. Optimal transport for applied mathematicians. Birkhauser, 2015.
+Villani, C. Optimal Transport: Old and New, volume 338. Springer Verlag, 2009.
+Weed, J. and Bach, F. Sharp asymptotic and ﬁnite-sample rates of convergence of empirical measures in Wasserstein distance. arXiv preprint arXiv:1707.00087, 2017.
+
